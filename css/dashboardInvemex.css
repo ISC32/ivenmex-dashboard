@@ -874,3 +874,28 @@ body {
         max-height: calc(70vh - 80px); /* asegurar espacio para header/footer */
     }
 }
+
+/* ==========================================
+   Added: Pedidos Urgentes - scroll vertical
+   This ruleset limits the height of the urgent orders table area
+   and enables vertical scrolling while preserving horizontal scrolling.
+========================================== */
+#accordion-urgentes .md-table-wrapper {
+    max-height: 360px; /* ajusta este valor según prefieras (px o vh) */
+    overflow-x: auto;  /* mantener scroll horizontal si la tabla es ancha */
+    overflow-y: auto;  /* habilitar scroll vertical */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Optional: mejorar apariencia de scrollbar en WebKit (Chrome/Safari) */
+#accordion-urgentes .md-table-wrapper::-webkit-scrollbar {
+    width: 10px;
+    height: 10px; /* para horizontal scrollbar */
+}
+#accordion-urgentes .md-table-wrapper::-webkit-scrollbar-thumb {
+    background: rgba(11,33,139,0.12);
+    border-radius: 8px;
+}
+#accordion-urgentes .md-table-wrapper::-webkit-scrollbar-track {
+    background: transparent;
+}
