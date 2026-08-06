@@ -112,16 +112,14 @@
     <!-- TOAST -->
     <div class="md-toast-container" id="toast-container"></div>
 
-    <!-- LOADING (Con estilos inline como respaldo de máxima prioridad) -->
-    <div class="md-loading-overlay" id="loading-overlay" style="position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; display: flex !important; flex-direction: column !important; align-items: center !important; justify-content: center !important; z-index: 999999 !important; background: rgba(240, 242, 245, 0.98) !important; backdrop-filter: blur(16px) !important;">
-        <div class="ivx-loader-card">
-            <img src="assets/logos/logo-invemex.png" alt="IVENMEX" class="ivx-loader-logo" onerror="this.style.display='none'">
-            <div class="ivx-loader-spinner"></div>
-            <div class="ivx-loader-title" id="loading-text">IVENMEX</div>
-            <p class="ivx-loader-text">Conectando servicios, espere...</p>
-        </div>
-        <div id="error-container" style="margin-top: 24px; width: 90%; max-width: 420px;"></div>
-    </div>
+    <!-- LOADING -->
+<div class="md-loading-overlay" id="loading-overlay">
+    <img src="assets/logos/logo-invemex.png" alt="IVENMEX" onerror="this.style.display='none'">
+    <div class="md-loading-spinner"></div>
+    <div class="md-loading-text" id="loading-text">IVENMEX</div>
+    <p style="font-size:14px; color:#6B7280; margin-top:12px; font-weight:500;">Conectando servicios, espere...</p>
+    <div id="error-container" style="margin-top: 16px;"></div>
+</div>
 
     <!-- DASHBOARD -->
     <div id="dashboard" style="display: none;">
