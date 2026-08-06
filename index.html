@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IVENMEX</title>
 
-    <!-- FAVICON CORREGIDO PARA GITHUB PAGES -->
+    <!-- FAVICON -->
     <link rel="icon" type="image/png" href="assets/logos/logo-invemex.png?v=3">
     <link rel="shortcut icon" href="assets/logos/favicon.ico?v=3">
     <link rel="apple-touch-icon" href="assets/logos/logo-invemex.png?v=3">
@@ -16,19 +16,80 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-    <!-- Bootstrap 5 (solo para modales y grid) -->
+    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Estilos del dashboard -->
     <link rel="stylesheet" href="css/dashboardInvemex.css">
 
-    <!-- Animaciones para la pantalla de carga -->
+    <!-- ESTILOS FORZADOS PARA LA PANTALLA DE CARGA (Sobreescribe el CSS externo) -->
     <style>
-        @keyframes spin {
+        #loading-overlay {
+            position: fixed !important;
+            inset: 0 !important;
+            top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important;
+            background: rgba(240, 242, 245, 0.95) !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: center !important;
+            justify-content: center !important;
+            z-index: 99999 !important;
+            backdrop-filter: blur(12px) !important;
+            -webkit-backdrop-filter: blur(12px) !important;
+            padding: 20px !important;
+        }
+
+        .loading-card {
+            text-align: center !important;
+            padding: 48px 40px !important;
+            background: #ffffff !important;
+            border-radius: 24px !important;
+            box-shadow: 0 20px 60px rgba(11, 33, 139, 0.12), 0 4px 12px rgba(0,0,0,0.04) !important;
+            max-width: 420px !important;
+            width: 100% !important;
+            border: 1px solid rgba(11, 33, 139, 0.05) !important;
+        }
+
+        .loading-logo {
+            height: 64px !important;
+            margin-bottom: 28px !important;
+            animation: pulseLoad 2.5s ease-in-out infinite !important;
+        }
+
+        .loading-spinner-custom {
+            margin: 0 auto 24px auto !important;
+            width: 48px !important;
+            height: 48px !important;
+            border: 4px solid #E8EAFF !important;
+            border-top: 4px solid #0B218B !important;
+            border-radius: 50% !important;
+            animation: spinLoad 1s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+        }
+
+        #loading-text {
+            font-family: 'Genos', sans-serif !important;
+            font-size: 28px !important;
+            font-weight: 800 !important;
+            color: #0B218B !important;
+            margin-bottom: 8px !important;
+            letter-spacing: 0.5px !important;
+            line-height: 1.2 !important;
+        }
+
+        .loading-subtitle {
+            font-family: 'Inter', sans-serif !important;
+            font-size: 14px !important;
+            color: #6B7280 !important;
+            margin: 0 !important;
+            font-weight: 500 !important;
+            line-height: 1.5 !important;
+        }
+
+        @keyframes spinLoad {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        @keyframes pulse {
+        @keyframes pulseLoad {
             0%, 100% { opacity: 1; transform: scale(1); }
             50% { opacity: 0.85; transform: scale(1.03); }
         }
@@ -40,18 +101,12 @@
     <div class="md-toast-container" id="toast-container"></div>
 
     <!-- LOADING (Rediseñado y Centrado) -->
-    <div class="md-loading-overlay" id="loading-overlay" style="position: fixed; inset: 0; background: rgba(240, 242, 245, 0.92); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);">
-        <div style="text-align: center; padding: 48px 40px; background: #ffffff; border-radius: 24px; box-shadow: 0 20px 60px rgba(11, 33, 139, 0.12), 0 4px 12px rgba(0,0,0,0.04); max-width: 420px; width: 90%; border: 1px solid rgba(11, 33, 139, 0.05);">
-            <img src="assets/logos/logo-invemex.png" alt="IVENMEX" style="height: 64px; margin-bottom: 28px; animation: pulse 2.5s ease-in-out infinite;" onerror="this.style.display='none'">
-            
-            <div style="margin: 0 auto 24px auto; width: 48px; height: 48px; border: 4px solid #E8EAFF; border-top: 4px solid #0B218B; border-radius: 50%; animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;"></div>
-            
-            <div class="md-loading-text" id="loading-text" style="font-family: 'Genos', sans-serif; font-size: 26px; font-weight: 800; color: #0B218B; margin-bottom: 8px; letter-spacing: 0.5px;">
-                IVENMEX
-            </div>
-            <p style="font-family: 'Inter', sans-serif; font-size: 14px; color: #6B7280; margin: 0; font-weight: 500; line-height: 1.5;">
-                Conectando servicios, espere...
-            </p>
+    <div id="loading-overlay">
+        <div class="loading-card">
+            <img src="assets/logos/logo-invemex.png" alt="IVENMEX" class="loading-logo" onerror="this.style.display='none'">
+            <div class="loading-spinner-custom"></div>
+            <div id="loading-text">IVENMEX</div>
+            <p class="loading-subtitle">Conectando servicios, espere...</p>
         </div>
         <div id="error-container" style="margin-top: 24px; width: 90%; max-width: 420px;"></div>
     </div>
@@ -59,9 +114,7 @@
     <!-- DASHBOARD -->
     <div id="dashboard" style="display: none;">
 
-        <!-- ==========================================
-        TOOLBAR - HEADER PRINCIPAL
-        ========================================== -->
+        <!-- TOOLBAR - HEADER PRINCIPAL -->
         <header class="md-toolbar">
             <a href="#" class="md-toolbar-brand">
                 <img src="assets/logos/logo-invemex.png" alt="INVEMEX" onerror="this.style.display='none'">
@@ -101,9 +154,7 @@
         <!-- OVERLAY CALENDARIO -->
         <div class="md-calendar-overlay" id="calendar-overlay" onclick="App.closeCalendar()"></div>
 
-        <!-- ==========================================
-        SECCIÓN DE EMPLEADOS - PANEL DE AVATARES (ARRIBA)
-        ========================================== -->
+        <!-- SECCIÓN DE EMPLEADOS -->
         <div class="empleados-section">
             <div class="section-header">
                 <div class="section-title">
@@ -124,9 +175,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-        KPI CARDS
-        ========================================== -->
+        <!-- KPI CARDS -->
         <div class="md-grid">
             <div class="md-card primary">
                 <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
@@ -154,9 +203,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-        ACCORDION: GRÁFICOS
-        ========================================== -->
+        <!-- ACCORDION: GRÁFICOS -->
         <div class="md-accordion active" id="accordion-graficos">
             <div class="md-accordion-header" onclick="App.toggleAccordion('accordion-graficos')">
                 <div class="header-left">
@@ -196,9 +243,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-        ACCORDION: EFICIENCIA
-        ========================================== -->
+        <!-- ACCORDION: EFICIENCIA -->
         <div class="md-accordion active" id="accordion-eficiencia">
             <div class="md-accordion-header" onclick="App.toggleAccordion('accordion-eficiencia')">
                 <div class="header-left">
@@ -239,9 +284,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-        ACCORDION: PEDIDOS URGENTES
-        ========================================== -->
+        <!-- ACCORDION: PEDIDOS URGENTES -->
         <div class="md-accordion active" id="accordion-urgentes">
             <div class="md-accordion-header" onclick="App.toggleAccordion('accordion-urgentes')">
                 <div class="header-left">
@@ -295,9 +338,7 @@
             </div>
         </div>
 
-        <!-- ==========================================
-        BOTONES RÁPIDOS
-        ========================================== -->
+        <!-- BOTONES RÁPIDOS -->
         <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:16px;">
             <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoPedido();">
                 <i class="fas fa-plus"></i> Nuevo Pedido
@@ -314,10 +355,7 @@
         </div>
     </div>
 
-    <!-- ==========================================
-    MODALES (Bootstrap)
-    ========================================== -->
-
+    <!-- MODALES -->
     <!-- MODAL: Nuevo Pedido -->
     <div class="modal fade md-modal" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-lg">
