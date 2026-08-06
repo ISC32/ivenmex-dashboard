@@ -50,6 +50,144 @@ body {
 }
 
 /* ==========================================
+   LOADING SCREEN - CENTRADA Y ELEGANTE
+========================================== */
+.md-loading-overlay {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: linear-gradient(135deg, #F0F2F5 0%, #E8EAFF 100%) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 999999 !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    margin: 0 !important;
+    padding: 20px !important;
+    border: none !important;
+    box-shadow: none !important;
+    overflow: hidden !important;
+}
+
+.md-loading-overlay::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 50% 50%, rgba(11, 33, 139, 0.03) 0%, transparent 70%);
+    animation: loadingPulse 4s ease-in-out infinite;
+    pointer-events: none;
+}
+
+@keyframes loadingPulse {
+    0%, 100% { transform: scale(1); opacity: 0.5; }
+    50% { transform: scale(1.1); opacity: 1; }
+}
+
+/* Tarjeta central del loader */
+.md-loading-overlay > div:first-child,
+.md-loading-spinner {
+    display: none !important;
+}
+
+/* Contenedor principal del contenido del loader */
+.md-loading-overlay {
+    gap: 0 !important;
+}
+
+/* Creamos la tarjeta visual usando el propio overlay */
+.md-loading-overlay::after {
+    content: '';
+    position: absolute;
+    width: 380px;
+    max-width: 90vw;
+    height: auto;
+    min-height: 320px;
+    background: var(--md-white);
+    border-radius: var(--md-radius-large);
+    box-shadow: 0 25px 80px rgba(11, 33, 139, 0.15), 0 8px 24px rgba(0,0,0,0.06);
+    border: 1px solid rgba(11, 33, 139, 0.06);
+    z-index: -1;
+}
+
+.md-loading-text {
+    font-family: 'Genos', sans-serif !important;
+    font-size: 28px !important;
+    font-weight: 800 !important;
+    color: var(--md-primary) !important;
+    text-align: center !important;
+    letter-spacing: 1px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Spinner personalizado */
+.md-loading-overlay .md-loading-spinner,
+.md-loading-spinner {
+    width: 52px !important;
+    height: 52px !important;
+    border: 4px solid var(--md-primary-light) !important;
+    border-top: 4px solid var(--md-primary) !important;
+    border-radius: 50% !important;
+    animation: mdSpin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite !important;
+    margin-bottom: 24px !important;
+    display: block !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+@keyframes mdSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Logo animado */
+.md-loading-overlay img {
+    height: 64px !important;
+    width: auto !important;
+    margin-bottom: 28px !important;
+    animation: mdLogoPulse 2.5s ease-in-out infinite !important;
+    display: block !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+@keyframes mdLogoPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+/* Subtítulo */
+.md-loading-overlay p,
+.md-loading-overlay .loading-subtitle {
+    font-family: 'Inter', sans-serif !important;
+    font-size: 14px !important;
+    color: var(--md-text-secondary) !important;
+    text-align: center !important;
+    margin-top: 12px !important;
+    font-weight: 500 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Contenedor de errores */
+#error-container {
+    position: relative !important;
+    z-index: 10 !important;
+    width: 90% !important;
+    max-width: 400px !important;
+    margin-top: 24px !important;
+}
+
+/* ==========================================
    HEADER
 ========================================== */
 .md-toolbar {
@@ -828,30 +966,240 @@ body {
     box-shadow: 0 4px 15px rgba(39, 174, 96, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.15), inset 0 -2px 0 rgba(0, 0, 0, 0.15);
 }
 
-/* --- TRUNCATED FOR BREVITY IN THIS COMMIT --- */
+.md-btn-outline {
+    background: transparent;
+    border: 2px solid var(--md-primary);
+    color: var(--md-primary);
+    box-shadow: none;
+}
 
-/* Empleado modal: limitar ancho y activar scroll interno */
+.md-btn-outline:hover {
+    background: var(--md-primary-light);
+    transform: translateY(-2px);
+}
+
+.md-btn-text {
+    background: transparent;
+    color: var(--md-primary);
+    box-shadow: none;
+    padding: var(--md-spacing-1) var(--md-spacing-2);
+}
+
+.md-btn-text:hover {
+    background: var(--md-primary-light);
+}
+
+.md-btn-sm {
+    padding: var(--md-spacing-1) var(--md-spacing-3);
+    font-size: 13px;
+}
+
+/* ==========================================
+   FORMS
+========================================== */
+.md-form-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--md-text);
+    margin-bottom: 6px;
+}
+
+.md-form-control {
+    width: 100%;
+    padding: 10px 14px;
+    border: 2px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-small);
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--md-text);
+    background: var(--md-white);
+    transition: var(--md-transition);
+    outline: none;
+}
+
+.md-form-control:focus {
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 3px rgba(11, 33, 139, 0.1);
+}
+
+.md-form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236B7280' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+}
+
+/* ==========================================
+   EMPTY STATE
+========================================== */
+.md-empty {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.md-empty .empty-icon {
+    font-size: 48px;
+    color: var(--md-text-light);
+    opacity: 0.5;
+    margin-bottom: 16px;
+}
+
+.md-empty .empty-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--md-text);
+    margin-bottom: 8px;
+}
+
+.md-empty .empty-description {
+    font-size: 14px;
+    color: var(--md-text-secondary);
+}
+
+/* ==========================================
+   CHARTS
+========================================== */
+.chart-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.doughnut-chart {
+    position: relative;
+}
+
+.doughnut-chart::after {
+    content: attr(data-total);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Genos', sans-serif;
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--md-primary);
+}
+
+/* ==========================================
+   MODAL OVERRIDES
+========================================== */
+.modal-content {
+    border-radius: var(--md-radius-medium);
+    border: none;
+    box-shadow: var(--md-elevation-5);
+}
+
+.modal-header {
+    border-bottom: 1px solid var(--md-gray-dark);
+    padding: var(--md-spacing-4) var(--md-spacing-5);
+}
+
+.modal-title {
+    font-family: 'Genos', sans-serif;
+    font-weight: 700;
+    font-size: 20px;
+    color: var(--md-text);
+    display: flex;
+    align-items: center;
+}
+
+.modal-body {
+    padding: var(--md-spacing-5);
+}
+
+.modal-footer {
+    border-top: 1px solid var(--md-gray-dark);
+    padding: var(--md-spacing-4) var(--md-spacing-5);
+}
+
+/* ==========================================
+   TOAST
+========================================== */
+.md-toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* ==========================================
+   AVATAR LARGE (Empleado modal)
+========================================== */
+.avatar-lg {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 800;
+    color: white;
+    margin-right: 12px;
+}
+
+/* ==========================================
+   NOTIFICACIONES
+========================================== */
+.chip-dot {
+    border-radius: 50%;
+}
+
+/* ==========================================
+   RESPONSIVE
+========================================== */
+@media (max-width: 768px) {
+    body {
+        padding: var(--md-spacing-3);
+    }
+
+    .md-toolbar {
+        padding: var(--md-spacing-3) var(--md-spacing-4);
+    }
+
+    .md-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .md-accordion-header {
+        flex-wrap: wrap;
+    }
+
+    .md-accordion-header .header-actions {
+        width: 100%;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+}
+
+/* ==========================================
+   Empleado modal: limitar ancho y activar scroll interno
+========================================== */
 .empleado-modal .modal-dialog,
 .empleado-modal .modal-dialog.modal-lg {
-    max-width: 520px;   /* ancho máximo del modal (ajusta si quieres más/menos) */
+    max-width: 520px;
     width: 100%;
     margin: 1.5rem auto;
 }
 
 .empleado-modal .modal-content {
-    overflow: hidden; /* mantiene el contenido contenible dentro del cuadro */
+    overflow: hidden;
     border-radius: 12px;
 }
 
-/* El body tendrá un alto máximo y scroll vertical si el contenido excede */
 .empleado-modal .modal-body {
-    max-height: calc(60vh); /* altura máxima relativa a la ventana */
-    overflow-y: auto;       /* scroll vertical dentro del modal */
+    max-height: calc(60vh);
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     padding: 16px;
 }
 
-/* Opcional: estilos visuales para la barra de scroll (WebKit) */
 .empleado-modal .modal-body::-webkit-scrollbar {
     width: 8px;
 }
@@ -863,7 +1211,6 @@ body {
     background: transparent;
 }
 
-/* Ajustes responsivos más estrictos en móviles */
 @media (max-width: 576px) {
     .empleado-modal .modal-dialog,
     .empleado-modal .modal-dialog.modal-lg {
@@ -871,26 +1218,23 @@ body {
         margin: 0.5rem;
     }
     .empleado-modal .modal-body {
-        max-height: calc(70vh - 80px); /* asegurar espacio para header/footer */
+        max-height: calc(70vh - 80px);
     }
 }
 
 /* ==========================================
-   Added: Pedidos Urgentes - scroll vertical
-   This ruleset limits the height of the urgent orders table area
-   and enables vertical scrolling while preserving horizontal scrolling.
+   Pedidos Urgentes - scroll vertical
 ========================================== */
 #accordion-urgentes .md-table-wrapper {
-    max-height: 360px; /* ajusta este valor según prefieras (px o vh) */
-    overflow-x: auto;  /* mantener scroll horizontal si la tabla es ancha */
-    overflow-y: auto;  /* habilitar scroll vertical */
+    max-height: 360px;
+    overflow-x: auto;
+    overflow-y: auto;
     -webkit-overflow-scrolling: touch;
 }
 
-/* Optional: mejorar apariencia de scrollbar en WebKit (Chrome/Safari) */
 #accordion-urgentes .md-table-wrapper::-webkit-scrollbar {
     width: 10px;
-    height: 10px; /* para horizontal scrollbar */
+    height: 10px;
 }
 #accordion-urgentes .md-table-wrapper::-webkit-scrollbar-thumb {
     background: rgba(11,33,139,0.12);
@@ -899,3 +1243,56 @@ body {
 #accordion-urgentes .md-table-wrapper::-webkit-scrollbar-track {
     background: transparent;
 }
+
+/* ==========================================
+   SCROLLBAR GLOBAL (WebKit)
+========================================== */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(11, 33, 139, 0.15);
+    border-radius: 8px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(11, 33, 139, 0.25);
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* ==========================================
+   ANIMACIONES ADICIONALES
+========================================== */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#dashboard {
+    animation: fadeIn 0.5s ease;
+}
+
+/* ==========================================
+   UTILIDADES
+========================================== */
+.text-center { text-align: center; }
+.text-primary { color: var(--md-primary); }
+.text-secondary { color: var(--md-text-secondary); }
+.mt-1 { margin-top: var(--md-spacing-1); }
+.mt-2 { margin-top: var(--md-spacing-2); }
+.mt-3 { margin-top: var(--md-spacing-3); }
+.mt-4 { margin-top: var(--md-spacing-4); }
+.mb-1 { margin-bottom: var(--md-spacing-1); }
+.mb-2 { margin-bottom: var(--md-spacing-2); }
+.mb-3 { margin-bottom: var(--md-spacing-3); }
+.mb-4 { margin-bottom: var(--md-spacing-4); }
