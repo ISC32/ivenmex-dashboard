@@ -101,14 +101,14 @@ body {
     gap: 0 !important;
 }
 
-/* Creamos la tarjeta visual usando el propio overlay */
+/* RESTORED: use fixed width for the loader card to avoid layout/visibility issues */
 .md-loading-overlay::after {
     content: '';
     position: absolute;
-    width: clamp(320px, 45vw, 720px); /* responsive width */
-    max-width: 95vw;
+    width: 380px; /* restored fixed/default width */
+    max-width: 90vw;
     height: auto;
-    min-height: 280px;
+    min-height: 320px; /* restored min-height */
     background: var(--md-white);
     border-radius: var(--md-radius-large);
     box-shadow: 0 25px 80px rgba(11, 33, 139, 0.15), 0 8px 24px rgba(0,0,0,0.06);
@@ -183,7 +183,7 @@ body {
     position: relative !important;
     z-index: 10 !important;
     width: 90% !important;
-    max-width: 420px !important; /* slightly larger for readability */
+    max-width: 400px !important; /* restored original max-width */
     margin-top: 24px !important;
 }
 
@@ -321,10 +321,7 @@ body {
     .modal-body { padding: 12px; }
 }
 
-/* Ensure dropdowns and popups have high z-index on mobile */
-@media (max-width: 767px) {
-    .md-calendar-dropdown, .modal { z-index: 11000 !important; }
-}
+/* Removed the aggressive z-index override for mobile to avoid layering issues */
 
 /* ==========================================
    EMPLEADOS AVATARS - responsive sizes
@@ -391,10 +388,8 @@ body {
     #bar-chart .bar-fill { padding: 6px 8px; font-size: 12px; }
 }
 
-/* ==========================================
-   TOAST container and loader text adjustments on small screens
-========================================== */
-.md-toast-container { position: fixed; top: 16px; right: 16px; z-index: 12000; }
+/* Toast container adjustments (kept but safe z-index) */
+.md-toast-container { position: fixed; top: 16px; right: 16px; z-index: 99999; }
 @media (max-width: 480px) { .md-toast-container { right: 8px; left: 8px; } }
 
 /* Reduce global page padding on smaller screens to improve available space */
