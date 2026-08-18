@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * DASHBOARD INVEMEX - SISTEMA DE GESTIÓN
- * Versión: 5.2.0 - Con Actualización Automática y Roles
+ * Versión: 6.0.0 - Diseño Optimizado & Funcionalidad Intacta
  * ==========================================
  */
 
@@ -12,24 +12,14 @@ const CONFIG = {
     TOAST_DURATION: 4000
 };
 
-console.log('🚀 Iniciando Dashboard INVEMEX v5.2.0');
+console.log('🚀 Iniciando Dashboard INVEMEX v6.0.0');
 
-const supabaseClient = supabase.createClient(
-    CONFIG.SUPABASE_URL,
-    CONFIG.SUPABASE_ANON_KEY
-);
+const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
 const STATE = {
-    clientes: [],
-    productos: [],
-    pedidos: [],
-    urgentes: [],
-    empleados: [],
-    tareas: [],
-    loading: false,
-    refreshInterval: null,
-    realtimeChannel: null,
-    ultimaActualizacion: null
+    clientes: [], productos: [], pedidos: [], urgentes: [],
+    empleados: [], tareas: [], loading: false,
+    refreshInterval: null, realtimeChannel: null, ultimaActualizacion: null
 };
 
 // ==========================================
@@ -77,10 +67,7 @@ const ToastSystem = {
 // ==========================================
 const DateFormatter = {
     formatLong() {
-        const fecha = new Date();
-        return fecha.toLocaleDateString('es-ES', {
-            year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
-        });
+        return new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
     },
     getToday() {
         return new Date().toISOString().split('T')[0];
@@ -102,22 +89,21 @@ const StateMappers = {
     },
     estadoLabel: {
         'cotizando': 'Cotizando', 'diseño': 'En Diseño', 'en_produccion': 'Producción',
-        'control_calidad': 'Control Calidad', 'listo': 'Listo', 'entregado': 'Entregado',
-        'cancelado': 'Cancelado'
+        'control_calidad': 'Control Calidad', 'listo': 'Listo', 'entregado': 'Entregado', 'cancelado': 'Cancelado'
     },
     getEstadoClass(estado) { return this.estadoClass[estado] || 'default'; },
     getEstadoLabel(estado) { return this.estadoLabel[estado] || estado; }
 };
 
 // ==========================================
-// ERROR HANDLER
+// ERROR & LOADING HANDLERS
 // ==========================================
 const ErrorHandler = {
     show(message) {
         const cont = document.getElementById('error-container');
         if (!cont) return;
         cont.innerHTML = `
-            <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:20px; max-width:500px; text-align:left;">
+            <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:20px; max-width:500px; text-align:left; margin-top:20px;">
                 <strong style="color: #991B1B; display:block; margin-bottom:8px;"><i class="fas fa-exclamation-circle"></i> Error</strong>
                 <pre style="background:white; padding:12px; border-radius:8px; font-size:13px; max-height:150px; overflow:auto; color:#1A1A1A; border:1px solid #EEEEEE;">${message}</pre>
                 <button class="md-btn md-btn-primary mt-3" onclick="App.reintentar()"><i class="fas fa-redo"></i> Reintentar</button>
@@ -130,38 +116,32 @@ const ErrorHandler = {
     }
 };
 
-// ==========================================
-// LOADING SYSTEM
-// ==========================================
 const LoadingSystem = {
     show(text = 'Cargando...') {
-        document.getElementById('loading-text').textContent = text;
-        document.getElementById('loading-overlay').style.display = 'flex';
+        const el = document.getElementById('loading-text');
+        if (el) el.textContent = text;
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'flex';
     },
     hide() {
-        document.getElementById('loading-overlay').style.display = 'none';
-        document.getElementById('dashboard').style.display = 'block';
+        const overlay = document.getElementById('loading-overlay');
+        if (overlay) overlay.style.display = 'none';
+        const dashboard = document.getElementById('dashboard');
+        if (dashboard) dashboard.style.display = 'block';
     },
     setText(text) {
-        document.getElementById('loading-text').textContent = text;
+        const el = document.getElementById('loading-text');
+        if (el) el.textContent = text;
     }
 };
 
-// ==========================================
-// TABLE COUNTER
-// ==========================================
 const TableCounter = {
     update() {
         const tbody = document.getElementById('tabla-urgentes-body');
         const countEl = document.getElementById('total-registros');
         if (!countEl || !tbody) return;
         const filas = tbody.querySelectorAll('tr:not(:has(.md-empty))');
-        const total = filas.length;
-        if (tbody.querySelector('.md-empty')) {
-            countEl.textContent = '0';
-            return;
-        }
-        countEl.textContent = total;
+        countEl.textContent = tbody.querySelector('.md-empty') ? '0' : filas.length;
     }
 };
 
@@ -169,11 +149,10 @@ const TableCounter = {
 // APP PRINCIPAL
 // ==========================================
 const App = {
-    // ==========================================
-    // INICIALIZACIÓN
-    // ==========================================
+    calendarState: { currentDate: new Date(), selectedDate: new Date(), isOpen: false },
+
     async init() {
-        console.log('📋 Inicializando aplicación v5.2.0...');
+        console.log('📋 Inicializando aplicación v6.0.0...');
         const today = new Date();
         this.calendarState.selectedDate = new Date(today);
         this.calendarState.currentDate = new Date(today);
@@ -181,19 +160,11 @@ const App = {
         ToastSystem.init();
         await this.cargarTodosLosDatos();
         this.suscribirRealtime();
-        STATE.refreshInterval = setInterval(() => {
-            this.refrescarDatosSilencioso();
-        }, CONFIG.REFRESH_INTERVAL);
+        STATE.refreshInterval = setInterval(() => this.refrescarDatosSilencioso(), CONFIG.REFRESH_INTERVAL);
         console.log('✅ Aplicación inicializada correctamente');
     },
 
-    // ==========================================
-    // CALENDARIO
-    // ==========================================
-    calendarState: { currentDate: new Date(), selectedDate: new Date(), isOpen: false },
-    toggleCalendar() {
-        if (this.calendarState.isOpen) { this.closeCalendar(); } else { this.openCalendar(); }
-    },
+    toggleCalendar() { this.calendarState.isOpen ? this.closeCalendar() : this.openCalendar(); },
     openCalendar() {
         this.calendarState.isOpen = true;
         document.getElementById('calendar-dropdown').classList.add('active');
@@ -227,16 +198,19 @@ const App = {
         const selected = this.calendarState.selectedDate;
         const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
         document.getElementById('calendar-month-year').textContent = `${monthNames[month]} ${year}`;
+        
         const firstDay = new Date(year, month, 1).getDay();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         let startOffset = firstDay === 0 ? 6 : firstDay - 1;
         const weekNumber = this.getWeekNumber(new Date(year, month, 1));
         document.getElementById('calendar-info').textContent = `Semana ${weekNumber}`;
+        
         const grid = document.getElementById('calendar-grid');
         if (!grid) return;
-        const weekdays = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
+        
         let html = '';
-        weekdays.forEach(day => { html += `<div class="weekday">${day}</div>`; });
+        ['L', 'M', 'X', 'J', 'V', 'S', 'D'].forEach(day => { html += `<div class="weekday">${day}</div>`; });
+        
         const prevMonthDays = new Date(year, month, 0).getDate();
         for (let i = startOffset - 1; i >= 0; i--) {
             html += `<div class="day other-month">${prevMonthDays - i}</div>`;
@@ -266,7 +240,8 @@ const App = {
         ToastSystem.success('📅 Fecha seleccionada', selectedDate.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }));
     },
     updateDateDisplay(date) {
-        document.getElementById('fecha-texto').textContent = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+        const el = document.getElementById('fecha-texto');
+        if (el) el.textContent = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
     },
     getWeekNumber(date) {
         const startOfYear = new Date(date.getFullYear(), 0, 1);
@@ -274,17 +249,11 @@ const App = {
         return Math.ceil((diff + startOfYear.getDay() + 1) / 7);
     },
 
-    // ==========================================
-    // ACCORDION
-    // ==========================================
     toggleAccordion(id) {
         const element = document.getElementById(id);
         if (element) element.classList.toggle('active');
     },
 
-    // ==========================================
-    // CARGA DE DATOS
-    // ==========================================
     async cargarTodosLosDatos() {
         try {
             LoadingSystem.show('Cargando datos del dashboard...');
@@ -298,16 +267,13 @@ const App = {
             LoadingSystem.setText('⚠️ Error al cargar datos');
         }
     },
+
     async cargarDatos() {
         console.log('📊 Cargando datos desde Supabase...');
         try {
             await Promise.all([
-                this.cargarKPI(),
-                this.cargarEstadosGrafico(),
-                this.cargarCargaTrabajo(),
-                this.cargarPedidosUrgentes(),
-                this.cargarEficiencia(),
-                this.cargarEmpleadosYTareas()
+                this.cargarKPI(), this.cargarEstadosGrafico(), this.cargarCargaTrabajo(),
+                this.cargarPedidosUrgentes(), this.cargarEficiencia(), this.cargarEmpleadosYTareas()
             ]);
             console.log('✅ Todos los datos cargados correctamente');
             TableCounter.update();
@@ -319,22 +285,12 @@ const App = {
         }
     },
 
-    // ==========================================
-    // ACTUALIZAR HORA DE ACTUALIZACIÓN
-    // ==========================================
     actualizarHoraActualizacion() {
         const el = document.getElementById('ultima-actualizacion-texto');
-        if (el) {
-            el.textContent = `Última actualización: ${DateFormatter.formatHora()}`;
-        }
+        if (el) el.textContent = `Última actualización: ${DateFormatter.formatHora()}`;
     },
 
-    // ==========================================
-    // REFRESCAR DATOS (con notificación)
-    // ==========================================
     async refrescarDatos() {
-        const icon = document.getElementById('btn-refresh-icon');
-        if (icon) icon.classList.add('fa-spin');
         ToastSystem.info('🔄 Actualizando', 'Refrescando datos del dashboard...');
         try {
             await this.cargarDatos();
@@ -343,14 +299,9 @@ const App = {
             console.error('❌ Error al refrescar:', error);
             ToastSystem.error('❌ Error', 'No se pudieron actualizar los datos');
             ErrorHandler.show(error.message);
-        } finally {
-            if (icon) icon.classList.remove('fa-spin');
         }
     },
 
-    // ==========================================
-    // REFRESCAR DATOS SILENCIOSO (sin notificación)
-    // ==========================================
     async refrescarDatosSilencioso() {
         try {
             await this.cargarDatos();
@@ -360,9 +311,6 @@ const App = {
         }
     },
 
-    // ==========================================
-    // KPI
-    // ==========================================
     async cargarKPI() {
         const hoy = DateFormatter.getToday();
         try {
@@ -373,29 +321,22 @@ const App = {
                 supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('prioridad', 'urgente').not('estado', 'in', '(entregado,cancelado)')
             ]);
             const kpiElements = {
-                'kpi-activos': activos || 0,
-                'kpi-activos-change': `${activos || 0} activos`,
-                'kpi-produccion': produccion || 0,
-                'kpi-produccion-change': `${produccion || 0} en producción`,
-                'kpi-entregados': entregados || 0,
-                'kpi-entregados-change': `${entregados || 0} hoy`,
-                'kpi-urgentes': urgentes || 0,
-                'kpi-urgentes-change': `${urgentes || 0} urgentes`
+                'kpi-activos': activos || 0, 'kpi-activos-change': `${activos || 0} activos`,
+                'kpi-produccion': produccion || 0, 'kpi-produccion-change': `${produccion || 0} en producción`,
+                'kpi-entregados': entregados || 0, 'kpi-entregados-change': `${entregados || 0} hoy`,
+                'kpi-urgentes': urgentes || 0, 'kpi-urgentes-change': `${urgentes || 0} urgentes`
             };
             Object.entries(kpiElements).forEach(([id, value]) => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = value;
             });
-            document.getElementById('notificaciones-badge').textContent = urgentes || 0;
-            document.getElementById('urgentes-count-badge').textContent = urgentes || 0;
-        } catch (error) {
-            console.error('Error cargando KPI:', error);
-        }
+            const badge1 = document.getElementById('notificaciones-badge');
+            const badge2 = document.getElementById('urgentes-count-badge');
+            if (badge1) badge1.textContent = urgentes || 0;
+            if (badge2) badge2.textContent = urgentes || 0;
+        } catch (error) { console.error('Error cargando KPI:', error); }
     },
 
-    // ==========================================
-    // GRÁFICO DOUGHNUT
-    // ==========================================
     async cargarEstadosGrafico() {
         const estados = ['cotizando', 'diseño', 'en_produccion', 'control_calidad', 'listo', 'entregado'];
         const labels = ['Cotizando', 'Diseño', 'Producción', 'Control Calidad', 'Listo', 'Entregado'];
@@ -412,37 +353,29 @@ const App = {
             const chart = document.getElementById('doughnut-chart');
             if (chart) {
                 chart.setAttribute('data-total', total);
-                if (total > 0) {
+                chart.style.background = total > 0 ? (() => {
                     let grad = 'conic-gradient(';
                     let acumulado = 0;
                     resultados.forEach((item, index) => {
                         const porcentaje = (item.value / total) * 100;
-                        const inicio = acumulado;
-                        const fin = acumulado + porcentaje;
-                        grad += `${item.color} ${inicio}% ${fin}%`;
-                        if (index < resultados.length - 1) grad += ', ';
-                        acumulado = fin;
+                        grad += `${item.color} ${acumulado}% ${acumulado + porcentaje}%${index < resultados.length - 1 ? ', ' : ''}`;
+                        acumulado += porcentaje;
                     });
-                    grad += ')';
-                    chart.style.background = grad;
-                } else {
-                    chart.style.background = 'conic-gradient(#EEEEEE 0% 100%)';
-                }
+                    return grad + ')';
+                })() : 'conic-gradient(#EEEEEE 0% 100%)';
             }
-            document.getElementById('doughnut-legend').innerHTML = resultados.map(item => `
-                <div class="legend-item">
-                    <span class="color-box" style="background:${item.color};"></span>
-                    ${item.label}: ${item.value}
-                </div>
-            `).join('');
-        } catch (error) {
-            console.error('Error cargando estados:', error);
-        }
+            const legend = document.getElementById('doughnut-legend');
+            if (legend) {
+                legend.innerHTML = resultados.map(item => `
+                    <div class="legend-item">
+                        <span class="color-box" style="background:${item.color};"></span>
+                        ${item.label}: ${item.value}
+                    </div>
+                `).join('');
+            }
+        } catch (error) { console.error('Error cargando estados:', error); }
     },
 
-    // ==========================================
-    // CARGA DE TRABAJO
-    // ==========================================
     async cargarCargaTrabajo() {
         const areas = [
             { nombre: 'diseño', label: 'Diseño', icon: 'fa-paint-brush', clase: 'design' },
@@ -455,9 +388,7 @@ const App = {
             'sublimacion': 'linear-gradient(90deg, #6C3483, #8E44AD)',
             'admin': 'linear-gradient(90deg, #D81B60, #E74C8B)'
         };
-        const coloresMap = {
-            'design': '#0B218B', 'corte': '#FFF200', 'sublimacion': '#8E44AD', 'admin': '#E74C8B'
-        };
+        const coloresMap = { 'design': '#0B218B', 'corte': '#FFF200', 'sublimacion': '#8E44AD', 'admin': '#E74C8B' };
         try {
             const resultados = [];
             let maxTareas = 1;
@@ -468,31 +399,28 @@ const App = {
                 resultados.push({ ...area, tareas });
             }
             resultados.push({ label: 'Administración', icon: 'fa-user-tie', clase: 'admin', tareas: 0 });
-            resultados.forEach(item => {
-                item.porcentaje = maxTareas > 0 ? (item.tareas / maxTareas) * 100 : 0;
-            });
-            document.getElementById('bar-chart').innerHTML = resultados.map(item => {
-                const gradiente = gradientesMap[item.clase] || 'linear-gradient(90deg, #0B218B, #1A3BA8)';
-                const textColor = item.clase === 'corte' ? '#1A1A1A' : 'white';
-                return `
-                    <div class="bar-item">
-                        <span class="bar-label"><i class="fas ${item.icon}" style="color:${coloresMap[item.clase]};"></i> ${item.label}</span>
-                        <div class="bar-track">
-                            <div class="bar-fill ${item.clase}" style="width:${item.porcentaje}%; background:${gradiente}; color:${textColor};">
-                                ${item.tareas} tareas
+            resultados.forEach(item => { item.porcentaje = maxTareas > 0 ? (item.tareas / maxTareas) * 100 : 0; });
+            
+            const barChart = document.getElementById('bar-chart');
+            if (barChart) {
+                barChart.innerHTML = resultados.map(item => {
+                    const gradiente = gradientesMap[item.clase] || 'linear-gradient(90deg, #0B218B, #1A3BA8)';
+                    const textColor = item.clase === 'corte' ? '#1A1A1A' : 'white';
+                    return `
+                        <div class="bar-item">
+                            <span class="bar-label"><i class="fas ${item.icon}" style="color:${coloresMap[item.clase]};"></i> ${item.label}</span>
+                            <div class="bar-track">
+                                <div class="bar-fill ${item.clase}" style="width:${item.porcentaje}%; background:${gradiente}; color:${textColor};">
+                                    ${item.tareas} tareas
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `;
-            }).join('');
-        } catch (error) {
-            console.error('Error cargando carga de trabajo:', error);
-        }
+                    `;
+                }).join('');
+            }
+        } catch (error) { console.error('Error cargando carga de trabajo:', error); }
     },
 
-    // ==========================================
-    // PEDIDOS URGENTES
-    // ==========================================
     async cargarPedidosUrgentes() {
         try {
             const { data, error } = await supabaseClient
@@ -535,23 +463,20 @@ const App = {
                 `;
             }).join('');
             TableCounter.update();
-        } catch (error) {
-            console.error('Error cargando pedidos urgentes:', error);
-        }
+        } catch (error) { console.error('Error cargando pedidos urgentes:', error); }
     },
 
-    // ==========================================
-    // VER DETALLE DE PEDIDO
-    // ==========================================
     verPedidoDetalle(id) {
         const modalBody = document.getElementById('modal-detalle-body');
-        document.getElementById('detalle-pedido-id').textContent = '#' + id;
+        const idSpan = document.getElementById('detalle-pedido-id');
+        if (idSpan) idSpan.textContent = '#' + id;
         if (modalBody) {
-            modalBody.innerHTML = `<div style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i><p style="margin-top:12px; color: var(--md-text-secondary);">Cargando detalles del pedido...</p></div>`;
+            modalBody.innerHTML = `<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i><p style="margin-top:12px; color: var(--md-text-secondary);">Cargando detalles del pedido...</p></div>`;
         }
         new bootstrap.Modal(document.getElementById('modalDetallePedido')).show();
         this.buscarYMostrarDetalle(id);
     },
+
     async buscarYMostrarDetalle(id) {
         try {
             const { data, error } = await supabaseClient.from('pedidos').select(`id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre, telefono, email), detalles_pedido (cantidad, medida_ancho_cm, medida_alto_cm, material_especifico, tiempo_estimado_minutos, productos (nombre, categoria, material)), tareas (estado, fecha_inicio, fecha_fin, tipo_tarea, empleados (nombre, apellido, cargo))`).eq('id', id).single();
@@ -564,108 +489,72 @@ const App = {
                 const cliente = data.clientes || {};
                 const estadoColor = StateMappers.getEstadoClass(data.estado);
                 const estadoLabel = StateMappers.getEstadoLabel(data.estado);
-                document.getElementById('modal-detalle-body').innerHTML = `
-                    <div class="row g-3">
-                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-user" style="color: var(--md-primary);"></i> Cliente</div><div class="detail-value">${cliente.nombre || 'Sin cliente'}</div>${cliente.telefono ? `<small style="color: var(--md-text-secondary);"><i class="fas fa-phone"></i> ${cliente.telefono}</small>` : ''}${cliente.email ? `<small style="color: var(--md-text-secondary); display:block;"><i class="fas fa-envelope"></i> ${cliente.email}</small>` : ''}</div></div>
-                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-box" style="color: var(--md-primary);"></i> Producto</div><div class="detail-value">${producto.nombre || 'Sin producto'}</div><small style="color: var(--md-text-secondary);">${producto.categoria || ''} ${producto.material ? '| ' + producto.material : ''}</small></div></div>
-                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-ruler-combined" style="color: var(--md-primary);"></i> Medidas</div><div class="detail-value">${detalle.medida_ancho_cm && detalle.medida_alto_cm ? `${detalle.medida_ancho_cm} x ${detalle.medida_alto_cm} cm` : 'No definido'}</div><small style="color: var(--md-text-secondary);">Cantidad: ${detalle.cantidad || 1}</small></div></div>
-                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-clock" style="color: var(--md-primary);"></i> Tiempo Estimado</div><div class="detail-value">${detalle.tiempo_estimado_minutos ? `${detalle.tiempo_estimado_minutos} min` : 'No definido'}</div><small style="color: var(--md-text-secondary);">Material: ${detalle.material_especifico || producto.material || 'No especificado'}</small></div></div>
-                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-user-tie" style="color: var(--md-primary);"></i> Asignado a</div><div class="detail-value">${empleado.nombre ? `${empleado.nombre} ${empleado.apellido || ''}` : 'Sin asignar'}</div><small style="color: var(--md-text-secondary);">${empleado.cargo || 'Sin cargo'} | ${tarea.tipo_tarea || 'Sin tarea'}</small></div></div>
-                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-calendar-alt" style="color: var(--md-primary);"></i> Fechas</div><div class="detail-value" style="font-size:14px;"><span><strong>Inicio:</strong> ${data.fecha_solicitud ? new Date(data.fecha_solicitud).toLocaleDateString('es-ES') : 'No definida'}</span><br><span><strong>Entrega:</strong> ${data.fecha_entrega_prometida ? new Date(data.fecha_entrega_prometida).toLocaleDateString('es-ES') : 'No definida'}</span><br><span><strong>Fin:</strong> ${tarea.fecha_fin ? new Date(tarea.fecha_fin).toLocaleDateString('es-ES') : 'En proceso'}</span></div></div></div>
-                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-info-circle" style="color: var(--md-primary);"></i> Información Adicional</div><div class="detail-value"><span class="md-badge ${estadoColor}">${estadoLabel}</span>${data.prioridad === 'urgente' ? '<span class="md-badge danger" style="margin-left:8px;">Urgente</span>' : ''}</div>${data.observaciones ? `<p style="margin-top:8px; font-size:13px; color: var(--md-text-secondary);"><strong>Observaciones:</strong> ${data.observaciones}</p>` : ''}</div></div>
-                    </div>
-                `;
+                const modalBody = document.getElementById('modal-detalle-body');
+                if (modalBody) {
+                    modalBody.innerHTML = `
+                        <div class="row g-3">
+                            <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-user" style="color: var(--md-primary);"></i> Cliente</div><div class="detail-value">${cliente.nombre || 'Sin cliente'}</div>${cliente.telefono ? `<small style="color: var(--md-text-secondary);"><i class="fas fa-phone"></i> ${cliente.telefono}</small>` : ''}${cliente.email ? `<small style="color: var(--md-text-secondary); display:block;"><i class="fas fa-envelope"></i> ${cliente.email}</small>` : ''}</div></div>
+                            <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-box" style="color: var(--md-primary);"></i> Producto</div><div class="detail-value">${producto.nombre || 'Sin producto'}</div><small style="color: var(--md-text-secondary);">${producto.categoria || ''} ${producto.material ? '| ' + producto.material : ''}</small></div></div>
+                            <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-ruler-combined" style="color: var(--md-primary);"></i> Medidas</div><div class="detail-value">${detalle.medida_ancho_cm && detalle.medida_alto_cm ? `${detalle.medida_ancho_cm} x ${detalle.medida_alto_cm} cm` : 'No definido'}</div><small style="color: var(--md-text-secondary);">Cantidad: ${detalle.cantidad || 1}</small></div></div>
+                            <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-clock" style="color: var(--md-primary);"></i> Tiempo Estimado</div><div class="detail-value">${detalle.tiempo_estimado_minutos ? `${detalle.tiempo_estimado_minutos} min` : 'No definido'}</div><small style="color: var(--md-text-secondary);">Material: ${detalle.material_especifico || producto.material || 'No especificado'}</small></div></div>
+                            <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-user-tie" style="color: var(--md-primary);"></i> Asignado a</div><div class="detail-value">${empleado.nombre ? `${empleado.nombre} ${empleado.apellido || ''}` : 'Sin asignar'}</div><small style="color: var(--md-text-secondary);">${empleado.cargo || 'Sin cargo'} | ${tarea.tipo_tarea || 'Sin tarea'}</small></div></div>
+                            <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-calendar-alt" style="color: var(--md-primary);"></i> Fechas</div><div class="detail-value" style="font-size:14px;"><span><strong>Inicio:</strong> ${data.fecha_solicitud ? new Date(data.fecha_solicitud).toLocaleDateString('es-ES') : 'No definida'}</span><br><span><strong>Entrega:</strong> ${data.fecha_entrega_prometida ? new Date(data.fecha_entrega_prometida).toLocaleDateString('es-ES') : 'No definida'}</span><br><span><strong>Fin:</strong> ${tarea.fecha_fin ? new Date(tarea.fecha_fin).toLocaleDateString('es-ES') : 'En proceso'}</span></div></div></div>
+                            <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-info-circle" style="color: var(--md-primary);"></i> Información Adicional</div><div class="detail-value"><span class="md-badge ${estadoColor}">${estadoLabel}</span>${data.prioridad === 'urgente' ? '<span class="md-badge danger" style="margin-left:8px;">Urgente</span>' : ''}</div>${data.observaciones ? `<p style="margin-top:8px; font-size:13px; color: var(--md-text-secondary);"><strong>Observaciones:</strong> ${data.observaciones}</p>` : ''}</div></div>
+                        </div>
+                    `;
+                }
             }
         } catch (error) {
             console.error('❌ Error cargando detalle:', error);
-            document.getElementById('modal-detalle-body').innerHTML = `<div style="text-align:center; padding:30px; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:32px; display:block; margin-bottom:12px;"></i><p>Error al cargar los detalles del pedido</p><small style="color: var(--md-text-secondary);">${error.message}</small></div>`;
+            const modalBody = document.getElementById('modal-detalle-body');
+            if (modalBody) {
+                modalBody.innerHTML = `<div style="text-align:center; padding:30px; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:32px; display:block; margin-bottom:12px;"></i><p>Error al cargar los detalles del pedido</p><small style="color: var(--md-text-secondary);">${error.message}</small></div>`;
+            }
             ToastSystem.error('Error', 'No se pudo cargar el detalle del pedido');
         }
     },
 
-    // ==========================================
-    // SISTEMA DE EMPLEADOS - PANEL DE AVATARES
-    // ==========================================
-    
-    // Colores para avatares de empleados
-    empleadoColores: [
-        '#0B218B', '#E84C3D', '#27AE60', '#F39C12', 
-        '#8E44AD', '#E74C8B', '#1A3BA8', '#2ECC71'
-    ],
-
-    // Obtener color para un empleado basado en su nombre
+    empleadoColores: ['#0B218B', '#E84C3D', '#27AE60', '#F39C12', '#8E44AD', '#E74C8B', '#1A3BA8', '#2ECC71'],
     getColorEmpleado(nombre) {
         let hash = 0;
-        for (let i = 0; i < nombre.length; i++) {
-            hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
-        }
-        const index = Math.abs(hash) % this.empleadoColores.length;
-        return this.empleadoColores[index];
+        for (let i = 0; i < nombre.length; i++) hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+        return this.empleadoColores[Math.abs(hash) % this.empleadoColores.length];
     },
 
-    // Cargar empleados y mostrar en el panel de avatares
     async cargarEmpleadosYTareas() {
         console.log('📊 Cargando empleados...');
-        
         try {
-            const { data: empleados, error: errorEmpleados } = await supabaseClient                .from('empleados')
-                .select('*')
-                .eq('activo', true)
-                .order('nombre');
-
+            const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('*').eq('activo', true).order('nombre');
             if (errorEmpleados) throw errorEmpleados;
-
             STATE.empleados = empleados || [];
-
+            const grid = document.getElementById('empleadosAvatarGrid');
+            const badge = document.getElementById('empleados-total-badge');
+            
             if (!empleados || empleados.length === 0) {
-                document.getElementById('empleadosAvatarGrid').innerHTML = `
-                    <div style="text-align:center; padding:20px; width:100%; color: var(--md-text-secondary);">
-                        <i class="fas fa-users" style="font-size:28px; display:block; margin-bottom:8px; opacity:0.15;"></i>
-                        No hay empleados registrados
-                    </div>
-                `;
-                document.getElementById('empleados-total-badge').textContent = '0';
+                if (grid) grid.innerHTML = `<div style="text-align:center; padding:20px; width:100%; color: var(--md-text-secondary);"><i class="fas fa-users" style="font-size:28px; display:block; margin-bottom:8px; opacity:0.15;"></i>No hay empleados registrados</div>`;
+                if (badge) badge.textContent = '0';
                 return;
             }
-
-            // Obtener tareas pendientes de todos los empleados
-            const { data: tareas, error: errorTareas } = await supabaseClient
-                .from('tareas')
-                .select('*')
-                .in('estado', ['pendiente', 'en_progreso', 'notificado'])
-                .order('fecha_asignacion', { ascending: false });
-
+            const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*').in('estado', ['pendiente', 'en_progreso', 'notificado']).order('fecha_asignacion', { ascending: false });
             if (errorTareas) throw errorTareas;
-
             STATE.tareas = tareas || [];
-
             this.renderAvataresEmpleados(empleados, tareas || []);
-
         } catch (error) {
             console.error('❌ Error cargando empleados:', error);
-            document.getElementById('empleadosAvatarGrid').innerHTML = `
-                <div style="text-align:center; padding:20px; width:100%; color: #EF4444;">
-                    <i class="fas fa-exclamation-circle" style="font-size:28px; display:block; margin-bottom:8px;"></i>
-                    Error al cargar empleados: ${error.message}
-                </div>
-            `;
+            const grid = document.getElementById('empleadosAvatarGrid');
+            if (grid) grid.innerHTML = `<div style="text-align:center; padding:20px; width:100%; color: #EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px; display:block; margin-bottom:8px;"></i>Error al cargar empleados: ${error.message}</div>`;
             ToastSystem.error('Error', 'No se pudieron cargar los empleados');
         }
     },
 
-    // Renderizar avatares en el panel
     renderAvataresEmpleados(empleados, tareas) {
         const grid = document.getElementById('empleadosAvatarGrid');
-        
         let html = '';
-        
         empleados.forEach(empleado => {
             const tareasPendientes = tareas.filter(t => t.empleado_id === empleado.id).length;
             const color = this.getColorEmpleado(empleado.nombre);
             const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`;
-            
             const badgeClass = tareasPendientes > 0 ? 'pendiente' : 'listo';
-            
             html += `
                 <div class="empleado-avatar-card" onclick="App.abrirModalEmpleado(${empleado.id})" title="Ver tareas de ${empleado.nombre}">
                     <span class="avatar-badge ${badgeClass}">${tareasPendientes}</span>
@@ -674,133 +563,83 @@ const App = {
                 </div>
             `;
         });
-        
-        grid.innerHTML = html;
-        document.getElementById('empleados-total-badge').textContent = empleados.length;
+        if (grid) grid.innerHTML = html;
+        const badge = document.getElementById('empleados-total-badge');
+        if (badge) badge.textContent = empleados.length;
     },
 
-    // Abrir modal con la vista detallada del empleado
     async abrirModalEmpleado(empleadoId) {
         try {
-            console.log(`📋 Abriendo vista de empleado ${empleadoId}`);
-            
-            const { data: empleado, error: errorEmpleado } = await supabaseClient
-                .from('empleados')
-                .select('*')
-                .eq('id', empleadoId)
-                .single();
-            
+            const { data: empleado, error: errorEmpleado } = await supabaseClient.from('empleados').select('*').eq('id', empleadoId).single();
             if (errorEmpleado) throw errorEmpleado;
-            
             const { data: tareas, error: errorTareas } = await supabaseClient
                 .from('tareas')
-                .select(`
-                    *,
-                    pedidos (
-                        id,
-                        cliente_id,
-                        fecha_solicitud,
-                        fecha_entrega_prometida,
-                        observaciones,
-                        clientes (nombre)
-                    )
-                `)
+                .select(`*, pedidos (id, cliente_id, fecha_solicitud, fecha_entrega_prometida, observaciones, clientes (nombre))`)
                 .eq('empleado_id', empleadoId)
                 .order('fecha_asignacion', { ascending: false });
-            
             if (errorTareas) throw errorTareas;
-            
             this.renderModalEmpleado(empleado, tareas || []);
-            
-            const modal = new bootstrap.Modal(document.getElementById('modalEmpleadoDetalle'));
-            modal.show();
-            
+            new bootstrap.Modal(document.getElementById('modalEmpleadoDetalle')).show();
         } catch (error) {
             console.error('❌ Error cargando empleado:', error);
             ToastSystem.error('Error', 'No se pudo cargar la información del empleado');
         }
     },
 
-    // Renderizar contenido del modal
     renderModalEmpleado(empleado, tareas) {
         const color = this.getColorEmpleado(empleado.nombre);
         const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`;
-        
         const completadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
         const enProceso = tareas.filter(t => t.estado === 'en_progreso').length;
         const pendientes = tareas.filter(t => t.estado === 'pendiente').length;
         const total = tareas.length;
         
-        document.getElementById('modalEmpleadoTitle').innerHTML = `
-            <span class="avatar-lg" style="background:${color};">${iniciales}</span>
-            ${empleado.nombre} ${empleado.apellido || ''}
-            <span class="ms-2 md-badge primary" style="font-size:12px;">${total} tareas</span>
-        `;
+        const titleEl = document.getElementById('modalEmpleadoTitle');
+        if (titleEl) {
+            titleEl.innerHTML = `<span class="avatar-lg" style="background:${color};">${iniciales}</span>${empleado.nombre} ${empleado.apellido || ''}<span class="ms-2 md-badge primary" style="font-size:12px;">${total} tareas</span>`;
+            if (titleEl.querySelector('.avatar-lg')) titleEl.querySelector('.avatar-lg').parentElement.dataset.empleadoId = empleado.id;
+        }
         
-        document.getElementById('modalEmpleadoBody').innerHTML = `
-            <div class="profile-summary">
-                <div class="info-item"><span class="label">📋 Cargo:</span> ${empleado.cargo || 'Sin cargo'}</div>
-                ${empleado.email ? `<div class="info-item"><span class="label">📧 Email:</span> ${empleado.email}</div>` : ''}
-                ${empleado.telefono ? `<div class="info-item"><span class="label">📱 Teléfono:</span> ${empleado.telefono}</div>` : ''}
-                <div class="info-item"><span class="label">📊 Total tareas:</span> ${total}</div>
-            </div>
-            
-            <div class="stats-row">
-                <span class="stat completadas">✅ ${completadas} completadas</span>
-                <span class="stat proceso">⏳ ${enProceso} en proceso</span>
-                <span class="stat pendientes">📋 ${pendientes} pendientes</span>
-            </div>
-            
-            ${tareas.length > 0 ? `
-                <div class="table-wrapper">
-                    <table class="tareas-empleado-modal">
-                        <thead>
-                            <tr>
-                                <th style="min-width:80px;">Recepción</th>
-                                <th style="min-width:120px;">Tarea</th>
-                                <th style="min-width:100px;">Entrega</th>
-                                <th style="min-width:150px;">Detalles</th>
-                                <th style="min-width:130px;">Status</th>
-                                <th style="min-width:110px;">Finalización</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${this.renderTareasModal(tareas, empleado)}
-                        </tbody>
-                    </table>
+        const bodyEl = document.getElementById('modalEmpleadoBody');
+        if (bodyEl) {
+            bodyEl.innerHTML = `
+                <div class="profile-summary">
+                    <div class="info-item"><span class="label">📋 Cargo:</span> ${empleado.cargo || 'Sin cargo'}</div>
+                    ${empleado.email ? `<div class="info-item"><span class="label">📧 Email:</span> ${empleado.email}</div>` : ''}
+                    ${empleado.telefono ? `<div class="info-item"><span class="label">📱 Teléfono:</span> ${empleado.telefono}</div>` : ''}
+                    <div class="info-item"><span class="label">📊 Total tareas:</span> ${total}</div>
                 </div>
-            ` : `
-                <div class="empty-tareas">
-                    <i class="fas fa-inbox"></i>
-                    No hay tareas asignadas a este empleado
+                <div class="stats-row">
+                    <span class="stat completadas">✅ ${completadas} completadas</span>
+                    <span class="stat proceso">⏳ ${enProceso} en proceso</span>
+                    <span class="stat pendientes">📋 ${pendientes} pendientes</span>
                 </div>
-            `}
-        `;
+                ${tareas.length > 0 ? `
+                    <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
+                        <table class="tareas-empleado-modal">
+                            <thead>
+                                <tr><th style="min-width:80px;">Recepción</th><th style="min-width:120px;">Tarea</th><th style="min-width:100px;">Entrega</th><th style="min-width:150px;">Detalles</th><th style="min-width:130px;">Status</th><th style="min-width:110px;">Finalización</th></tr>
+                            </thead>
+                            <tbody>${this.renderTareasModal(tareas, empleado)}</tbody>
+                        </table>
+                    </div>
+                ` : `<div class="md-empty"><i class="fas fa-inbox empty-icon"></i><div class="empty-title">Sin tareas</div></div>`}
+            `;
+        }
     },
 
-    // Renderizar tareas en el modal
     renderTareasModal(tareas, empleado) {
         if (!tareas || tareas.length === 0) return '';
-        
-        const statusMap = {
-            'pendiente': 'Pendiente',
-            'en_progreso': 'En Proceso',
-            'notificado': 'Notificado',
-            'completado': 'Listo'
-        };
-        
+        const statusMap = { 'pendiente': 'Pendiente', 'en_progreso': 'En Proceso', 'notificado': 'Notificado', 'completado': 'Listo' };
         const statusOptions = ['pendiente', 'notificado', 'en_progreso', 'completado'];
-        
         return tareas.map(tarea => {
             const pedido = tarea.pedidos || {};
             const cliente = pedido.clientes || {};
             const fechaRecepcion = pedido.fecha_solicitud ? new Date(pedido.fecha_solicitud).toLocaleDateString('es-ES') : '-';
             const fechaEntrega = pedido.fecha_entrega_prometida ? new Date(pedido.fecha_entrega_prometida).toLocaleDateString('es-ES') : '-';
             const fechaFin = tarea.fecha_fin ? new Date(tarea.fecha_fin).toLocaleDateString('es-ES') : '-';
-            
             const tareaNombre = tarea.tipo_tarea || 'Sin tarea';
             const detalles = pedido.observaciones || tarea.observaciones || cliente.nombre || 'Sin detalles';
-            
             return `
                 <tr data-tarea-id="${tarea.id}">
                     <td>${fechaRecepcion}</td>
@@ -808,142 +647,66 @@ const App = {
                     <td>${fechaEntrega}</td>
                     <td style="max-width:150px; word-wrap:break-word;">${detalles}</td>
                     <td>
-                        <select class="status-select status-${tarea.estado}" 
-                                onchange="App.actualizarStatusTarea(${tarea.id}, this.value, ${empleado.id})">
-                            ${statusOptions.map(opt => `
-                                <option value="${opt}" ${tarea.estado === opt ? 'selected' : ''}>
-                                    ${statusMap[opt]}
-                                </option>
-                            `).join('')}
+                        <select class="status-select status-${tarea.estado}" onchange="App.actualizarStatusTarea(${tarea.id}, this.value, ${empleado.id})">
+                            ${statusOptions.map(opt => `<option value="${opt}" ${tarea.estado === opt ? 'selected' : ''}>${statusMap[opt]}</option>`).join('')}
                         </select>
                     </td>
-                    <td>
-                        <span class="status-badge-sm ${tarea.estado}">
-                            ${tarea.estado === 'completado' ? fechaFin : 'En curso'}
-                        </span>
-                    </td>
+                    <td><span class="status-badge-sm ${tarea.estado}">${tarea.estado === 'completado' ? fechaFin : 'En curso'}</span></td>
                 </tr>
             `;
         }).join('');
     },
 
-    // Actualizar status de una tarea (desde el modal)
     async actualizarStatusTarea(tareaId, nuevoStatus, empleadoId) {
         try {
-            console.log(`🔄 Actualizando tarea ${tareaId} a ${nuevoStatus}`);
-            
-            const updateData = {
-                estado: nuevoStatus,
-                updated_at: new Date().toISOString()
-            };
-            
-            if (nuevoStatus === 'completado') {
-                updateData.fecha_fin = new Date().toISOString();
-                updateData.completada = true;
-            }
-            
-            const { error } = await supabaseClient
-                .from('tareas')
-                .update(updateData)
-                .eq('id', tareaId);
-            
+            const updateData = { estado: nuevoStatus, updated_at: new Date().toISOString() };
+            if (nuevoStatus === 'completado') { updateData.fecha_fin = new Date().toISOString(); updateData.completada = true; }
+            const { error } = await supabaseClient.from('tareas').update(updateData).eq('id', tareaId);
             if (error) throw error;
-            
-            // Actualizar eficiencia
             await this.calcularEficienciaEmpleado(empleadoId);
-            
             ToastSystem.success('✅ Actualizado', `Tarea cambiada a ${nuevoStatus}`);
-            
-            // Recargar datos
-            await this.cargarEmpleadosYTareas();
-            await this.cargarEficiencia();
-            await this.cargarPedidosUrgentes();
-            
-            // Reabrir modal del empleado
+            await Promise.all([this.cargarEmpleadosYTareas(), this.cargarEficiencia(), this.cargarPedidosUrgentes()]);
             await this.abrirModalEmpleado(empleadoId);
-            
         } catch (error) {
             console.error('❌ Error actualizando tarea:', error);
             ToastSystem.error('Error', 'No se pudo actualizar la tarea');
         }
     },
 
-    // Calcular eficiencia de un empleado específico
     async calcularEficienciaEmpleado(empleadoId) {
         try {
-            const { data: tareas, error } = await supabaseClient
-                .from('tareas')
-                .select('*')
-                .eq('empleado_id', empleadoId);
-            
+            const { data: tareas, error } = await supabaseClient.from('tareas').select('*').eq('empleado_id', empleadoId);
             if (error) throw error;
-            
             const total = tareas.length;
             const completadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
             const pendientes = tareas.filter(t => t.estado === 'pendiente').length;
-            const enProgreso = tareas.filter(t => t.estado === 'en_progreso').length;
-            
             const tasaExito = total > 0 ? Math.round((completadas / total) * 100) : 0;
-            
-            await supabaseClient
-                .from('eficiencia_empleados')
-                .upsert({
-                    empleado_id: empleadoId,
-                    fecha: new Date().toISOString().split('T')[0],
-                    tareas_completadas: completadas,
-                    tareas_pendientes: pendientes,
-                    tareas_retrasadas: 0,
-                    tasa_exito: tasaExito
-                }, { onConflict: 'empleado_id, fecha' });
-            
-        } catch (error) {
-            console.error('Error calculando eficiencia:', error);
-        }
+            await supabaseClient.from('eficiencia_empleados').upsert({
+                empleado_id: empleadoId, fecha: new Date().toISOString().split('T')[0],
+                tareas_completadas: completadas, tareas_pendientes: pendientes, tareas_retrasadas: 0, tasa_exito: tasaExito
+            }, { onConflict: 'empleado_id, fecha' });
+        } catch (error) { console.error('Error calculando eficiencia:', error); }
     },
 
-    // ==========================================
-    // SUPABASE REALTIME
-    // ==========================================
     suscribirRealtime() {
         try {
-            if (STATE.realtimeChannel) {
-                supabaseClient.removeChannel(STATE.realtimeChannel);
-            }
-            STATE.realtimeChannel = supabaseClient
-                .channel('dashboard-updates')
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'pedidos' },
-                    (payload) => {
-                        console.log('🔄 Cambio detectado en pedidos:', payload);
-                        ToastSystem.info('🔄 Actualizando', 'Cambio detectado en pedidos');
-                        this.refrescarDatosSilencioso();
-                    }
-                )
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'tareas' },
-                    (payload) => {
-                        console.log('🔄 Cambio detectado en tareas:', payload);
-                        this.refrescarDatosSilencioso();
-                    }
-                )
+            if (STATE.realtimeChannel) supabaseClient.removeChannel(STATE.realtimeChannel);
+            STATE.realtimeChannel = supabaseClient.channel('dashboard-updates')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
+                    console.log('🔄 Cambio detectado en pedidos');
+                    this.refrescarDatosSilencioso();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tareas' }, () => {
+                    console.log('🔄 Cambio detectado en tareas');
+                    this.refrescarDatosSilencioso();
+                })
                 .subscribe((status, err) => {
-                    if (status === 'SUBSCRIBED') {
-                        console.log('✅ Suscrito a cambios en tiempo real');
-                        ToastSystem.success('✅ Tiempo real activo', 'Recibiendo actualizaciones automáticas');
-                    } else if (err) {
-                        console.error('❌ Error en suscripción:', err);
-                    }
+                    if (status === 'SUBSCRIBED') console.log('✅ Suscrito a cambios en tiempo real');
+                    else if (err) console.error('❌ Error en suscripción:', err);
                 });
-        } catch (error) {
-            console.error('❌ Error suscribiendo a Realtime:', error);
-        }
+        } catch (error) { console.error('❌ Error suscribiendo a Realtime:', error); }
     },
 
-    // ==========================================
-    // EFICIENCIA DE EMPLEADOS (Vista general)
-    // ==========================================
     async cargarEficiencia() {
         try {
             const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('id, nombre, apellido, cargo').eq('activo', true);
@@ -969,27 +732,36 @@ const App = {
                 else if (tasaExito >= 50) { eficienciaClass = 'warning'; eficienciaLabel = 'Regular ⚠️'; progressClass = 'warning'; }
                 else if (tasaExito > 0) { eficienciaClass = 'danger'; eficienciaLabel = 'Necesita Mejorar 🔴'; progressClass = 'danger'; }
                 else { eficienciaClass = 'default'; eficienciaLabel = 'Sin Datos 📊'; progressClass = 'default'; }
-                html += `<tr><td><strong>${empleado.nombre} ${empleado.apellido || ''}</strong></td><td>${empleado.cargo || 'Sin cargo'}</td><td><span class="md-badge success">${tareasCompletadas}</span></td><td><span class="md-badge warning">${tareasPendientes}</span></td><td>0</td><td><div style="display:flex; align-items:center; gap:12px;"><div class="md-progress" style="width:100px;"><div class="progress-fill ${progressClass}" style="width:${tasaExito}%;"></div></div><span style="font-weight:600; font-size:14px; min-width:40px;">${tasaExito}%</span></div></td><td>-</td><td>-</td><td><span class="md-badge ${eficienciaClass}">${eficienciaLabel}</span></td></tr>`;
+                
+                html += `<tr>
+                    <td><strong>${empleado.nombre} ${empleado.apellido || ''}</strong></td>
+                    <td>${empleado.cargo || 'Sin cargo'}</td>
+                    <td><span class="md-badge success">${tareasCompletadas}</span></td>
+                    <td><span class="md-badge warning">${tareasPendientes}</span></td>
+                    <td>0</td>
+                    <td><div style="display:flex; align-items:center; gap:12px;"><div class="md-progress" style="width:100px;"><div class="progress-fill ${progressClass}" style="width:${tasaExito}%;"></div></div><span style="font-weight:600; font-size:14px; min-width:40px;">${tasaExito}%</span></div></td>
+                    <td>-</td><td>-</td>
+                    <td><span class="md-badge ${eficienciaClass}">${eficienciaLabel}</span></td>
+                </tr>`;
                 if (tareasCompletadas > 0) {
-                    totalExito += tasaExito;
-                    totalEmpleados++;
+                    totalExito += tasaExito; totalEmpleados++;
                     if (tasaExito > mejorTasa) { mejorTasa = tasaExito; mejorEmpleado = `${empleado.nombre} ${empleado.apellido || ''}`; }
                 }
             }
             tbody.innerHTML = html;
             const tasaGeneral = totalEmpleados > 0 ? Math.round(totalExito / totalEmpleados) : 0;
-            document.getElementById('tasa-exito-general').textContent = `${tasaGeneral}%`;
-            document.getElementById('tasa-exito-general-badge').textContent = `${tasaGeneral}% General`;
-            document.getElementById('empleado-mas-eficiente').textContent = mejorEmpleado || 'Sin datos';
+            const el1 = document.getElementById('tasa-exito-general');
+            const el2 = document.getElementById('tasa-exito-general-badge');
+            const el3 = document.getElementById('empleado-mas-eficiente');
+            if (el1) el1.textContent = `${tasaGeneral}%`;
+            if (el2) el2.textContent = `${tasaGeneral}% General`;
+            if (el3) el3.textContent = mejorEmpleado || 'Sin datos';
         } catch (error) {
             console.error('❌ Error cargando eficiencia:', error);
             ToastSystem.error('Error', 'No se pudo cargar la eficiencia de empleados');
         }
     },
 
-    // ==========================================
-    // CALCULAR EFICIENCIA TODOS
-    // ==========================================
     async calcularEficienciaTodos() {
         try {
             ToastSystem.warning('⏳ Calculando', 'Procesando eficiencia de todos los empleados...');
@@ -1004,12 +776,8 @@ const App = {
                 const pendientes = tareas.filter(t => t.estado !== 'completado' && t.completada !== true).length;
                 const tasaExito = total > 0 ? Math.round((completadas / total) * 100) : 0;
                 await supabaseClient.from('eficiencia_empleados').upsert({
-                    empleado_id: emp.id,
-                    fecha: new Date().toISOString().split('T')[0],
-                    tareas_completadas: completadas,
-                    tareas_pendientes: pendientes,
-                    tareas_retrasadas: 0,
-                    tasa_exito: tasaExito
+                    empleado_id: emp.id, fecha: new Date().toISOString().split('T')[0],
+                    tareas_completadas: completadas, tareas_pendientes: pendientes, tareas_retrasadas: 0, tasa_exito: tasaExito
                 }, { onConflict: 'empleado_id, fecha' });
                 actualizados++;
             }
@@ -1021,49 +789,13 @@ const App = {
         }
     },
 
-    // ==========================================
-    // REFRESCAR DATOS
-    // ==========================================
-    async refrescarDatos() {
-        const icon = document.getElementById('btn-refresh-icon');
-        if (icon) icon.classList.add('fa-spin');
-        ToastSystem.info('🔄 Actualizando', 'Refrescando datos del dashboard...');
-        try {
-            await this.cargarDatos();
-            ToastSystem.success('✅ Actualizado', 'Datos del dashboard actualizados correctamente');
-        } catch (error) {
-            console.error('❌ Error al refrescar:', error);
-            ToastSystem.error('❌ Error', 'No se pudieron actualizar los datos');
-            ErrorHandler.show(error.message);
-        } finally {
-            if (icon) icon.classList.remove('fa-spin');
-        }
-    },
-
-    // ==========================================
-    // REFRESCAR DATOS SILENCIOSO
-    // ==========================================
-    async refrescarDatosSilencioso() {
-        try {
-            await this.cargarDatos();
-            console.log('🔄 Datos actualizados automáticamente');
-        } catch (error) {
-            console.error('❌ Error en actualización automática:', error);
-        }
-    },
-
-    // ==========================================
-    // REINTENTAR
-    // ==========================================
     reintentar() {
         ErrorHandler.clear();
         LoadingSystem.show('⏳ Reintentando conexión...');
         this.cargarTodosLosDatos();
     },
 
-    // ==========================================
-    // CRUD - CLIENTES
-    // ==========================================
+    // CRUD CLIENTES
     async cargarClientes() {
         try {
             const { data, error } = await supabaseClient.from('clientes').select('*').order('nombre');
@@ -1071,43 +803,26 @@ const App = {
             STATE.clientes = data || [];
             const select = document.getElementById('pedido_cliente');
             if (select) {
-                select.innerHTML = '<option value="">Seleccionar cliente...</option>';
-                STATE.clientes.forEach(cliente => { select.innerHTML += `<option value="${cliente.id}">${cliente.nombre}</option>`; });
+                select.innerHTML = '<option value="">Seleccionar cliente...</option>' + STATE.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
             }
             const tbody = document.getElementById('tbody-clientes');
-            if (!tbody) return;
-            if (!STATE.clientes.length) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:30px; color: var(--md-text-secondary);">No hay clientes registrados</td></tr>`;
-                return;
+            if (tbody) {
+                tbody.innerHTML = STATE.clientes.length ? STATE.clientes.map(c => `<tr><td>${c.id}</td><td>${c.nombre}</td><td>${c.telefono || '-'}</td><td>${c.email || '-'}</td><td><button class="md-btn md-btn-text md-btn-sm" onclick="App.eliminarCliente(${c.id})" style="color:#EF4444;"><i class="fas fa-trash"></i></button></td></tr>`).join('') : `<tr><td colspan="5" style="text-align:center; padding:30px; color: var(--md-text-secondary);">No hay clientes registrados</td></tr>`;
             }
-            tbody.innerHTML = STATE.clientes.map(cliente => `<tr><td>${cliente.id}</td><td>${cliente.nombre}</td><td>${cliente.telefono || '-'}</td><td>${cliente.email || '-'}</td><td><button class="md-btn md-btn-text md-btn-sm" onclick="App.eliminarCliente(${cliente.id})" style="color:#EF4444;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-        } catch (error) {
-            console.error('Error clientes:', error);
-            ToastSystem.error('Error', 'No se pudieron cargar los clientes');
-        }
+        } catch (error) { console.error('Error clientes:', error); ToastSystem.error('Error', 'No se pudieron cargar los clientes'); }
     },
-
     async guardarNuevoCliente() {
         const nombre = document.getElementById('cliente_nombre').value.trim();
         if (!nombre) { ToastSystem.error('Error', 'El nombre es obligatorio'); return; }
         try {
-            const { error } = await supabaseClient.from('clientes').insert({
-                nombre: nombre,
-                telefono: document.getElementById('cliente_telefono').value.trim() || null,
-                email: document.getElementById('cliente_email').value.trim() || null,
-                direccion: document.getElementById('cliente_direccion').value.trim() || null
-            });
+            const { error } = await supabaseClient.from('clientes').insert({ nombre, telefono: document.getElementById('cliente_telefono').value.trim() || null, email: document.getElementById('cliente_email').value.trim() || null, direccion: document.getElementById('cliente_direccion').value.trim() || null });
             if (error) throw error;
             ToastSystem.success('✅ Cliente creado', `Cliente "${nombre}" registrado exitosamente`);
             bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente')).hide();
             document.getElementById('formNuevoCliente').reset();
             await this.cargarClientes();
-        } catch (error) {
-            console.error('Error guardar cliente:', error);
-            ToastSystem.error('Error', 'No se pudo guardar el cliente');
-        }
+        } catch (error) { console.error('Error guardar cliente:', error); ToastSystem.error('Error', 'No se pudo guardar el cliente'); }
     },
-
     async eliminarCliente(id) {
         const cliente = STATE.clientes.find(c => c.id === id);
         if (!confirm(`¿Eliminar cliente "${cliente?.nombre}"?`)) return;
@@ -1116,15 +831,10 @@ const App = {
             if (error) throw error;
             ToastSystem.success('✅ Cliente eliminado', 'Cliente eliminado correctamente');
             await this.cargarClientes();
-        } catch (error) {
-            console.error('Error eliminar cliente:', error);
-            ToastSystem.error('Error', 'No se pudo eliminar el cliente');
-        }
+        } catch (error) { console.error('Error eliminar cliente:', error); ToastSystem.error('Error', 'No se pudo eliminar el cliente'); }
     },
 
-    // ==========================================
-    // CRUD - PRODUCTOS
-    // ==========================================
+    // CRUD PRODUCTOS
     async cargarProductos() {
         try {
             const { data, error } = await supabaseClient.from('productos').select('*').order('nombre');
@@ -1132,22 +842,14 @@ const App = {
             STATE.productos = data || [];
             const select = document.getElementById('pedido_producto');
             if (select) {
-                select.innerHTML = '<option value="">Seleccionar producto...</option>';
-                STATE.productos.forEach(producto => { select.innerHTML += `<option value="${producto.id}">${producto.nombre}</option>`; });
+                select.innerHTML = '<option value="">Seleccionar producto...</option>' + STATE.productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
             }
             const tbody = document.getElementById('tbody-productos');
-            if (!tbody) return;
-            if (!STATE.productos.length) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:30px; color: var(--md-text-secondary);">No hay productos registrados</td></tr>`;
-                return;
+            if (tbody) {
+                tbody.innerHTML = STATE.productos.length ? STATE.productos.map(p => `<tr><td>${p.id}</td><td>${p.nombre}</td><td>${p.categoria || '-'}</td><td>${p.material || '-'}</td><td>${p.precio_por_m2 || p.precio_unitario || '0.00'}</td><td><button class="md-btn md-btn-text md-btn-sm" onclick="App.eliminarProducto(${p.id})" style="color:#EF4444;"><i class="fas fa-trash"></i></button></td></tr>`).join('') : `<tr><td colspan="6" style="text-align:center; padding:30px; color: var(--md-text-secondary);">No hay productos registrados</td></tr>`;
             }
-            tbody.innerHTML = STATE.productos.map(producto => `<tr><td>${producto.id}</td><td>${producto.nombre}</td><td>${producto.categoria || '-'}</td><td>${producto.material || '-'}</td><td>${producto.precio_por_m2 || producto.precio_unitario || '0.00'}</td><td><button class="md-btn md-btn-text md-btn-sm" onclick="App.eliminarProducto(${producto.id})" style="color:#EF4444;"><i class="fas fa-trash"></i></button></td></tr>`).join('');
-        } catch (error) {
-            console.error('Error productos:', error);
-            ToastSystem.error('Error', 'No se pudieron cargar los productos');
-        }
+        } catch (error) { console.error('Error productos:', error); ToastSystem.error('Error', 'No se pudieron cargar los productos'); }
     },
-
     async guardarNuevoProducto() {
         const nombre = document.getElementById('producto_nombre').value.trim();
         if (!nombre) { ToastSystem.error('Error', 'El nombre es obligatorio'); return; }
@@ -1155,27 +857,20 @@ const App = {
         const precio = parseFloat(document.getElementById('producto_precio').value) || 0;
         try {
             const dataInsert = {
-                nombre: nombre,
-                categoria: document.getElementById('producto_categoria').value || null,
+                nombre, categoria: document.getElementById('producto_categoria').value || null,
                 material: document.getElementById('producto_material').value.trim() || null,
-                tipo_producto: tipoPrecio === 'm2' ? 'servicio' : 'producto',
-                tipo_precio: tipoPrecio,
-                velocidad_impresion_m2_hora: parseFloat(document.getElementById('producto_velocidad').value) || null,
-                activo: true
+                tipo_producto: tipoPrecio === 'm2' ? 'servicio' : 'producto', tipo_precio: tipoPrecio,
+                velocidad_impresion_m2_hora: parseFloat(document.getElementById('producto_velocidad').value) || null, activo: true
             };
-            if (tipoPrecio === 'm2') { dataInsert.precio_por_m2 = precio; } else { dataInsert.precio_unitario = precio; }
+            if (tipoPrecio === 'm2') dataInsert.precio_por_m2 = precio; else dataInsert.precio_unitario = precio;
             const { error } = await supabaseClient.from('productos').insert(dataInsert);
             if (error) throw error;
             ToastSystem.success('✅ Producto creado', `"${nombre}" registrado exitosamente`);
             bootstrap.Modal.getInstance(document.getElementById('modalNuevoProducto')).hide();
             document.getElementById('formNuevoProducto').reset();
             await this.cargarProductos();
-        } catch (error) {
-            console.error('Error guardar producto:', error);
-            ToastSystem.error('Error', 'No se pudo guardar el producto');
-        }
+        } catch (error) { console.error('Error guardar producto:', error); ToastSystem.error('Error', 'No se pudo guardar el producto'); }
     },
-
     async eliminarProducto(id) {
         if (!confirm('¿Eliminar este producto?')) return;
         try {
@@ -1183,50 +878,35 @@ const App = {
             if (error) throw error;
             ToastSystem.success('✅ Producto eliminado', 'Producto eliminado correctamente');
             await this.cargarProductos();
-        } catch (error) {
-            console.error('Error eliminar producto:', error);
-            ToastSystem.error('Error', 'No se pudo eliminar el producto');
-        }
+        } catch (error) { console.error('Error eliminar producto:', error); ToastSystem.error('Error', 'No se pudo eliminar el producto'); }
     },
 
-    // ==========================================
-    // CRUD - PEDIDOS
-    // ==========================================
+    // CRUD PEDIDOS
     async guardarNuevoPedido() {
         const clienteId = document.getElementById('pedido_cliente').value;
         const productoId = document.getElementById('pedido_producto').value;
         if (!clienteId || !productoId) { ToastSystem.error('Error', 'Cliente y producto son obligatorios'); return; }
         try {
             const { data: pedido, error: errorPedido } = await supabaseClient.from('pedidos').insert({
-                cliente_id: parseInt(clienteId),
-                prioridad: document.getElementById('pedido_prioridad').value || 'normal',
+                cliente_id: parseInt(clienteId), prioridad: document.getElementById('pedido_prioridad').value || 'normal',
                 fecha_entrega_prometida: document.getElementById('pedido_fecha_entrega').value || null,
-                observaciones: document.getElementById('pedido_observaciones').value.trim() || null,
-                estado: 'cotizando'
+                observaciones: document.getElementById('pedido_observaciones').value.trim() || null, estado: 'cotizando'
             }).select();
             if (errorPedido) throw errorPedido;
             const pedidoId = pedido[0].id;
-            const cantidad = parseInt(document.getElementById('pedido_cantidad').value) || 1;
-            const ancho = parseFloat(document.getElementById('pedido_ancho').value) || null;
-            const alto = parseFloat(document.getElementById('pedido_alto').value) || null;
             const { error: errorDetalle } = await supabaseClient.from('detalles_pedido').insert({
-                pedido_id: pedidoId,
-                producto_id: parseInt(productoId),
-                cantidad: cantidad,
-                medida_ancho_cm: ancho,
-                medida_alto_cm: alto
+                pedido_id: pedidoId, producto_id: parseInt(productoId),
+                cantidad: parseInt(document.getElementById('pedido_cantidad').value) || 1,
+                medida_ancho_cm: parseFloat(document.getElementById('pedido_ancho').value) || null,
+                medida_alto_cm: parseFloat(document.getElementById('pedido_alto').value) || null
             });
             if (errorDetalle) throw errorDetalle;
             ToastSystem.success('✅ Pedido creado', `Pedido #${pedidoId} registrado exitosamente`);
             bootstrap.Modal.getInstance(document.getElementById('modalNuevoPedido')).hide();
             document.getElementById('formNuevoPedido').reset();
             await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error guardar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo guardar el pedido');
-        }
+        } catch (error) { console.error('Error guardar pedido:', error); ToastSystem.error('Error', 'No se pudo guardar el pedido'); }
     },
-
     async abrirModalEditarPedido(id) {
         try {
             const { data, error } = await supabaseClient.from('pedidos').select('*').eq('id', id).single();
@@ -1237,12 +917,8 @@ const App = {
             document.getElementById('editar_pedido_prioridad').value = data.prioridad || 'normal';
             document.getElementById('editar_pedido_observaciones').value = data.observaciones || '';
             new bootstrap.Modal(document.getElementById('modalEditarPedido')).show();
-        } catch (error) {
-            console.error('Error cargar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo cargar el pedido');
-        }
+        } catch (error) { console.error('Error cargar pedido:', error); ToastSystem.error('Error', 'No se pudo cargar el pedido'); }
     },
-
     async guardarEditarPedido() {
         const id = parseInt(document.getElementById('editar_pedido_id_hidden').value);
         try {
@@ -1256,12 +932,8 @@ const App = {
             ToastSystem.success('✅ Pedido actualizado', `Pedido #${id} actualizado correctamente`);
             bootstrap.Modal.getInstance(document.getElementById('modalEditarPedido')).hide();
             await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error actualizar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo actualizar el pedido');
-        }
+        } catch (error) { console.error('Error actualizar pedido:', error); ToastSystem.error('Error', 'No se pudo actualizar el pedido'); }
     },
-
     async completarPedido(id) {
         if (!confirm(`¿Marcar pedido #${id} como completado?`)) return;
         try {
@@ -1269,12 +941,8 @@ const App = {
             if (error) throw error;
             ToastSystem.success('✅ Pedido completado', `Pedido #${id} marcado como entregado`);
             await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error completar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo completar el pedido');
-        }
+        } catch (error) { console.error('Error completar pedido:', error); ToastSystem.error('Error', 'No se pudo completar el pedido'); }
     },
-
     async eliminarPedido(id) {
         if (!confirm(`¿Cancelar pedido #${id}?`)) return;
         try {
@@ -1282,59 +950,25 @@ const App = {
             if (error) throw error;
             ToastSystem.success('✅ Pedido cancelado', `Pedido #${id} cancelado`);
             await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error cancelar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo cancelar el pedido');
-        }
+        } catch (error) { console.error('Error cancelar pedido:', error); ToastSystem.error('Error', 'No se pudo cancelar el pedido'); }
     },
+    verPedido(id) { this.verPedidoDetalle(id); },
 
-    verPedido(id) {
-        this.verPedidoDetalle(id);
-    },
-
-    // ==========================================
     // FUNCIONES PARA ABRIR MODALES
-    // ==========================================
-    abrirModalNuevoPedido() {
-        this.cargarClientes();
-        this.cargarProductos();
-        new bootstrap.Modal(document.getElementById('modalNuevoPedido')).show();
-    },
-    abrirModalClientes() {
-        new bootstrap.Modal(document.getElementById('modalClientes')).show();
-        this.cargarClientes();
-    },
-    abrirModalNuevoCliente() {
-        new bootstrap.Modal(document.getElementById('modalNuevoCliente')).show();
-    },
-    abrirModalProductos() {
-        new bootstrap.Modal(document.getElementById('modalProductos')).show();
-        this.cargarProductos();
-    },
-    abrirModalNuevoProducto() {
-        new bootstrap.Modal(document.getElementById('modalNuevoProducto')).show();
-    },
+    abrirModalNuevoPedido() { this.cargarClientes(); this.cargarProductos(); new bootstrap.Modal(document.getElementById('modalNuevoPedido')).show(); },
+    abrirModalClientes() { new bootstrap.Modal(document.getElementById('modalClientes')).show(); this.cargarClientes(); },
+    abrirModalNuevoCliente() { new bootstrap.Modal(document.getElementById('modalNuevoCliente')).show(); },
+    abrirModalProductos() { new bootstrap.Modal(document.getElementById('modalProductos')).show(); this.cargarProductos(); },
+    abrirModalNuevoProducto() { new bootstrap.Modal(document.getElementById('modalNuevoProducto')).show(); },
     mostrarNotificaciones() {
         const urgentes = parseInt(document.getElementById('kpi-urgentes').textContent) || 0;
-        if (urgentes > 0) {
-            ToastSystem.warning('📢 Notificaciones', `Tienes ${urgentes} pedido(s) urgente(s) pendiente(s)`);
-        } else {
-            ToastSystem.success('✅ Sin notificaciones', 'No hay pedidos urgentes pendientes');
-        }
+        if (urgentes > 0) ToastSystem.warning('📢 Notificaciones', `Tienes ${urgentes} pedido(s) urgente(s) pendiente(s)`);
+        else ToastSystem.success('✅ Sin notificaciones', 'No hay pedidos urgentes pendientes');
     },
 
-    // ==========================================
-    // DESTRUCCIÓN
-    // ==========================================
     destroy() {
-        if (STATE.refreshInterval) {
-            clearInterval(STATE.refreshInterval);
-            STATE.refreshInterval = null;
-        }
-        if (STATE.realtimeChannel) {
-            supabaseClient.removeChannel(STATE.realtimeChannel);
-            STATE.realtimeChannel = null;
-        }
+        if (STATE.refreshInterval) { clearInterval(STATE.refreshInterval); STATE.refreshInterval = null; }
+        if (STATE.realtimeChannel) { supabaseClient.removeChannel(STATE.realtimeChannel); STATE.realtimeChannel = null; }
         console.log('🧹 Aplicación destruida correctamente');
     }
 };
@@ -1379,4 +1013,4 @@ window.actualizarStatusTarea = (tareaId, nuevoStatus, empleadoId) => App.actuali
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => { App.init(); });
 window.addEventListener('beforeunload', () => { App.destroy(); });
-console.log('✅ Dashboard INVEMEX v5.2.0 cargado correctamente');
+console.log('✅ Dashboard INVEMEX v6.0.0 cargado correctamente');
