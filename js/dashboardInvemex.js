@@ -1,7 +1,7 @@
 /**
  * ==========================================
  * DASHBOARD INVEMEX - SISTEMA DE GESTIÓN
- * Versión: 6.0.0 - Diseño Optimizado & Funcionalidad Intacta
+ * Versión: 6.0.1 - Corrección de Loader y Estabilidad
  * ==========================================
  */
 
@@ -12,7 +12,7 @@ const CONFIG = {
     TOAST_DURATION: 4000
 };
 
-console.log('🚀 Iniciando Dashboard INVEMEX v6.0.0');
+console.log('🚀 Iniciando Dashboard INVEMEX v6.0.1');
 
 const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 
@@ -96,7 +96,7 @@ const StateMappers = {
 };
 
 // ==========================================
-// ERROR & LOADING HANDLERS
+// ERROR & LOADING HANDLERS (CORREGIDO)
 // ==========================================
 const ErrorHandler = {
     show(message) {
@@ -104,7 +104,7 @@ const ErrorHandler = {
         if (!cont) return;
         cont.innerHTML = `
             <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:20px; max-width:500px; text-align:left; margin-top:20px;">
-                <strong style="color: #991B1B; display:block; margin-bottom:8px;"><i class="fas fa-exclamation-circle"></i> Error</strong>
+                <strong style="color: #991B1B; display:block; margin-bottom:8px;"><i class="fas fa-exclamation-circle"></i> Error de Conexión</strong>
                 <pre style="background:white; padding:12px; border-radius:8px; font-size:13px; max-height:150px; overflow:auto; color:#1A1A1A; border:1px solid #EEEEEE;">${message}</pre>
                 <button class="md-btn md-btn-primary mt-3" onclick="App.reintentar()"><i class="fas fa-redo"></i> Reintentar</button>
             </div>
@@ -122,12 +122,31 @@ const LoadingSystem = {
         if (el) el.textContent = text;
         const overlay = document.getElementById('loading-overlay');
         if (overlay) overlay.style.display = 'flex';
+        
+        // Asegurar que el loader nuevo también sea visible
+        const newLoader = document.getElementById('ivx-loader');
+        if (newLoader) {
+            newLoader.style.display = 'flex';
+            newLoader.style.opacity = '1';
+            newLoader.style.pointerEvents = 'auto';
+        }
     },
     hide() {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) overlay.style.display = 'none';
+        
         const dashboard = document.getElementById('dashboard');
         if (dashboard) dashboard.style.display = 'block';
+        
+        // Ocultar explícitamente el loader nuevo (ivx-loader) para evitar que se quede pegado
+        const newLoader = document.getElementById('ivx-loader');
+        if (newLoader) {
+            newLoader.style.opacity = '0';
+            newLoader.style.pointerEvents = 'none';
+            setTimeout(() => { 
+                newLoader.style.display = 'none'; 
+            }, 500);
+        }
     },
     setText(text) {
         const el = document.getElementById('loading-text');
@@ -152,7 +171,7 @@ const App = {
     calendarState: { currentDate: new Date(), selectedDate: new Date(), isOpen: false },
 
     async init() {
-        console.log('📋 Inicializando aplicación v6.0.0...');
+        console.log('📋 Inicializando aplicación v6.0.1...');
         const today = new Date();
         this.calendarState.selectedDate = new Date(today);
         this.calendarState.currentDate = new Date(today);
@@ -254,6 +273,9 @@ const App = {
         if (element) element.classList.toggle('active');
     },
 
+    // ==========================================
+    // CORRECCIÓN CRÍTICA AQUÍ:
+    // ==========================================
     async cargarTodosLosDatos() {
         try {
             LoadingSystem.show('Cargando datos del dashboard...');
@@ -263,8 +285,13 @@ const App = {
             ToastSystem.success('✅ Listo', 'Dashboard actualizado correctamente');
         } catch (error) {
             console.error('❌ Error en carga inicial:', error);
-            ErrorHandler.show(error.message || 'Error al cargar los datos');
-            LoadingSystem.setText('⚠️ Error al cargar datos');
+            ErrorHandler.show(error.message || 'Error al conectar con la base de datos. Revisa la consola (F12).');
+            LoadingSystem.setText('⚠️ Error al cargar datos.');
+            
+            // FORZAR OCULTACIÓN DEL LOADER PARA QUE EL USUARIO VEA EL ERROR
+            setTimeout(() => {
+                LoadingSystem.hide();
+            }, 1500);
         }
     },
 
@@ -1013,4 +1040,4 @@ window.actualizarStatusTarea = (tareaId, nuevoStatus, empleadoId) => App.actuali
 // ==========================================
 document.addEventListener('DOMContentLoaded', () => { App.init(); });
 window.addEventListener('beforeunload', () => { App.destroy(); });
-console.log('✅ Dashboard INVEMEX v6.0.0 cargado correctamente');
+console.log('✅ Dashboard INVEMEX v6.0.1 cargado correctamente');
