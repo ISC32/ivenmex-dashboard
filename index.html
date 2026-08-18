@@ -5,15 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IVENMEX - Dashboard</title>
     
-    <!-- Favicon con cache buster -->
-    <link rel="icon" type="image/png" href="assets/logos/logo-invemex.png?v=5">
-    <link rel="shortcut icon" type="image/png" href="assets/logos/logo-invemex.png?v=5">
-    <link rel="apple-touch-icon" href="assets/logos/logo-invemex.png?v=5">
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="assets/logos/logo-invemex.png?v=6">
+    <link rel="shortcut icon" type="image/png" href="assets/logos/logo-invemex.png?v=6">
+    <link rel="apple-touch-icon" href="assets/logos/logo-invemex.png?v=6">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Genos:wght@400;600;700;800;900&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Genos:wght@600;700;800&display=swap" rel="stylesheet">
 
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
@@ -22,90 +22,31 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Estilos del dashboard -->
-    <link rel="stylesheet" href="css/dashboardInvemex.css?v=5">
-
-    <!-- Estilos del Loader (Alta prioridad inline) -->
-    <style>
-        #ivx-loader {
-            position: fixed !important;
-            top: 0; left: 0;
-            width: 100vw; height: 100vh;
-            background: linear-gradient(135deg, #F0F2F5 0%, #E8EAFF 100%);
-            display: flex !important;
-            flex-direction: column !important;
-            align-items: center !important;
-            justify-content: center !important;
-            z-index: 999999 !important;
-            backdrop-filter: blur(10px);
-        }
-        #ivx-loader .card {
-            background: #fff;
-            padding: 48px 40px;
-            border-radius: 24px;
-            box-shadow: 0 20px 60px rgba(11,33,139,0.12), 0 4px 12px rgba(0,0,0,0.04);
-            max-width: 420px;
-            width: 90%;
-            text-align: center;
-            border: 1px solid rgba(11,33,139,0.05);
-        }
-        #ivx-loader .logo {
-            height: 64px;
-            margin-bottom: 28px;
-            animation: ivxPulse 2.5s ease-in-out infinite;
-        }
-        #ivx-loader .spinner {
-            width: 48px; height: 48px;
-            border: 4px solid #E8EAFF;
-            border-top: 4px solid #0B218B;
-            border-radius: 50%;
-            animation: ivxSpin 1s linear infinite;
-            margin: 0 auto 24px auto;
-        }
-        #ivx-loader h1 {
-            font-family: 'Genos', sans-serif;
-            font-size: 28px;
-            font-weight: 800;
-            color: #0B218B;
-            margin: 0 0 8px 0;
-            letter-spacing: 0.5px;
-        }
-        #ivx-loader p {
-            font-family: 'Inter', sans-serif;
-            font-size: 14px;
-            color: #6B7280;
-            margin: 0;
-            font-weight: 500;
-        }
-        @keyframes ivxSpin { to { transform: rotate(360deg); } }
-        @keyframes ivxPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.85; transform: scale(1.03); }
-        }
-    </style>
+    <link rel="stylesheet" href="css/dashboardInvemex.css?v=6">
 </head>
 <body>
 
-    <!-- TOAST -->
+    <!-- TOAST CONTAINER -->
     <div class="md-toast-container" id="toast-container"></div>
 
-    <!-- LOADING CENTRADO -->
+    <!-- LOADER PRINCIPAL -->
     <div id="ivx-loader">
-        <div class="card">
-            <img src="assets/logos/logo-invemex.png" alt="IVENMEX" class="logo" onerror="this.style.display='none'">
-            <div class="spinner"></div>
-            <h1>IVENMEX</h1>
-            <p>Conectando servicios, espere...</p>
-            <div id="error-container" style="margin-top: 20px;"></div>
+        <div class="loader-card">
+            <img src="assets/logos/logo-invemex.png" alt="IVENMEX" class="loader-logo" onerror="this.style.display='none'">
+            <div class="loader-spinner"></div>
+            <h1 class="loader-title">IVENMEX</h1>
+            <p class="loader-subtitle">Conectando servicios, espere...</p>
+            <div id="error-container"></div>
         </div>
     </div>
 
-    <!-- LOADING LEGACY (se oculta inmediatamente) -->
+    <!-- LOADING LEGACY (Mantenido para compatibilidad con el hook del JS) -->
     <div id="loading-overlay" style="display:none!important;">
         <div class="md-loading-spinner"></div>
         <div class="md-loading-text" id="loading-text">IVENMEX</div>
     </div>
 
-    <!-- DASHBOARD -->
+    <!-- DASHBOARD PRINCIPAL -->
     <div id="dashboard" style="display: none;">
 
         <!-- TOOLBAR -->
@@ -123,9 +64,9 @@
                     </span>
                     <div class="md-calendar-dropdown" id="calendar-dropdown">
                         <div class="md-calendar-header">
-                            <button class="nav-btn" onclick="event.stopPropagation(); App.calendarNavigate(-1);"><i class="fas fa-chevron-left"></i></button>
+                            <button class="nav-btn" onclick="event.stopPropagation(); App.calendarNavigate(-1);" aria-label="Mes anterior"><i class="fas fa-chevron-left"></i></button>
                             <span class="month-year" id="calendar-month-year">Enero 2024</span>
-                            <button class="nav-btn" onclick="event.stopPropagation(); App.calendarNavigate(1);"><i class="fas fa-chevron-right"></i></button>
+                            <button class="nav-btn" onclick="event.stopPropagation(); App.calendarNavigate(1);" aria-label="Mes siguiente"><i class="fas fa-chevron-right"></i></button>
                         </div>
                         <div class="md-calendar-grid" id="calendar-grid">
                             <div class="weekday">L</div><div class="weekday">M</div><div class="weekday">X</div>
@@ -137,9 +78,9 @@
                         </div>
                     </div>
                 </div>
-                <span class="md-chip" style="cursor: pointer;" onclick="App.mostrarNotificaciones()">
+                <span class="md-chip" style="cursor: pointer; position: relative;" onclick="App.mostrarNotificaciones()">
                     <i class="fas fa-bell"></i>
-                    <span class="chip-dot" id="notificaciones-badge" style="background: #EF4444; color: white; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px;">0</span>
+                    <span class="chip-dot" id="notificaciones-badge" style="position: absolute; top: -4px; right: -4px; background: #EF4444; color: white; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; font-size: 10px; border-radius: 50%; border: 2px solid white;">0</span>
                 </span>
                 <div class="md-avatar" onclick="App.mostrarNotificaciones()">L</div>
             </div>
@@ -152,19 +93,16 @@
         <div class="empleados-section">
             <div class="section-header">
                 <div class="section-title">
-                    <i class="fas fa-users"></i> Equipo de Trabajo
+                    <i class="fas fa-users" style="color: var(--md-primary);"></i> Equipo de Trabajo
                     <span class="total-badge" id="empleados-total-badge">0</span>
                 </div>
-                <div>
-                    <button class="md-btn md-btn-text md-btn-sm" onclick="App.cargarEmpleadosYTareas();" title="Actualizar empleados">
-                        <i class="fas fa-sync"></i>
-                    </button>
-                </div>
+                <button class="md-btn md-btn-text md-btn-sm" onclick="App.cargarEmpleadosYTareas();" title="Actualizar empleados">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
             </div>
             <div class="empleados-avatar-grid" id="empleadosAvatarGrid">
-                <div style="text-align:center; padding:12px; width:100%; color: var(--md-text-secondary); font-size:13px;">
-                    <i class="fas fa-spinner fa-spin" style="display:inline-block; margin-right:8px;"></i>
-                    Cargando empleados...
+                <div style="text-align:center; padding:20px; width:100%; color: var(--md-text-secondary); font-size:14px;">
+                    <i class="fas fa-spinner fa-spin" style="display:inline-block; margin-right:8px;"></i> Cargando empleados...
                 </div>
             </div>
         </div>
@@ -206,7 +144,7 @@
                     <span class="header-badge">Actualizado</span>
                 </div>
                 <div class="header-actions">
-                    <button class="md-btn md-btn-text md-btn-sm" onclick="event.stopPropagation(); App.refrescarDatos();"><i class="fas fa-sync"></i> Refrescar</button>
+                    <button class="md-btn md-btn-text md-btn-sm" onclick="event.stopPropagation(); App.refrescarDatos();"><i class="fas fa-sync-alt"></i> Refrescar</button>
                     <span class="accordion-chevron"><i class="fas fa-chevron-down"></i></span>
                 </div>
             </div>
@@ -214,20 +152,20 @@
                 <div class="body-content">
                     <div class="row g-4">
                         <div class="col-md-6">
-                            <div class="md-card" style="box-shadow: var(--md-elevation-1);">
-                                <div class="chart-title" style="font-weight:700; font-size:16px; margin-bottom:16px;">
-                                    <i class="fas fa-chart-pie" style="color: var(--md-secondary);"></i> Estado de Pedidos
+                            <div class="md-card" style="box-shadow: none; border: 1px solid var(--md-gray-dark);">
+                                <div class="chart-title" style="font-weight:700; font-size:16px; margin-bottom:20px; color: var(--md-text);">
+                                    <i class="fas fa-chart-pie" style="color: var(--md-primary); margin-right: 8px;"></i> Estado de Pedidos
                                 </div>
-                                <div class="doughnut-container" style="display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:20px;">
-                                    <div class="doughnut-chart" id="doughnut-chart" data-total="0" style="width:170px; height:170px; border-radius:50%; position:relative; flex-shrink:0;"></div>
-                                    <div id="doughnut-legend"></div>
+                                <div class="doughnut-container" style="display:flex; align-items:center; justify-content:space-around; flex-wrap:wrap; gap:24px;">
+                                    <div class="doughnut-chart" id="doughnut-chart" data-total="0" style="width:180px; height:180px; border-radius:50%; position:relative; flex-shrink:0; box-shadow: inset 0 0 20px rgba(0,0,0,0.05);"></div>
+                                    <div id="doughnut-legend" style="display:flex; flex-direction:column; gap:8px;"></div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="md-card" style="box-shadow: var(--md-elevation-1);">
-                                <div class="chart-title" style="font-weight:700; font-size:16px; margin-bottom:16px;">
-                                    <i class="fas fa-users" style="color: var(--md-secondary);"></i> Carga de Trabajo por Área
+                            <div class="md-card" style="box-shadow: none; border: 1px solid var(--md-gray-dark);">
+                                <div class="chart-title" style="font-weight:700; font-size:16px; margin-bottom:20px; color: var(--md-text);">
+                                    <i class="fas fa-users" style="color: var(--md-primary); margin-right: 8px;"></i> Carga de Trabajo por Área
                                 </div>
                                 <div id="bar-chart"></div>
                             </div>
@@ -263,16 +201,16 @@
                             <tbody id="tbody-eficiencia">
                                 <tr>
                                     <td colspan="9" style="text-align:center; padding:40px; color: var(--md-text-secondary);">
-                                        <i class="fas fa-spinner fa-spin" style="font-size:24px; display:block; margin-bottom:8px;"></i>
+                                        <i class="fas fa-spinner fa-spin" style="font-size:24px; display:block; margin-bottom:12px;"></i>
                                         Cargando datos de eficiencia...
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 4px; flex-wrap:wrap; gap:8px; border-top:1px solid var(--md-gray-dark); margin-top:12px; font-size:14px; color: var(--md-text-secondary);">
-                        <span><i class="fas fa-flag-checkered" style="color: var(--md-primary);"></i> Tasa de éxito general: <strong id="tasa-exito-general" style="color: var(--md-primary);">0%</strong></span>
-                        <span><i class="fas fa-trophy" style="color: #F59E0B;"></i> Empleado más eficiente: <strong id="empleado-mas-eficiente" style="color: var(--md-text);">-</strong></span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 4px; flex-wrap:wrap; gap:12px; border-top:1px solid var(--md-gray-dark); margin-top:16px; font-size:14px; color: var(--md-text-secondary);">
+                        <span><i class="fas fa-flag-checkered" style="color: var(--md-primary); margin-right: 6px;"></i> Tasa de éxito general: <strong id="tasa-exito-general" style="color: var(--md-primary);">0%</strong></span>
+                        <span><i class="fas fa-trophy" style="color: #F59E0B; margin-right: 6px;"></i> Empleado más eficiente: <strong id="empleado-mas-eficiente" style="color: var(--md-text);">-</strong></span>
                     </div>
                 </div>
             </div>
@@ -324,16 +262,16 @@
                             </tbody>
                         </table>
                     </div>
-                    <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 4px; flex-wrap:wrap; gap:8px; border-top:1px solid var(--md-gray-dark); margin-top:12px; font-size:14px; color: var(--md-text-secondary);">
-                        <span><i class="fas fa-list"></i> Mostrando <strong id="total-registros" style="color: var(--md-primary);">0</strong> pedidos urgentes</span>
-                        <span><i class="fas fa-sync-alt"></i> Actualización automática cada 30s</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 4px; flex-wrap:wrap; gap:12px; border-top:1px solid var(--md-gray-dark); margin-top:16px; font-size:14px; color: var(--md-text-secondary);">
+                        <span><i class="fas fa-list" style="margin-right: 6px;"></i> Mostrando <strong id="total-registros" style="color: var(--md-primary);">0</strong> pedidos urgentes</span>
+                        <span><i class="fas fa-sync-alt" style="margin-right: 6px;"></i> Actualización automática cada 30s</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- BOTONES RÁPIDOS -->
-        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:16px;">
+        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:24px; margin-bottom: 40px;">
             <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoPedido();">
                 <i class="fas fa-plus"></i> Nuevo Pedido
             </button>
@@ -349,28 +287,24 @@
         </div>
     </div>
 
-    <!-- MODALES -->
+    <!-- MODALES (Estructura optimizada para responsividad) -->
     <div class="modal fade md-modal" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-clipboard-list me-2" style="color: var(--md-primary);"></i> Nuevo Pedido</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formNuevoPedido">
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="md-form-label">Cliente <span style="color:#EF4444;">*</span></label>
-                                <select class="md-form-control md-form-select" id="pedido_cliente" required>
-                                    <option value="">Seleccionar cliente...</option>
-                                </select>
+                                <select class="md-form-control md-form-select" id="pedido_cliente" required></select>
                             </div>
                             <div class="col-md-6">
                                 <label class="md-form-label">Producto <span style="color:#EF4444;">*</span></label>
-                                <select class="md-form-control md-form-select" id="pedido_producto" required>
-                                    <option value="">Seleccionar producto...</option>
-                                </select>
+                                <select class="md-form-control md-form-select" id="pedido_producto" required></select>
                             </div>
                             <div class="col-md-4">
                                 <label class="md-form-label">Cantidad</label>
@@ -405,59 +339,41 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="md-btn md-btn-primary" onclick="App.guardarNuevoPedido();">
-                        <i class="fas fa-save"></i> Guardar Pedido
-                    </button>
+                    <button type="button" class="md-btn md-btn-primary" onclick="App.guardarNuevoPedido();"><i class="fas fa-save"></i> Guardar Pedido</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade md-modal" id="modalClientes" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-users me-2" style="color: var(--md-primary);"></i> Gestión de Clientes</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <button class="md-btn md-btn-secondary" onclick="App.abrirModalNuevoCliente();">
-                            <i class="fas fa-user-plus"></i> Nuevo Cliente
-                        </button>
+                        <button class="md-btn md-btn-secondary" onclick="App.abrirModalNuevoCliente();"><i class="fas fa-user-plus"></i> Nuevo Cliente</button>
                     </div>
                     <div class="md-table-wrapper">
                         <table class="md-table" id="tabla-clientes">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Teléfono</th>
-                                    <th>Email</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-clientes">
-                                <tr>
-                                    <td colspan="5" style="text-align:center; padding:30px; color: var(--md-text-secondary);">Cargando clientes...</td>
-                                </tr>
-                            </tbody>
+                            <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
+                            <tbody id="tbody-clientes"><tr><td colspan="5" style="text-align:center; padding:30px; color: var(--md-text-secondary);">Cargando clientes...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button>
-                </div>
+                <div class="modal-footer"><button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button></div>
             </div>
         </div>
     </div>
 
     <div class="modal fade md-modal" id="modalNuevoCliente" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-user-plus me-2" style="color: var(--md-primary);"></i> Nuevo Cliente</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formNuevoCliente">
@@ -481,60 +397,41 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="md-btn md-btn-secondary" onclick="App.guardarNuevoCliente();">
-                        <i class="fas fa-save"></i> Guardar Cliente
-                    </button>
+                    <button type="button" class="md-btn md-btn-secondary" onclick="App.guardarNuevoCliente();"><i class="fas fa-save"></i> Guardar Cliente</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade md-modal" id="modalProductos" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-box me-2" style="color: var(--md-primary);"></i> Gestión de Productos</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <div class="mb-3">
-                        <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoProducto();">
-                            <i class="fas fa-plus"></i> Nuevo Producto
-                        </button>
+                        <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoProducto();"><i class="fas fa-plus"></i> Nuevo Producto</button>
                     </div>
                     <div class="md-table-wrapper">
                         <table class="md-table" id="tabla-productos">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Nombre</th>
-                                    <th>Categoría</th>
-                                    <th>Material</th>
-                                    <th>Precio</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tbody-productos">
-                                <tr>
-                                    <td colspan="6" style="text-align:center; padding:30px; color: var(--md-text-secondary);">Cargando productos...</td>
-                                </tr>
-                            </tbody>
+                            <thead><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Material</th><th>Precio</th><th>Acciones</th></tr></thead>
+                            <tbody id="tbody-productos"><tr><td colspan="6" style="text-align:center; padding:30px; color: var(--md-text-secondary);">Cargando productos...</td></tr></tbody>
                         </table>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button>
-                </div>
+                <div class="modal-footer"><button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button></div>
             </div>
         </div>
     </div>
 
     <div class="modal fade md-modal" id="modalNuevoProducto" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-plus me-2" style="color: var(--md-primary);"></i> Nuevo Producto</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formNuevoProducto">
@@ -578,20 +475,18 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="md-btn md-btn-primary" onclick="App.guardarNuevoProducto();">
-                        <i class="fas fa-save"></i> Guardar Producto
-                    </button>
+                    <button type="button" class="md-btn md-btn-primary" onclick="App.guardarNuevoProducto();"><i class="fas fa-save"></i> Guardar Producto</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade md-modal" id="modalEditarPedido" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title"><i class="fas fa-edit me-2" style="color: var(--md-primary);"></i> Editar Pedido #<span id="editar_pedido_id"></span></h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body">
                     <form id="formEditarPedido">
@@ -626,26 +521,24 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="md-btn md-btn-primary" onclick="App.guardarEditarPedido();">
-                        <i class="fas fa-save"></i> Actualizar
-                    </button>
+                    <button type="button" class="md-btn md-btn-primary" onclick="App.guardarEditarPedido();"><i class="fas fa-save"></i> Actualizar</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div class="modal fade md-modal" id="modalDetallePedido" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <div class="modal-header" style="border-bottom: 2px solid var(--md-primary);">
+                <div class="modal-header" style="border-bottom: 2px solid var(--md-primary-light);">
                     <h5 class="modal-title">
                         <i class="fas fa-file-alt me-2" style="color: var(--md-primary);"></i>
                         Detalle del Pedido <span id="detalle-pedido-id" style="color: var(--md-primary); font-weight: 800;"></span>
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body" id="modal-detalle-body">
-                    <div style="text-align:center; padding:30px;">
+                    <div style="text-align:center; padding:40px;">
                         <i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i>
                         <p style="margin-top:12px; color: var(--md-text-secondary);">Cargando detalles del pedido...</p>
                     </div>
@@ -660,18 +553,18 @@
         </div>
     </div>
 
-    <div class="modal fade empleado-modal" id="modalEmpleadoDetalle" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
+    <div class="modal fade md-modal empleado-modal" id="modalEmpleadoDetalle" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="modalEmpleadoTitle">
                         <span class="avatar-lg" style="background:var(--md-primary);">E</span>
                         Empleado
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
                 <div class="modal-body" id="modalEmpleadoBody">
-                    <div style="text-align:center; padding:30px;">
+                    <div style="text-align:center; padding:40px;">
                         <i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i>
                         <p style="margin-top:12px; color: var(--md-text-secondary);">Cargando información del empleado...</p>
                     </div>
@@ -689,41 +582,37 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dashboardInvemex.js?v=5"></script>
+    <script src="js/dashboardInvemex.js?v=6"></script>
     
-    <!-- Script para manejar el nuevo loader con el JS existente -->
+    <!-- Hook para el loader -->
     <script>
-        // Hook para el loader existente: redirige las llamadas del JS al nuevo loader
         (function() {
             const newLoader = document.getElementById('ivx-loader');
             const originalLoadingText = document.getElementById('loading-text');
             
-            // Interceptar cambios de texto en el loading-text legacy
             if (originalLoadingText) {
-                const observer = new MutationObserver((mutations) => {
-                    mutations.forEach((m) => {
-                        if (m.type === 'characterData' || m.type === 'childList') {
-                            // El nuevo loader no muestra el texto dinámico pero el dashboard sigue funcionando
-                        }
-                    });
-                });
+                const observer = new MutationObserver(() => {});
                 observer.observe(originalLoadingText, { characterData: true, childList: true, subtree: true });
             }
             
-            // Ocultar el loader cuando el dashboard sea visible
             const dashboard = document.getElementById('dashboard');
             const checkDashboard = setInterval(() => {
                 if (dashboard && dashboard.style.display !== 'none') {
-                    if (newLoader) newLoader.style.display = 'none';
+                    if (newLoader) {
+                        newLoader.style.opacity = '0';
+                        setTimeout(() => { newLoader.style.display = 'none'; }, 300);
+                    }
                     clearInterval(checkDashboard);
                 }
             }, 100);
             
-            // Fallback: ocultar después de 20 segundos máximo
             setTimeout(() => {
-                if (newLoader) newLoader.style.display = 'none';
+                if (newLoader) {
+                    newLoader.style.opacity = '0';
+                    setTimeout(() => { newLoader.style.display = 'none'; }, 300);
+                }
                 clearInterval(checkDashboard);
-            }, 20000);
+            }, 15000);
         })();
     </script>
 </body>
