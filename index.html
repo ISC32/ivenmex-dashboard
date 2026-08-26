@@ -83,7 +83,7 @@
                 </div>
                 <span class="md-chip" style="cursor: pointer; position: relative;" onclick="App.mostrarNotificaciones()" role="button" aria-label="Mostrar notificaciones">
                     <i class="fas fa-bell" aria-hidden="true"></i>
-                    <span class="chip-dot" id="notificaciones-badge" style="position: absolute; top: -4px; right: -4px; background: #EF4444; color: white; width: 18px; height: 18px; display: flex; align-items:center; justify-content:center; font-weight:700; border-radius:9999px;">0</span>
+                    <span class="chip-dot" id="notificaciones-badge" style="position: absolute; top: -4px; right: -4px; background: #EF4444; color: white; width: 18px; height: 18px; display: flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px;">0</span>
                 </span>
                 <div class="md-avatar" onclick="App.mostrarNotificaciones()" role="button" aria-label="Perfil usuario">L</div>
             </div>
@@ -138,7 +138,154 @@
             </div>
         </div>
 
-        <!-- (el resto del HTML permanece sin cambios para no romper funcionalidad) -->
+        <!-- SECCIONES ADICIONALES NECESARIAS PARA EL JS -->
+        <section class="urgentes-section mt-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h3>Pedidos Urgentes <span id="urgentes-count-badge" class="md-badge danger">0</span></h3>
+                <div>Última: <span id="ultima-actualizacion-texto">-</span></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>ID</th><th>Cliente</th><th>Observaciones</th><th>Producto/Tarea</th><th>Asignado</th><th>Fecha Solicitud</th><th>Entrega Prometida</th><th>Fecha Fin</th><th>Estado</th><th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-urgentes-body"><tr><td colspan="10" style="text-align:center; padding:20px; color: var(--md-text-secondary);">Cargando pedidos urgentes...</td></tr></tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>Total registros: <span id="total-registros">0</span></div>
+                <div id="notificaciones-area"></div>
+            </div>
+        </section>
+
+        <section class="charts-section mt-4 d-flex gap-4">
+            <div class="card p-3" style="flex:1; min-width:220px;">
+                <h4>Estados</h4>
+                <div id="doughnut-chart" style="width:220px; height:220px; border-radius:50%; margin:12px auto; background: conic-gradient(#EEEEEE 0% 100%);"></div>
+                <div id="doughnut-legend"></div>
+            </div>
+            <div class="card p-3" style="flex:1; min-width:220px;">
+                <h4>Carga de Trabajo</h4>
+                <div id="bar-chart"></div>
+            </div>
+        </section>
+
+        <section class="eficiencia-section mt-4">
+            <div class="d-flex gap-3 align-items-center mb-2">
+                <div>Tasa éxito general: <strong id="tasa-exito-general">0%</strong></div>
+                <div id="tasa-exito-general-badge" class="md-badge">0% General</div>
+                <div>Empleado más eficiente: <span id="empleado-mas-eficiente">Sin datos</span></div>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Empleado</th><th>Cargo</th><th>Completadas</th><th>Pendientes</th><th>Retrasadas</th><th>Progreso</th><th>Col7</th><th>Col8</th><th>Estado</th></tr></thead>
+                    <tbody id="tbody-eficiencia"><tr><td colspan="9" style="text-align:center; padding:20px; color: var(--md-text-secondary);">Cargando eficiencia...</td></tr></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- MODALES (placeholders mínimos para que el JS no falle) -->
+        <!-- Modal Detalle Pedido -->
+        <div class="modal fade" id="modalDetallePedido" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Detalle Pedido <span id="detalle-pedido-id">#0</span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body" id="modal-detalle-body">
+                        <div style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Empleado Detalle -->
+        <div class="modal fade" id="modalEmpleadoDetalle" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-xl modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalEmpleadoTitle">Empleado</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body" id="modalEmpleadoBody">
+                        <div style="text-align:center; padding:30px;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Nuevo Pedido (mínimo) -->
+        <div class="modal fade" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">Nuevo Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-body">
+                        <form id="formNuevoPedido">
+                            <div class="mb-3"><label>Cliente</label><select id="pedido_cliente" class="form-select"><option value="">Cargando...</option></select></div>
+                            <div class="mb-3"><label>Producto</label><select id="pedido_producto" class="form-select"><option value="">Cargando...</option></select></div>
+                        </form>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarNuevoPedido()">Guardar</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Editar Pedido -->
+        <div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-md modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">Editar Pedido <span id="editar_pedido_id">#0</span></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-body">
+                        <input type="hidden" id="editar_pedido_id_hidden" value="0">
+                        <div class="mb-2"><label>Estado</label><select id="editar_pedido_estado" class="form-select"><option value="cotizando">Cotizando</option><option value="en_produccion">Producción</option><option value="entregado">Entregado</option></select></div>
+                        <div class="mb-2"><label>Prioridad</label><select id="editar_pedido_prioridad" class="form-select"><option value="normal">Normal</option><option value="urgente">Urgente</option></select></div>
+                        <div class="mb-2"><label>Observaciones</label><textarea id="editar_pedido_observaciones" class="form-control"></textarea></div>
+                    </div>
+                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarEditarPedido()">Guardar cambios</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Clientes / Nuevo Cliente -->
+        <div class="modal fade" id="modalClientes" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">Clientes</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-body" id="modalClientesBody">Listado de clientes...</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="modalNuevoCliente" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-md modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">Nuevo Cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-body"><form id="formNuevoCliente"><input id="cliente_nombre" class="form-control" placeholder="Nombre"><input id="cliente_telefono" class="form-control mt-2" placeholder="Teléfono"></form></div>
+                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarNuevoCliente()">Crear cliente</button></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Productos / Nuevo Producto -->
+        <div class="modal fade" id="modalProductos" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">Productos</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-body" id="modalProductosBody">Listado de productos...</div>
+                </div>
+            </div>
+        </div>
+        <div class="modal fade" id="modalNuevoProducto" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-md modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header"><h5 class="modal-title">Nuevo Producto</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-body"><form id="formNuevoProducto"><input id="producto_nombre" class="form-control" placeholder="Nombre"></form></div>
+                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarNuevoProducto()">Crear producto</button></div>
+                </div>
+            </div>
+        </div>
 
     </main>
 
