@@ -22,7 +22,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <!-- Estilos del dashboard -->
-    <link rel="stylesheet" href="css/dashboardInvemex.css?v=6">
+    <link rel="stylesheet" href="css/dashboardInvemex.css?v=7">
 </head>
 <body>
 
@@ -43,7 +43,7 @@
         </div>
     </div>
 
-    <!-- LOADING LEGACY (Mantenido para compatibilidad con el hook del JS) -->
+    <!-- LOADING LEGACY -->
     <div id="loading-overlay" class="hidden" aria-hidden="true">
         <div class="md-loading-spinner" aria-hidden="true"></div>
         <div class="md-loading-text" id="loading-text">IVENMEX</div>
@@ -52,45 +52,19 @@
     <!-- DASHBOARD PRINCIPAL -->
     <main id="dashboard" role="main" aria-hidden="true">
 
-        <!-- TOOLBAR -->
+        <!-- TOOLBAR SIMPLIFICADO (Sin calendario ni notificaciones) -->
         <header class="md-toolbar" role="banner">
             <a href="#" class="md-toolbar-brand" aria-label="Página principal INVEMEX">
                 <img src="assets/logos/logo-invemex.png" alt="INVEMEX" onerror="this.style.display='none'">
                 <span class="brand-text">IVENMEX</span>
             </a>
             <div class="md-toolbar-actions">
-                <div class="md-calendar-wrapper">
-                    <span class="md-chip" id="fecha-actual" role="button" tabindex="0" aria-expanded="false" style="cursor: pointer;" onclick="App.toggleCalendar()">
-                        <i class="far fa-calendar-alt" aria-hidden="true"></i>
-                        <span id="fecha-texto"></span>
-                        <i class="fas fa-chevron-down" style="font-size: 10px; margin-left: 4px; opacity: 0.6;" aria-hidden="true"></i>
-                    </span>
-                    <div class="md-calendar-dropdown" id="calendar-dropdown">
-                        <div class="md-calendar-header">
-                            <button class="nav-btn" onclick="event.stopPropagation(); App.calendarNavigate(-1);" aria-label="Mes anterior"><i class="fas fa-chevron-left" aria-hidden="true"></i></button>
-                            <span class="month-year" id="calendar-month-year">Enero 2024</span>
-                            <button class="nav-btn" onclick="event.stopPropagation(); App.calendarNavigate(1);" aria-label="Mes siguiente"><i class="fas fa-chevron-right" aria-hidden="true"></i></button>
-                        </div>
-                        <div class="md-calendar-grid" id="calendar-grid">
-                            <div class="weekday">L</div><div class="weekday">M</div><div class="weekday">X</div>
-                            <div class="weekday">J</div><div class="weekday">V</div><div class="weekday">S</div><div class="weekday">D</div>
-                        </div>
-                        <div class="md-calendar-footer">
-                            <span id="calendar-info">Semana 1</span>
-                            <button class="today-btn" onclick="event.stopPropagation(); App.calendarGoToday();">Hoy</button>
-                        </div>
-                    </div>
-                </div>
-                <span class="md-chip" style="cursor: pointer; position: relative;" onclick="App.mostrarNotificaciones()" role="button" aria-label="Mostrar notificaciones">
-                    <i class="fas fa-bell" aria-hidden="true"></i>
-                    <span class="chip-dot" id="notificaciones-badge" style="position: absolute; top: -4px; right: -4px; background: #EF4444; color: white; width: 18px; height: 18px; display: flex; align-items:center; justify-content:center; border-radius:50%; font-size:12px;">0</span>
+                <span class="md-chip" style="cursor: default;">
+                    <i class="fas fa-clock" aria-hidden="true"></i>
+                    <span id="fecha-texto"></span>
                 </span>
-                <div class="md-avatar" onclick="App.mostrarNotificaciones()" role="button" aria-label="Perfil usuario">L</div>
             </div>
         </header>
-
-        <!-- OVERLAY CALENDARIO -->
-        <div class="md-calendar-overlay" id="calendar-overlay" onclick="App.closeCalendar()" aria-hidden="true"></div>
 
         <!-- EMPLEADOS -->
         <div class="empleados-section">
@@ -138,7 +112,23 @@
             </div>
         </div>
 
-        <!-- SECCIONES ADICIONALES NECESARIAS PARA EL JS -->
+        <!-- BOTONES RÁPIDOS -->
+        <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin: 16px 0 24px 0;">
+            <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoPedido();">
+                <i class="fas fa-plus"></i> Nuevo Pedido
+            </button>
+            <button class="md-btn md-btn-secondary" onclick="App.abrirModalNuevoCliente();">
+                <i class="fas fa-user-plus"></i> Registrar Cliente
+            </button>
+            <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoProducto();">
+                <i class="fas fa-box"></i> Nuevo Producto
+            </button>
+            <button class="md-btn md-btn-outline" onclick="App.calcularEficienciaTodos();">
+                <i class="fas fa-chart-line"></i> Calcular Eficiencia
+            </button>
+        </div>
+
+        <!-- SECCIÓN PEDIDOS URGENTES -->
         <section class="urgentes-section mt-4">
             <div class="d-flex justify-content-between align-items-center mb-2">
                 <h3>Pedidos Urgentes <span id="urgentes-count-badge" class="md-badge danger">0</span></h3>
@@ -160,7 +150,8 @@
             </div>
         </section>
 
-        <section class="charts-section mt-4 d-flex gap-4">
+        <!-- SECCIÓN GRÁFICOS -->
+        <section class="charts-section mt-4 d-flex gap-4 flex-wrap">
             <div class="card p-3" style="flex:1; min-width:220px;">
                 <h4>Estados</h4>
                 <div id="doughnut-chart" style="width:220px; height:220px; border-radius:50%; margin:12px auto; background: conic-gradient(#EEEEEE 0% 100%);"></div>
@@ -172,8 +163,9 @@
             </div>
         </section>
 
+        <!-- SECCIÓN EFICIENCIA -->
         <section class="eficiencia-section mt-4">
-            <div class="d-flex gap-3 align-items-center mb-2">
+            <div class="d-flex gap-3 align-items-center mb-2 flex-wrap">
                 <div>Tasa éxito general: <strong id="tasa-exito-general">0%</strong></div>
                 <div id="tasa-exito-general-badge" class="md-badge">0% General</div>
                 <div>Empleado más eficiente: <span id="empleado-mas-eficiente">Sin datos</span></div>
@@ -186,7 +178,10 @@
             </div>
         </section>
 
-        <!-- MODALES (placeholders mínimos para que el JS no falle) -->
+        <!-- ==========================================
+        MODALES
+        ========================================== -->
+
         <!-- Modal Detalle Pedido -->
         <div class="modal fade" id="modalDetallePedido" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -217,18 +212,59 @@
             </div>
         </div>
 
-        <!-- Modal Nuevo Pedido (mínimo) -->
+        <!-- Modal Nuevo Pedido -->
         <div class="modal fade" id="modalNuevoPedido" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
                     <div class="modal-header"><h5 class="modal-title">Nuevo Pedido</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
                     <div class="modal-body">
                         <form id="formNuevoPedido">
-                            <div class="mb-3"><label>Cliente</label><select id="pedido_cliente" class="form-select"><option value="">Cargando...</option></select></div>
-                            <div class="mb-3"><label>Producto</label><select id="pedido_producto" class="form-select"><option value="">Cargando...</option></select></div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Cliente</label>
+                                <select id="pedido_cliente" class="md-form-control md-form-select">
+                                    <option value="">Cargando clientes...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Producto</label>
+                                <select id="pedido_producto" class="md-form-control md-form-select">
+                                    <option value="">Cargando productos...</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Prioridad</label>
+                                <select id="pedido_prioridad" class="md-form-control md-form-select">
+                                    <option value="normal">Normal</option>
+                                    <option value="urgente">Urgente</option>
+                                    <option value="baja">Baja</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Fecha de Entrega</label>
+                                <input id="pedido_fecha_entrega" type="date" class="md-form-control">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Cantidad</label>
+                                <input id="pedido_cantidad" type="number" min="1" class="md-form-control" value="1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Ancho (cm)</label>
+                                <input id="pedido_ancho" type="number" step="0.01" class="md-form-control" placeholder="Ej: 150">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Alto (cm)</label>
+                                <input id="pedido_alto" type="number" step="0.01" class="md-form-control" placeholder="Ej: 200">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Observaciones</label>
+                                <textarea id="pedido_observaciones" class="md-form-control" rows="2"></textarea>
+                            </div>
                         </form>
                     </div>
-                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarNuevoPedido()">Guardar</button></div>
+                    <div class="modal-footer">
+                        <button class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="md-btn md-btn-primary" onclick="window.guardarNuevoPedido()"><i class="fas fa-save"></i> Guardar</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -237,52 +273,189 @@
         <div class="modal fade" id="modalEditarPedido" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-md modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Editar Pedido <span id="editar_pedido_id">#0</span></h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Editar Pedido <span id="editar_pedido_id">#0</span></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
                     <div class="modal-body">
                         <input type="hidden" id="editar_pedido_id_hidden" value="0">
-                        <div class="mb-2"><label>Estado</label><select id="editar_pedido_estado" class="form-select"><option value="cotizando">Cotizando</option><option value="en_produccion">Producción</option><option value="entregado">Entregado</option></select></div>
-                        <div class="mb-2"><label>Prioridad</label><select id="editar_pedido_prioridad" class="form-select"><option value="normal">Normal</option><option value="urgente">Urgente</option></select></div>
-                        <div class="mb-2"><label>Observaciones</label><textarea id="editar_pedido_observaciones" class="form-control"></textarea></div>
+                        <div class="mb-2">
+                            <label class="md-form-label">Estado</label>
+                            <select id="editar_pedido_estado" class="md-form-control md-form-select">
+                                <option value="cotizando">Cotizando</option>
+                                <option value="diseño">Diseño</option>
+                                <option value="en_produccion">Producción</option>
+                                <option value="control_calidad">Control Calidad</option>
+                                <option value="listo">Listo</option>
+                                <option value="entregado">Entregado</option>
+                                <option value="cancelado">Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="md-form-label">Prioridad</label>
+                            <select id="editar_pedido_prioridad" class="md-form-control md-form-select">
+                                <option value="normal">Normal</option>
+                                <option value="urgente">Urgente</option>
+                                <option value="baja">Baja</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label class="md-form-label">Observaciones</label>
+                            <textarea id="editar_pedido_observaciones" class="md-form-control" rows="2"></textarea>
+                        </div>
                     </div>
-                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarEditarPedido()">Guardar cambios</button></div>
+                    <div class="modal-footer">
+                        <button class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="md-btn md-btn-primary" onclick="window.guardarEditarPedido()">Guardar cambios</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Modal Clientes / Nuevo Cliente -->
+        <!-- Modal Clientes -->
         <div class="modal fade" id="modalClientes" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-lg modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Clientes</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
-                    <div class="modal-body" id="modalClientesBody">Listado de clientes...</div>
-                </div>
-            </div>
-        </div>
-        <div class="modal fade" id="modalNuevoCliente" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-md modal-dialog-centered">
-                <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Nuevo Cliente</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
-                    <div class="modal-body"><form id="formNuevoCliente"><input id="cliente_nombre" class="form-control" placeholder="Nombre"><input id="cliente_telefono" class="form-control mt-2" placeholder="Teléfono"></form></div>
-                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarNuevoCliente()">Crear cliente</button></div>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Clientes</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <button class="md-btn md-btn-secondary" onclick="App.abrirModalNuevoCliente();">
+                                <i class="fas fa-user-plus"></i> Nuevo Cliente
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead><tr><th>ID</th><th>Nombre</th><th>Teléfono</th><th>Email</th><th>Acciones</th></tr></thead>
+                                <tbody id="tbody-clientes"><tr><td colspan="5" style="text-align:center; padding:20px;">Cargando clientes...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Modal Productos / Nuevo Producto -->
-        <div class="modal fade" id="modalProductos" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog modal-lg modal-dialog-centered">
+        <!-- Modal Nuevo Cliente -->
+        <div class="modal fade" id="modalNuevoCliente" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-md modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Productos</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
-                    <div class="modal-body" id="modalProductosBody">Listado de productos...</div>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Nuevo Cliente</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formNuevoCliente">
+                            <div class="mb-3">
+                                <label class="md-form-label">Nombre <span style="color:#EF4444;">*</span></label>
+                                <input id="cliente_nombre" class="md-form-control" placeholder="Nombre completo">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Teléfono</label>
+                                <input id="cliente_telefono" class="md-form-control" placeholder="0412-1234567">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Email</label>
+                                <input id="cliente_email" class="md-form-control" placeholder="cliente@email.com">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Dirección</label>
+                                <textarea id="cliente_direccion" class="md-form-control" rows="2" placeholder="Dirección del cliente"></textarea>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="md-btn md-btn-secondary" onclick="window.guardarNuevoCliente()">Crear cliente</button>
+                    </div>
                 </div>
             </div>
         </div>
+
+        <!-- Modal Productos -->
+        <div class="modal fade" id="modalProductos" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Productos</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <button class="md-btn md-btn-primary" onclick="App.abrirModalNuevoProducto();">
+                                <i class="fas fa-plus"></i> Nuevo Producto
+                            </button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-striped">
+                                <thead><tr><th>ID</th><th>Nombre</th><th>Categoría</th><th>Material</th><th>Precio</th><th>Acciones</th></tr></thead>
+                                <tbody id="tbody-productos"><tr><td colspan="6" style="text-align:center; padding:20px;">Cargando productos...</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal Nuevo Producto -->
         <div class="modal fade" id="modalNuevoProducto" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-md modal-dialog-centered">
                 <div class="modal-content">
-                    <div class="modal-header"><h5 class="modal-title">Nuevo Producto</h5><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button></div>
-                    <div class="modal-body"><form id="formNuevoProducto"><input id="producto_nombre" class="form-control" placeholder="Nombre"></form></div>
-                    <div class="modal-footer"><button class="btn btn-primary" onclick="window.guardarNuevoProducto()">Crear producto</button></div>
+                    <div class="modal-header">
+                        <h5 class="modal-title">Nuevo Producto</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="formNuevoProducto">
+                            <div class="mb-3">
+                                <label class="md-form-label">Nombre <span style="color:#EF4444;">*</span></label>
+                                <input id="producto_nombre" class="md-form-control" placeholder="Nombre del producto">
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Categoría</label>
+                                <select id="producto_categoria" class="md-form-control md-form-select">
+                                    <option value="">Seleccionar...</option>
+                                    <option value="Gran Formato">Gran Formato</option>
+                                    <option value="Sublimación">Sublimación</option>
+                                    <option value="Corte">Corte</option>
+                                    <option value="Trofeos">Trofeos</option>
+                                    <option value="Papelería">Papelería</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="md-form-label">Material</label>
+                                <input id="producto_material" class="md-form-control" placeholder="Ej: Vinilo, Poliéster">
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="md-form-label">Tipo Precio</label>
+                                    <select id="producto_tipo_precio" class="md-form-control md-form-select">
+                                        <option value="m2">Por m²</option>
+                                        <option value="unidad">Por Unidad</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="md-form-label">Precio</label>
+                                    <input id="producto_precio" type="number" class="md-form-control" placeholder="0.00" step="0.01">
+                                </div>
+                            </div>
+                            <div class="mt-3">
+                                <label class="md-form-label">Velocidad (m²/hora)</label>
+                                <input id="producto_velocidad" type="number" class="md-form-control" placeholder="Solo para servicios" step="0.1">
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                        <button class="md-btn md-btn-primary" onclick="window.guardarNuevoProducto()">Crear producto</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -292,7 +465,7 @@
     <!-- SCRIPTS -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dashboardInvemex.js?v=6"></script>
+    <script src="js/dashboardInvemex.js?v=7"></script>
     
     <!-- Hook para el loader -->
     <script>
