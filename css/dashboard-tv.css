@@ -1,0 +1,70 @@
+/* Presentacion para pantallas grandes y televisores (16:9 / 4K). */
+@media (min-width: 1400px) {
+  :root {
+    --tv-scale: clamp(1, 100vw / 1920, 1.35);
+    --md-radius-lg: 20px;
+    --md-radius-xl: 28px;
+  }
+
+  body {
+    max-width: 1920px;
+    margin: 0 auto;
+    padding: clamp(28px, 2.2vw, 52px);
+    font-size: clamp(16px, 1vw, 22px);
+    background:
+      radial-gradient(circle at 10% 0%, rgba(232,234,255,.9), transparent 34%),
+      var(--md-gray);
+  }
+
+  #dashboard { min-height: 100vh; }
+  .md-toolbar { padding: 22px 34px; margin-bottom: 34px; top: 18px; }
+  .md-toolbar-brand img { height: 50px; }
+  .md-toolbar-brand .brand-text { font-size: clamp(30px, 2vw, 42px); }
+  .md-toolbar-actions, .md-chip { font-size: clamp(16px, 1.1vw, 22px); }
+  .md-chip { padding: 12px 20px; }
+
+  .empleados-section { margin-bottom: 34px; }
+  .section-title { font-size: clamp(22px, 1.5vw, 30px); }
+  .empleados-avatar-grid { gap: 28px; }
+  .empleado-avatar-card { min-width: 120px; gap: 12px; }
+  .avatar-circle { width: 82px; height: 82px; font-size: 30px; }
+  .avatar-name { max-width: 130px; font-size: 16px; }
+  .avatar-badge { width: 28px; height: 28px; font-size: 14px; }
+
+  .md-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; margin-bottom: 34px; }
+  .md-card { min-height: 190px; padding: 30px; }
+  .card-icon { width: 64px; height: 64px; font-size: 28px; }
+  .card-label { font-size: clamp(15px, 1vw, 21px); }
+  .card-value { font-size: clamp(48px, 3.4vw, 76px); }
+  .card-change { font-size: 17px; }
+
+  .charts-section { gap: 28px !important; }
+  .charts-section > .card { min-height: 430px; padding: 28px !important; border: 0; border-radius: var(--md-radius-xl); box-shadow: var(--md-elevation-3); }
+  .charts-section h4, .urgentes-section h3 { font-size: clamp(24px, 1.6vw, 34px); }
+  #doughnut-chart { width: min(20vw, 360px) !important; height: min(20vw, 360px) !important; }
+  .legend-item, .bar-label { font-size: 18px; }
+  .bar-item { margin-bottom: 24px; }
+  .bar-track { height: 42px; }
+  .bar-fill { font-size: 17px; }
+
+  .urgentes-section, .eficiencia-section { margin-top: 34px !important; }
+  .table-responsive { max-height: 460px; }
+  .table { font-size: 17px; }
+  .table th, .table td { padding: 16px 18px; }
+  #tbody-eficiencia, #tabla-urgentes-body { min-height: 140px; }
+
+  /* En TV los controles de edición no deben dominar la pantalla. */
+  .md-toolbar-actions .md-btn, body.tv-display .md-btn-outline { display: none; }
+  .tv-clock { font-variant-numeric: tabular-nums; font-weight: 800; }
+}
+
+@media (min-width: 2200px) {
+  body { max-width: 2400px; padding-inline: 72px; }
+  .md-grid { gap: 38px; }
+  .md-card { min-height: 230px; }
+  .table-responsive { max-height: 560px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md-card:hover, .empleado-avatar-card:hover { transform: none; }
+}
