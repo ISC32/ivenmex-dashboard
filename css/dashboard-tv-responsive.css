@@ -1,0 +1,97 @@
+/* ==========================================================================
+   MODO TV / PANTALLAS GRANDES — layout responsivo de una sola vista
+   Se activa con ?tv en la URL (body.tv-display). Complementa dashboard-tv.css.
+   Objetivo: que un televisor (1080p/4K, visto a distancia) muestre KPIs,
+   empleados, urgentes y eficiencia sin scroll innecesario.
+   ========================================================================== */
+
+body.tv-display {
+    overflow-x: hidden;
+}
+
+/* El reloj se refresca solo; nada de botones de edición en modo TV */
+body.tv-display .md-btn,
+body.tv-display .section-header button,
+body.tv-display td .md-btn-text { display: none !important; }
+
+/* Toolbar compacta */
+body.tv-display .md-toolbar { position: static; padding: 14px 26px; margin-bottom: 18px; }
+
+/* Reorganización en TV: una columna principal + panel lateral derecho */
+@media (min-width: 1400px) {
+    body.tv-display main#dashboard {
+        max-width: 2560px;
+        margin-inline: auto;
+    }
+
+    /* Los KPIs pasan a ser una fila superior compacta y legible a distancia */
+    body.tv-display .md-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: clamp(16px, 1.4vw, 30px);
+        margin-bottom: clamp(16px, 1.4vw, 28px);
+    }
+    body.tv-display .md-card {
+        min-height: clamp(140px, 11vw, 210px);
+        padding: clamp(16px, 1.3vw, 28px);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    body.tv-display .card-value { line-height: 1.05; }
+
+    /* Fila combinada: equipo de trabajo + gráficos */
+    body.tv-display .empleados-section { margin-bottom: 0; }
+    body.tv-display .tv-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+        gap: clamp(16px, 1.4vw, 30px);
+        align-items: stretch;
+        margin-bottom: clamp(16px, 1.4vw, 28px);
+    }
+    body.tv-display .tv-row > .charts-section { margin-top: 0 !important; flex-wrap: nowrap; gap: clamp(16px, 1.2vw, 24px); }
+    body.tv-display .tv-row > .charts-section > .card { min-height: clamp(260px, 20vw, 420px); }
+    body.tv-display .tv-row > .empleados-section .empleados-avatar-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(clamp(96px, 7vw, 150px), 1fr));
+        gap: clamp(12px, 1vw, 22px);
+        max-height: clamp(200px, 16vw, 340px);
+        overflow-y: auto;
+    }
+
+    /* Tablas con tamaño de fuente legible a 2-3 metros */
+    body.tv-display .table { font-size: clamp(15px, 1.05vw, 24px); }
+    body.tv-display .table th, body.tv-display .table td { padding: clamp(8px, 0.7vw, 16px) clamp(10px, 0.9vw, 20px); }
+    body.tv-display .table-responsive { max-height: clamp(280px, 26vw, 560px); overflow: auto; }
+    body.tv-display .table thead th { position: sticky; top: 0; z-index: 2; background: var(--md-primary-light, #E8EAFF); }
+
+    /* Eficiencia: ocultar columnas vacías decorativas para dar aire a la tabla */
+    body.tv-display .eficiencia-section th:nth-child(7),
+    body.tv-display .eficiencia-section td:nth-child(7),
+    body.tv-display .eficiencia-section th:nth-child(8),
+    body.tv-display .eficiencia-section td:nth-child(8) { display: none; }
+
+    /* Gráfico de dona más grande y centrado */
+    body.tv-display #doughnut-chart { width: clamp(160px, 14vw, 300px) !important; height: clamp(160px, 14vw, 300px) !important; }
+    body.tv-display .legend-item { font-size: clamp(14px, 1vw, 22px); }
+    body.tv-display .bar-label { font-size: clamp(14px, 1vw, 22px); }
+    body.tv-display .bar-track { height: clamp(26px, 2.2vw, 46px); }
+    body.tv-display .bar-fill { font-size: clamp(13px, 0.95vw, 20px); }
+
+    /* Títulos de sección proporcionados a la distancia de visualización */
+    body.tv-display h3, body.tv-display h4, body.tv-display .section-title { letter-spacing: 0.2px; }
+    body.tv-display .urgentes-section h3 { font-size: clamp(22px, 1.7vw, 38px); }
+    body.tv-display .md-badge { font-size: clamp(12px, 0.85vw, 18px); padding: 6px 14px; }
+}
+
+/* 4K nativo: aprovechar resolución sin deformar proporciones */
+@media (min-width: 3000px) {
+    body.tv-display { zoom: 1.6; }
+}
+
+/* Pantallas medianas-grandes (laptop conectada a TV, proyectores): 2 columnas KPI */
+@media (min-width: 1024px) and (max-width: 1399px) {
+    body.tv-display .md-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* En TV no mostrar el overlay de carga textual duplicado */
+body.tv-display #loading-overlay { display: none !important; }
