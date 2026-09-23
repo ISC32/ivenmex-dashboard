@@ -5,9 +5,28 @@ const CONFIG = {
     TOAST_DURATION: 4000
 };
 
-console.log('🚀 Iniciando Dashboard INVEMEX v6.0.1');
+// Permitir sobrescribir credenciales sin recompilar (ej. ?sbUrl=...&sbKey=... o ventana TV)
+try {
+    const qs = new URLSearchParams(window.location.search);
+    if (qs.get('sbUrl')) CONFIG.SUPABASE_URL = qs.get('sbUrl');
+    if (qs.get('sbKey')) CONFIG.SUPABASE_ANON_KEY = qs.get('sbKey');
+} catch (_) { /* noop */ }
 
-const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
+console.log('🚀 Iniciando Dashboard INVEMEX v6.1.0');
+
+let supabaseClient = null;
+if (typeof window.supabase === 'undefined' || !window.supabase?.createClient) {
+    console.error('❌ SDK de Supabase no disponible');
+} else {
+    try {
+        supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY, {
+            global: { headers: { 'x-client-info': 'ivx-dashboard/6.1.0' } },
+            auth: { persistSession: false, autoRefreshToken: false }
+        });
+    } catch (error) {
+        console.error('❌ No se pudo crear el cliente de Supabase:', error);
+    }
+}
 window.supabaseClient = supabaseClient;
 
 const STATE = {
@@ -167,16 +186,26 @@ const App = {
     calendarState: { currentDate: new Date(), selectedDate: new Date(), isOpen: false },
 
     async init() {
-        console.log('📋 Inicializando aplicación v6.0.1...');
+        console.log('📋 Inicializando aplicación v6.1.0...');
         const today = new Date();
         this.calendarState.selectedDate = new Date(today);
         this.calendarState.currentDate = new Date(today);
-        this.updateDateDisplay(today);
+        this.updateDateDisplay?.(today);
         ToastSystem.init();
+        LoadingSystem.show('Conectando con la base de datos...');
         await this.cargarTodosLosDatos();
         this.suscribirRealtime();
         STATE.refreshInterval = setInterval(() => this.refrescarDatosSilencioso(), CONFIG.REFRESH_INTERVAL);
         console.log('✅ Aplicación inicializada correctamente');
+    },
+
+    // Envuelve cualquier promesa con un tiempo máximo de espera (evita loader eterno en TV)
+    withTimeout(promise, ms = 20000, label = 'consulta') {
+        let timer;
+        const timeout = new Promise((_, reject) => {
+            timer = setTimeout(() => reject(new Error(`Tiempo de espera agotado en ${label}.`)), ms);
+        });
+        return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
     },
 
     async cargarTodosLosDatos() {
@@ -196,6 +225,7 @@ const App = {
 
     async cargarDatos() {
         console.log('📊 Cargando datos desde Supabase...');
+        if (!supabaseClient) throw new Error('Sin conexión: el cliente de Supabase no está disponible.');
         try {
             await Promise.all([
                 this.cargarKPI(),
@@ -238,18 +268,25 @@ const App = {
             console.log('🔄 Datos actualizados automáticamente');
         } catch (error) {
             console.error('❌ Error en actualización automática:', error);
+            // Reintenta una vez tras unos segundos si la conexión falló
+            setTimeout(() => this.cargarDatos().catch(() => {}), 10000);
         }
     },
 
     async cargarKPI() {
         const hoy = DateFormatter.getToday();
         try {
-            const [{ count: activos }, { count: produccion }, { count: entregados }, { count: urgentes }] = await Promise.all([
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).not('estado', 'in', '(entregado,cancelado)'),
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'en_produccion'),
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'entregado').gte('fecha_solicitud', hoy),
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('prioridad', 'urgente').not('estado', 'in', '(entregado,cancelado)')
-            ]);
+            // Una sola consulta: trae los pedidos y calcula los KPI en memoria (menos requests)
+            const { data, error } = await this.withTimeout(
+                supabaseClient.from('pedidos').select('id, estado, prioridad, fecha_solicitud'),
+                20000, 'carga de KPIs'
+            );
+            if (error) throw error;
+            const pedidos = data || [];
+            const activos = pedidos.filter(p => p.estado !== 'entregado' && p.estado !== 'cancelado').length;
+            const produccion = pedidos.filter(p => p.estado === 'en_produccion').length;
+            const entregados = pedidos.filter(p => p.estado === 'entregado' && p.fecha_solicitud && p.fecha_solicitud.slice(0, 10) >= hoy).length;
+            const urgentes = pedidos.filter(p => p.prioridad === 'urgente' && p.estado !== 'entregado' && p.estado !== 'cancelado').length;
             const elements = {
                 'kpi-activos': activos || 0,
                 'kpi-activos-change': `${activos || 0} activos`,
@@ -276,14 +313,16 @@ const App = {
         const labels = ['Cotizando', 'Diseño', 'Producción', 'Control Calidad', 'Listo', 'Entregado'];
         const colores = ['#0B218B', '#1A3BA8', '#FFF200', '#E84C3D', '#27AE60', '#8B6914'];
         try {
-            const resultados = [];
-            let total = 0;
-            for (let i = 0; i < estados.length; i++) {
-                const { count } = await supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', estados[i]);
-                const valor = count || 0;
-                resultados.push({ label: labels[i], value: valor, color: colores[i] });
-                total += valor;
-            }
+            // Una sola consulta agrupada en memoria (antes: 6 consultas secuenciales)
+            const { data, error } = await this.withTimeout(
+                supabaseClient.from('pedidos').select('estado'),
+                20000, 'gráfico de estados'
+            );
+            if (error) throw error;
+            const conteo = {};
+            (data || []).forEach(p => { conteo[p.estado] = (conteo[p.estado] || 0) + 1; });
+            const resultados = estados.map((estado, i) => ({ label: labels[i], value: conteo[estado] || 0, color: colores[i] }));
+            const total = resultados.reduce((sum, item) => sum + item.value, 0);
             const chart = document.getElementById('doughnut-chart');
             if (chart) {
                 chart.setAttribute('data-total', total);
@@ -326,14 +365,20 @@ const App = {
         };
         const coloresMap = { design: '#0B218B', corte: '#FFF200', sublimacion: '#8E44AD', admin: '#E74C8B' };
         try {
-            const resultados = [];
+            // Una sola consulta y agrupación en memoria (antes: 3 consultas secuenciales)
+            const { data, error } = await this.withTimeout(
+                supabaseClient.from('tareas').select('tipo_tarea').in('estado', ['pendiente', 'en_progreso']),
+                20000, 'carga de trabajo'
+            );
+            if (error) throw error;
+            const conteo = {};
+            (data || []).forEach(t => { conteo[t.tipo_tarea] = (conteo[t.tipo_tarea] || 0) + 1; });
             let maxTareas = 1;
-            for (const area of areas) {
-                const { count } = await supabaseClient.from('tareas').select('*', { count: 'exact', head: true }).eq('tipo_tarea', area.nombre).in('estado', ['pendiente', 'en_progreso']);
-                const tareas = count || 0;
+            const resultados = areas.map(area => {
+                const tareas = conteo[area.nombre] || 0;
                 if (tareas > maxTareas) maxTareas = tareas;
-                resultados.push({ ...area, tareas });
-            }
+                return { ...area, tareas };
+            });
             resultados.push({ label: 'Administración', icon: 'fa-user-tie', clase: 'admin', tareas: 0 });
             resultados.forEach(item => { item.porcentaje = maxTareas > 0 ? (item.tareas / maxTareas) * 100 : 0; });
             const barChart = document.getElementById('bar-chart');
@@ -360,13 +405,16 @@ const App = {
 
     async cargarPedidosUrgentes() {
         try {
-            const { data, error } = await supabaseClient
-                .from('pedidos')
-                .select('id, cliente_id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre), detalles_pedido (producto_id, material_especifico, tiempo_estimado_horas, productos (nombre)), tareas (id, empleado_id, fecha_fin, empleados (nombre, apellido))')
-                .eq('prioridad', 'urgente')
-                .not('estado', 'in', '(entregado,cancelado)')
-                .order('fecha_solicitud', { ascending: false })
-                .limit(10);
+            const { data, error } = await this.withTimeout(
+                supabaseClient
+                    .from('pedidos')
+                    .select('id, cliente_id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre), detalles_pedido (producto_id, material_especifico, tiempo_estimado_minutos, productos (nombre)), tareas (id, empleado_id, fecha_fin, empleados (nombre, apellido))')
+                    .eq('prioridad', 'urgente')
+                    .not('estado', 'in', '(entregado,cancelado)')
+                    .order('fecha_solicitud', { ascending: false })
+                    .limit(10),
+                20000, 'pedidos urgentes'
+            );
             if (error) throw error;
             const tbody = document.getElementById('tabla-urgentes-body');
             if (!tbody) return;
@@ -435,7 +483,7 @@ const App = {
                         <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-user" style="color: var(--md-primary);"></i> Cliente</div><div class="detail-value">${cliente.nombre || 'Sin cliente'}</div></div></div>
                         <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-box" style="color: var(--md-primary);"></i> Producto</div><div class="detail-value">${producto.nombre || detalle.material_especifico || 'Sin producto'}</div></div></div>
                         <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-ruler-combined" style="color: var(--md-primary);"></i> Medidas</div><div class="detail-value">${detalle.medida_ancho_cm ? `${detalle.medida_ancho_cm} x ${detalle.medida_alto_cm || '-'} cm` : 'No definida'}</div></div></div>
-                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-clock" style="color: var(--md-primary);"></i> Tiempo Estimado</div><div class="detail-value">${detalle.tiempo_estimado_horas || 'N/A'} hrs</div></div></div>
+                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-clock" style="color: var(--md-primary);"></i> Tiempo Estimado</div><div class="detail-value">${detalle.tiempo_estimado_minutos ? `${Math.round(detalle.tiempo_estimado_minutos / 60 * 10) / 10} hrs` : 'N/A'}</div></div></div>
                         <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-user-tie" style="color: var(--md-primary);"></i> Asignado a</div><div class="detail-value">${empleado.nombre ? `${empleado.nombre} ${empleado.apellido || ''}`.trim() : 'Sin asignar'}</div></div></div>
                         <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-calendar-alt" style="color: var(--md-primary);"></i> Fechas</div><div class="detail-value">Solicitud: ${data.fecha_solicitud ? new Date(data.fecha_solicitud).toLocaleDateString('es-ES') : '-'}<br>Entrega: ${data.fecha_entrega_prometida ? new Date(data.fecha_entrega_prometida).toLocaleDateString('es-ES') : '-'}</div></div></div>
                         <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-info-circle" style="color: var(--md-primary);"></i> Información Adicional</div><div class="detail-value"><span class="md-badge ${estadoColor}">${estadoLabel}</span><br>${data.observaciones || 'Sin observaciones'}</div></div></div>
@@ -461,8 +509,12 @@ const App = {
 
     async cargarEmpleadosYTareas() {
         console.log('📊 Cargando empleados...');
+        if (!supabaseClient) throw new Error('Sin conexión con la base de datos.');
         try {
-            const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('*').eq('activo', true).order('nombre');
+            const [{ data: empleados, error: errorEmpleados }, { data: tareas, error: errorTareas }] = await Promise.all([
+                this.withTimeout(supabaseClient.from('empleados').select('*').eq('activo', true).order('nombre'), 20000, 'empleados'),
+                this.withTimeout(supabaseClient.from('tareas').select('*').in('estado', ['pendiente', 'en_progreso', 'notificado']).order('fecha_asignacion', { ascending: false }), 20000, 'tareas')
+            ]);
             if (errorEmpleados) throw errorEmpleados;
             STATE.empleados = empleados || [];
             const grid = document.getElementById('empleadosAvatarGrid');
@@ -472,7 +524,6 @@ const App = {
                 if (badge) badge.textContent = '0';
                 return;
             }
-            const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*').in('estado', ['pendiente', 'en_progreso', 'notificado']).order('fecha_asignacion', { ascending: false });
             if (errorTareas) throw errorTareas;
             STATE.tareas = tareas || [];
             this.renderAvataresEmpleados(empleados, tareas || []);
@@ -481,6 +532,7 @@ const App = {
             const grid = document.getElementById('empleadosAvatarGrid');
             if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color: #EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px; display:block; margin-bottom:8px;"></i>No se pudieron cargar los empleados</div>';
             ToastSystem.error('Error', 'No se pudieron cargar los empleados');
+            throw error;
         }
     },
 
@@ -589,7 +641,7 @@ const App = {
 
     async actualizarStatusTarea(tareaId, nuevoStatus, empleadoId) {
         try {
-            const updateData = { estado: nuevoStatus, updated_at: new Date().toISOString() };
+            const updateData = { estado: nuevoStatus };
             if (nuevoStatus === 'completado') {
                 updateData.fecha_fin = new Date().toISOString();
                 updateData.completada = true;
@@ -650,7 +702,11 @@ const App = {
 
     async cargarEficiencia() {
         try {
-            const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('id, nombre, apellido, cargo').eq('activo', true);
+            // Dos consultas en paralelo (empleados + todas las tareas) en lugar de N+1
+            const [{ data: empleados, error: errorEmpleados }, { data: todasTareas, error: errorTareas }] = await Promise.all([
+                this.withTimeout(supabaseClient.from('empleados').select('id, nombre, apellido, cargo').eq('activo', true), 20000, 'eficiencia/empleados'),
+                this.withTimeout(supabaseClient.from('tareas').select('empleado_id, estado, completada'), 20000, 'eficiencia/tareas')
+            ]);
             if (errorEmpleados) throw errorEmpleados;
             const tbody = document.getElementById('tbody-eficiencia');
             if (!tbody) return;
@@ -658,11 +714,15 @@ const App = {
                 tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px; color: var(--md-text-secondary);"><i class="fas fa-inbox" style="font-size:32px; display:block; margin-bottom:10px;"></i>No hay empleados activos</td></tr>';
                 return;
             }
+            const tareasPorEmpleado = {};
+            (todasTareas || []).forEach(t => {
+                if (t.empleado_id == null) return;
+                (tareasPorEmpleado[t.empleado_id] = tareasPorEmpleado[t.empleado_id] || []).push(t);
+            });
             let totalExito = 0, totalEmpleados = 0, mejorEmpleado = '', mejorTasa = 0;
             let html = '';
             for (const empleado of empleados) {
-                const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*').eq('empleado_id', empleado.id);
-                if (errorTareas) continue;
+                const tareas = tareasPorEmpleado[empleado.id] || [];
                 const totalTareas = tareas.length;
                 const tareasCompletadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
                 const tareasPendientes = tareas.filter(t => t.estado !== 'completado' && t.completada !== true).length;
@@ -920,8 +980,7 @@ const App = {
             const { error } = await supabaseClient.from('pedidos').update({
                 estado: document.getElementById('editar_pedido_estado').value,
                 prioridad: document.getElementById('editar_pedido_prioridad').value,
-                observaciones: document.getElementById('editar_pedido_observaciones').value.trim() || null,
-                updated_at: new Date().toISOString()
+                observaciones: document.getElementById('editar_pedido_observaciones').value.trim() || null
             }).eq('id', id);
             if (error) throw error;
             ToastSystem.success('✅ Pedido actualizado', `Pedido #${id} actualizado correctamente`);
@@ -936,7 +995,7 @@ const App = {
     async completarPedido(id) {
         if (!confirm(`¿Marcar pedido #${id} como completado?`)) return;
         try {
-            const { error } = await supabaseClient.from('pedidos').update({ estado: 'entregado', updated_at: new Date().toISOString() }).eq('id', id);
+            const { error } = await supabaseClient.from('pedidos').update({ estado: 'entregado' }).eq('id', id);
             if (error) throw error;
             ToastSystem.success('✅ Pedido completado', `Pedido #${id} marcado como entregado`);
             await this.refrescarDatosSilencioso();
@@ -949,7 +1008,7 @@ const App = {
     async eliminarPedido(id) {
         if (!confirm(`¿Cancelar pedido #${id}?`)) return;
         try {
-            const { error } = await supabaseClient.from('pedidos').update({ estado: 'cancelado', updated_at: new Date().toISOString() }).eq('id', id);
+            const { error } = await supabaseClient.from('pedidos').update({ estado: 'cancelado' }).eq('id', id);
             if (error) throw error;
             ToastSystem.success('✅ Pedido cancelado', `Pedido #${id} cancelado`);
             await this.refrescarDatosSilencioso();
