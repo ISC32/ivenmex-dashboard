@@ -17,7 +17,12 @@
   }
 
   #dashboard { min-height: 100vh; }
-  .md-toolbar { padding: 22px 34px; margin-bottom: 34px; top: 18px; }
+
+  .md-toolbar {
+    padding: 22px 34px;
+    margin-bottom: 34px;
+    top: 18px;
+  }
   .md-toolbar-brand img { height: 50px; }
   .md-toolbar-brand .brand-text { font-size: clamp(30px, 2vw, 42px); }
   .md-toolbar-actions, .md-chip { font-size: clamp(16px, 1.1vw, 22px); }
@@ -31,7 +36,11 @@
   .avatar-name { max-width: 130px; font-size: 16px; }
   .avatar-badge { width: 28px; height: 28px; font-size: 14px; }
 
-  .md-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; margin-bottom: 34px; }
+  .md-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 28px;
+    margin-bottom: 34px;
+  }
   .md-card { min-height: 190px; padding: 30px; }
   .card-icon { width: 64px; height: 64px; font-size: 28px; }
   .card-label { font-size: clamp(15px, 1vw, 21px); }
@@ -39,9 +48,18 @@
   .card-change { font-size: 17px; }
 
   .charts-section { gap: 28px !important; }
-  .charts-section > .card { min-height: 430px; padding: 28px !important; border: 0; border-radius: var(--md-radius-xl); box-shadow: var(--md-elevation-3); }
+  .charts-section > .card {
+    min-height: 430px;
+    padding: 28px !important;
+    border: 0;
+    border-radius: var(--md-radius-xl);
+    box-shadow: var(--md-elevation-3);
+  }
   .charts-section h4, .urgentes-section h3 { font-size: clamp(24px, 1.6vw, 34px); }
-  #doughnut-chart { width: min(20vw, 360px) !important; height: min(20vw, 360px) !important; }
+  #doughnut-chart {
+    width: min(20vw, 360px) !important;
+    height: min(20vw, 360px) !important;
+  }
   .legend-item, .bar-label { font-size: 18px; }
   .bar-item { margin-bottom: 24px; }
   .bar-track { height: 42px; }
@@ -51,9 +69,7 @@
   .table-responsive { max-height: 460px; }
   .table { font-size: 17px; }
   .table th, .table td { padding: 16px 18px; }
-  #tbody-eficiencia, #tabla-urgentes-body { min-height: 140px; }
 
-  /* En TV los controles de edición no deben dominar la pantalla. */
   .md-toolbar-actions .md-btn, body.tv-display .md-btn-outline { display: none; }
   .tv-clock { font-variant-numeric: tabular-nums; font-weight: 800; }
 }
@@ -63,6 +79,9 @@
   .md-grid { gap: 38px; }
   .md-card { min-height: 230px; }
   .table-responsive { max-height: 560px; }
+  .empleado-avatar-card { min-width: 140px; }
+  .avatar-circle { width: 96px; height: 96px; font-size: 36px; }
+  .avatar-name { font-size: 18px; max-width: 150px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
