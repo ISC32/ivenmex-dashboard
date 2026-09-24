@@ -56,13 +56,16 @@
     console.log(`📊 Grid ajustado a ${columnasCalculadas} columnas`);
   }
 
+  // ==========================================
+  // ROTACIÓN AUTOMÁTICA
+  // ==========================================
   let rotacionActiva = false;
   let rotacionInterval = null;
   let panelActual = 0;
 
   function iniciarRotacionAutomatica() {
     const ancho = window.innerWidth;
-    if (ancho < 1400) { detenerRotacion(); return; }
+    if (ancho < 1400) { detenerRotacionAutomatica(); return; }
     if (rotacionActiva) return;
     rotacionActiva = true;
 
@@ -85,7 +88,7 @@
     console.log('🔄 Rotación automática iniciada');
   }
 
-  function detenerRotacion() {
+  function detenerRotacionAutomatica() {
     if (rotacionInterval) { clearInterval(rotacionInterval); rotacionInterval = null; }
     rotacionActiva = false;
   }
@@ -139,8 +142,8 @@
       detectar: detectarTamanoPantalla,
       aplicar: aplicarClaseTamano,
       ajustarGrid: ajustarGridEmpleados,
-      iniciarRotacion,
-      detenerRotacion
+      iniciarRotacion: iniciarRotacionAutomatica,
+      detenerRotacion: detenerRotacionAutomatica
     };
   }
 
