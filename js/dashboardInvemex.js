@@ -1,26 +1,39 @@
+// ==========================================
+// DASHBOARD INVEMEX - OPTIMIZADO v7.0
+// ==========================================
+
 const CONFIG = {
     SUPABASE_URL: 'https://ubyesdxizxywfwysechk.supabase.co',
     SUPABASE_ANON_KEY: 'sb_publishable_ocKHSbzB3BuoZRWu4GvCFQ_fonZWWgQ',
-    REFRESH_INTERVAL: 30000,
-    TOAST_DURATION: 4000
+    REFRESH_INTERVAL: 45000,
+    TOAST_DURATION: 4000,
+    MAX_RETRIES: 3,
+    RETRY_DELAY: 2000
 };
 
-console.log('🚀 Iniciando Dashboard INVEMEX v6.0.1');
+console.log('🚀 Iniciando Dashboard INVEMEX v7.0');
 
 const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 window.supabaseClient = supabaseClient;
 
 const STATE = {
-    clientes: [],
-    productos: [],
-    pedidos: [],
-    urgentes: [],
-    empleados: [],
-    tareas: [],
-    loading: false,
-    refreshInterval: null,
-    realtimeChannel: null,
-    ultimaActualizacion: null
+    clientes: [], productos: [], pedidos: [], urgentes: [],
+    empleados: [], tareas: [], eficiencia: [], loading: false,
+    refreshInterval: null, realtimeChannel: null, ultimaActualizacion: null
+};
+
+const Cache = {
+    data: new Map(),
+    TTL: 30000,
+    get(key) {
+        const item = this.data.get(key);
+        if (!item) return null;
+        if (Date.now() - item.time > this.TTL) { this.data.delete(key); return null; }
+        return item.value;
+    },
+    set(key, value) { this.data.set(key, { value, time: Date.now() }); },
+    invalidate(...keys) { keys.forEach(k => this.data.delete(k)); },
+    clear() { this.data.clear(); }
 };
 
 const ToastSystem = {
@@ -36,12 +49,7 @@ const ToastSystem = {
     },
     show(title, message, type = 'success') {
         if (!this.container) this.init();
-        const icons = {
-            success: 'fa-check-circle',
-            error: 'fa-exclamation-circle',
-            warning: 'fa-exclamation-triangle',
-            info: 'fa-info-circle'
-        };
+        const icons = { success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle' };
         const toast = document.createElement('div');
         toast.className = `md-toast ${type}`;
         toast.innerHTML = `
@@ -66,39 +74,20 @@ const ToastSystem = {
 };
 
 const DateFormatter = {
-    formatLong() {
-        return new Date().toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
-    },
-    getToday() {
-        return new Date().toISOString().split('T')[0];
-    },
-    formatHora() {
-        return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    }
+    getToday() { return new Date().toISOString().split('T')[0]; },
+    formatHora() { return new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }); }
 };
 
 const StateMappers = {
     estadoClass: {
-        urgente: 'danger',
-        'producción': 'warning',
-        'en diseño': 'primary',
-        completado: 'success',
-        en_produccion: 'warning',
-        diseño: 'primary',
-        control_calidad: 'default',
-        cotizando: 'default',
-        listo: 'success',
-        entregado: 'success',
-        cancelado: 'default'
+        urgente: 'danger', 'producción': 'warning', 'en diseño': 'primary',
+        completado: 'success', en_produccion: 'warning', diseño: 'primary',
+        control_calidad: 'default', cotizando: 'default', listo: 'success',
+        entregado: 'success', cancelado: 'default'
     },
     estadoLabel: {
-        cotizando: 'Cotizando',
-        diseño: 'En Diseño',
-        en_produccion: 'Producción',
-        control_calidad: 'Control Calidad',
-        listo: 'Listo',
-        entregado: 'Entregado',
-        cancelado: 'Cancelado'
+        cotizando: 'Cotizando', diseño: 'En Diseño', en_produccion: 'Producción',
+        control_calidad: 'Control Calidad', listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado'
     },
     getEstadoClass(estado) { return this.estadoClass[estado] || 'default'; },
     getEstadoLabel(estado) { return this.estadoLabel[estado] || estado; }
@@ -111,15 +100,12 @@ const ErrorHandler = {
         cont.innerHTML = `
             <div style="background:#FEF2F2; border:1px solid #FECACA; border-radius:12px; padding:20px; max-width:500px; text-align:left; margin-top:20px;">
                 <strong style="color:#991B1B; display:block; margin-bottom:8px;"><i class="fas fa-exclamation-circle"></i> Error de Conexión</strong>
-                <pre style="background:white; padding:12px; border-radius:8px; font-size:13px; max-height:150px; overflow:auto; color:#1A1A1A; border:1px solid #EEEEEE;">${message}</pre>
+                <pre style="background:white; padding:12px; border-radius:8px; font-size:13px; max-height:150px; overflow:auto;">${message}</pre>
                 <button class="md-btn md-btn-primary mt-3" onclick="App.reintentar()"><i class="fas fa-redo"></i> Reintentar</button>
             </div>
         `;
     },
-    clear() {
-        const cont = document.getElementById('error-container');
-        if (cont) cont.innerHTML = '';
-    }
+    clear() { const cont = document.getElementById('error-container'); if (cont) cont.innerHTML = ''; }
 };
 
 const LoadingSystem = {
@@ -129,11 +115,7 @@ const LoadingSystem = {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) overlay.style.display = 'flex';
         const newLoader = document.getElementById('ivx-loader');
-        if (newLoader) {
-            newLoader.style.display = 'flex';
-            newLoader.style.opacity = '1';
-            newLoader.style.pointerEvents = 'auto';
-        }
+        if (newLoader) { newLoader.style.display = 'flex'; newLoader.style.opacity = '1'; newLoader.style.pointerEvents = 'auto'; }
     },
     hide() {
         const overlay = document.getElementById('loading-overlay');
@@ -147,36 +129,30 @@ const LoadingSystem = {
             setTimeout(() => { newLoader.style.display = 'none'; }, 500);
         }
     },
-    setText(text) {
-        const el = document.getElementById('loading-text');
-        if (el) el.textContent = text;
-    }
+    setText(text) { const el = document.getElementById('loading-text'); if (el) el.textContent = text; }
 };
 
-const TableCounter = {
-    update() {
-        const tbody = document.getElementById('tabla-urgentes-body');
-        const countEl = document.getElementById('total-registros');
-        if (!countEl || !tbody) return;
-        const filas = tbody.querySelectorAll('tr:not(:has(.md-empty))');
-        countEl.textContent = tbody.querySelector('.md-empty') ? '0' : filas.length;
+async function withRetry(fn, retries = CONFIG.MAX_RETRIES) {
+    for (let i = 0; i < retries; i++) {
+        try { return await fn(); }
+        catch (err) { if (i === retries - 1) throw err; await new Promise(r => setTimeout(r, CONFIG.RETRY_DELAY * (i + 1))); }
     }
-};
+}
 
 const App = {
-    calendarState: { currentDate: new Date(), selectedDate: new Date(), isOpen: false },
-
     async init() {
-        console.log('📋 Inicializando aplicación v6.0.1...');
-        const today = new Date();
-        this.calendarState.selectedDate = new Date(today);
-        this.calendarState.currentDate = new Date(today);
-        this.updateDateDisplay(today);
+        console.log('📋 Inicializando aplicación v7.0...');
+        this.updateDateDisplay(new Date());
         ToastSystem.init();
         await this.cargarTodosLosDatos();
         this.suscribirRealtime();
         STATE.refreshInterval = setInterval(() => this.refrescarDatosSilencioso(), CONFIG.REFRESH_INTERVAL);
         console.log('✅ Aplicación inicializada correctamente');
+    },
+
+    updateDateDisplay(date) {
+        const el = document.getElementById('fecha-texto');
+        if (el) el.textContent = date.toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
     },
 
     async cargarTodosLosDatos() {
@@ -188,7 +164,7 @@ const App = {
             ToastSystem.success('✅ Listo', 'Dashboard actualizado correctamente');
         } catch (error) {
             console.error('❌ Error en carga inicial:', error);
-            ErrorHandler.show(error.message || 'Error al conectar con la base de datos. Revisa la consola (F12).');
+            ErrorHandler.show(error.message || 'Error al conectar con la base de datos.');
             LoadingSystem.setText('⚠️ Error al cargar datos.');
             setTimeout(() => LoadingSystem.hide(), 1500);
         }
@@ -202,11 +178,10 @@ const App = {
                 this.cargarEstadosGrafico(),
                 this.cargarCargaTrabajo(),
                 this.cargarPedidosUrgentes(),
-                this.cargarEficiencia(),
+                this.cargarEficienciaOptimizada(),
                 this.cargarEmpleadosYTareas()
             ]);
             console.log('✅ Todos los datos cargados correctamente');
-            TableCounter.update();
             STATE.ultimaActualizacion = new Date();
             this.actualizarHoraActualizacion();
         } catch (error) {
@@ -223,12 +198,12 @@ const App = {
     async refrescarDatos() {
         ToastSystem.info('🔄 Actualizando', 'Refrescando datos del dashboard...');
         try {
+            Cache.clear();
             await this.cargarDatos();
             ToastSystem.success('✅ Actualizado', 'Datos del dashboard actualizados correctamente');
         } catch (error) {
             console.error('❌ Error al refrescar:', error);
             ToastSystem.error('❌ Error', 'No se pudieron actualizar los datos');
-            ErrorHandler.show(error.message);
         }
     },
 
@@ -244,46 +219,43 @@ const App = {
     async cargarKPI() {
         const hoy = DateFormatter.getToday();
         try {
-            const [{ count: activos }, { count: produccion }, { count: entregados }, { count: urgentes }] = await Promise.all([
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).not('estado', 'in', '(entregado,cancelado)'),
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'en_produccion'),
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', 'entregado').gte('fecha_solicitud', hoy),
-                supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('prioridad', 'urgente').not('estado', 'in', '(entregado,cancelado)')
-            ]);
+            const { data, error } = await withRetry(() => supabaseClient.from('pedidos').select('estado, prioridad, fecha_solicitud'));
+            if (error) throw error;
+
+            let activos = 0, produccion = 0, entregados = 0, urgentes = 0;
+            (data || []).forEach(p => {
+                const esActivo = p.estado !== 'entregado' && p.estado !== 'cancelado';
+                if (esActivo) activos++;
+                if (p.estado === 'en_produccion') produccion++;
+                if (p.estado === 'entregado' && p.fecha_solicitud && p.fecha_solicitud.startsWith(hoy)) entregados++;
+                if (p.prioridad === 'urgente' && esActivo) urgentes++;
+            });
+
             const elements = {
-                'kpi-activos': activos || 0,
-                'kpi-activos-change': `${activos || 0} activos`,
-                'kpi-produccion': produccion || 0,
-                'kpi-produccion-change': `${produccion || 0} en producción`,
-                'kpi-entregados': entregados || 0,
-                'kpi-entregados-change': `${entregados || 0} hoy`,
-                'kpi-urgentes': urgentes || 0,
-                'kpi-urgentes-change': `${urgentes || 0} urgentes`
+                'kpi-activos': activos, 'kpi-activos-change': `${activos} activos`,
+                'kpi-produccion': produccion, 'kpi-produccion-change': `${produccion} en producción`,
+                'kpi-entregados': entregados, 'kpi-entregados-change': `${entregados} hoy`,
+                'kpi-urgentes': urgentes, 'kpi-urgentes-change': `${urgentes} urgentes`
             };
             Object.entries(elements).forEach(([id, value]) => {
                 const el = document.getElementById(id);
                 if (el) el.textContent = value;
             });
-            const badge2 = document.getElementById('urgentes-count-badge');
-            if (badge2) badge2.textContent = urgentes || 0;
-        } catch (error) {
-            console.error('Error cargando KPI:', error);
-        }
+            const badge = document.getElementById('urgentes-count-badge');
+            if (badge) badge.textContent = urgentes;
+        } catch (error) { console.error('Error cargando KPI:', error); }
     },
 
     async cargarEstadosGrafico() {
-        const estados = ['cotizando', 'diseño', 'en_produccion', 'control_calidad', 'listo', 'entregado'];
-        const labels = ['Cotizando', 'Diseño', 'Producción', 'Control Calidad', 'Listo', 'Entregado'];
-        const colores = ['#0B218B', '#1A3BA8', '#FFF200', '#E84C3D', '#27AE60', '#8B6914'];
+        const colores = { cotizando: '#0B218B', diseño: '#1A3BA8', en_produccion: '#FFF200', control_calidad: '#E84C3D', listo: '#27AE60', entregado: '#8B6914' };
+        const labels = { cotizando: 'Cotizando', diseño: 'Diseño', en_produccion: 'Producción', control_calidad: 'Control Calidad', listo: 'Listo', entregado: 'Entregado' };
         try {
-            const resultados = [];
-            let total = 0;
-            for (let i = 0; i < estados.length; i++) {
-                const { count } = await supabaseClient.from('pedidos').select('*', { count: 'exact', head: true }).eq('estado', estados[i]);
-                const valor = count || 0;
-                resultados.push({ label: labels[i], value: valor, color: colores[i] });
-                total += valor;
-            }
+            const { data, error } = await withRetry(() => supabaseClient.from('pedidos').select('estado'));
+            if (error) throw error;
+            const conteo = {};
+            (data || []).forEach(p => { conteo[p.estado] = (conteo[p.estado] || 0) + 1; });
+            const resultados = Object.keys(labels).map(k => ({ label: labels[k], value: conteo[k] || 0, color: colores[k] }));
+            const total = resultados.reduce((sum, r) => sum + r.value, 0);
             const chart = document.getElementById('doughnut-chart');
             if (chart) {
                 chart.setAttribute('data-total', total);
@@ -307,9 +279,7 @@ const App = {
                     </div>
                 `).join('');
             }
-        } catch (error) {
-            console.error('Error cargando estados:', error);
-        }
+        } catch (error) { console.error('Error cargando estados:', error); }
     },
 
     async cargarCargaTrabajo() {
@@ -326,16 +296,18 @@ const App = {
         };
         const coloresMap = { design: '#0B218B', corte: '#FFF200', sublimacion: '#8E44AD', admin: '#E74C8B' };
         try {
-            const resultados = [];
-            let maxTareas = 1;
-            for (const area of areas) {
-                const { count } = await supabaseClient.from('tareas').select('*', { count: 'exact', head: true }).eq('tipo_tarea', area.nombre).in('estado', ['pendiente', 'en_progreso']);
-                const tareas = count || 0;
-                if (tareas > maxTareas) maxTareas = tareas;
-                resultados.push({ ...area, tareas });
-            }
+            const { data, error } = await withRetry(() => supabaseClient.from('tareas').select('tipo_tarea, estado'));
+            if (error) throw error;
+            const conteo = {};
+            (data || []).forEach(t => {
+                if (t.estado === 'pendiente' || t.estado === 'en_progreso') {
+                    conteo[t.tipo_tarea] = (conteo[t.tipo_tarea] || 0) + 1;
+                }
+            });
+            const resultados = areas.map(a => ({ ...a, tareas: conteo[a.nombre] || 0 }));
             resultados.push({ label: 'Administración', icon: 'fa-user-tie', clase: 'admin', tareas: 0 });
-            resultados.forEach(item => { item.porcentaje = maxTareas > 0 ? (item.tareas / maxTareas) * 100 : 0; });
+            const maxTareas = Math.max(1, ...resultados.map(r => r.tareas));
+            resultados.forEach(item => { item.porcentaje = (item.tareas / maxTareas) * 100; });
             const barChart = document.getElementById('bar-chart');
             if (barChart) {
                 barChart.innerHTML = resultados.map(item => {
@@ -353,20 +325,19 @@ const App = {
                     `;
                 }).join('');
             }
-        } catch (error) {
-            console.error('Error cargando carga de trabajo:', error);
-        }
+        } catch (error) { console.error('Error cargando carga de trabajo:', error); }
     },
 
     async cargarPedidosUrgentes() {
         try {
-            const { data, error } = await supabaseClient
-                .from('pedidos')
-                .select('id, cliente_id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre), detalles_pedido (producto_id, material_especifico, tiempo_estimado_horas, productos (nombre)), tareas (id, empleado_id, fecha_fin, empleados (nombre, apellido))')
-                .eq('prioridad', 'urgente')
-                .not('estado', 'in', '(entregado,cancelado)')
-                .order('fecha_solicitud', { ascending: false })
-                .limit(10);
+            const { data, error } = await withRetry(() =>
+                supabaseClient.from('pedidos')
+                    .select(`id, cliente_id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre), detalles_pedido (material_especifico, productos (nombre)), tareas (fecha_fin, empleados (nombre, apellido))`)
+                    .eq('prioridad', 'urgente')
+                    .not('estado', 'in', '(entregado,cancelado)')
+                    .order('fecha_solicitud', { ascending: false })
+                    .limit(10)
+            );
             if (error) throw error;
             const tbody = document.getElementById('tabla-urgentes-body');
             if (!tbody) return;
@@ -399,10 +370,7 @@ const App = {
                     </tr>
                 `;
             }).join('');
-            TableCounter.update();
-        } catch (error) {
-            console.error('Error cargando pedidos urgentes:', error);
-        }
+        } catch (error) { console.error('Error cargando pedidos urgentes:', error); }
     },
 
     verPedidoDetalle(id) {
@@ -419,7 +387,7 @@ const App = {
 
     async buscarYMostrarDetalle(id) {
         try {
-            const { data, error } = await supabaseClient.from('pedidos').select('id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre, telefono, email), detalles_pedido (*, productos (*)), tareas (*, empleados (*))').eq('id', id).single();
+            const { data, error } = await supabaseClient.from('pedidos').select(`id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre, telefono, email), detalles_pedido (*, productos (*)), tareas (*, empleados (*))`).eq('id', id).single();
             if (error) throw error;
             const detalle = data.detalles_pedido?.[0] || {};
             const producto = detalle.productos || {};
@@ -432,23 +400,20 @@ const App = {
             if (modalBody) {
                 modalBody.innerHTML = `
                     <div class="row g-3">
-                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-user" style="color: var(--md-primary);"></i> Cliente</div><div class="detail-value">${cliente.nombre || 'Sin cliente'}</div></div></div>
+                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-user" style="color: var(--md-primary);"></i> Cliente</div><div class="detail-value">${cliente.nombre || 'Sin cliente'}</div>${cliente.telefono ? `<small>📞 ${cliente.telefono}</small>` : ''}</div></div>
                         <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-box" style="color: var(--md-primary);"></i> Producto</div><div class="detail-value">${producto.nombre || detalle.material_especifico || 'Sin producto'}</div></div></div>
                         <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-ruler-combined" style="color: var(--md-primary);"></i> Medidas</div><div class="detail-value">${detalle.medida_ancho_cm ? `${detalle.medida_ancho_cm} x ${detalle.medida_alto_cm || '-'} cm` : 'No definida'}</div></div></div>
-                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-clock" style="color: var(--md-primary);"></i> Tiempo Estimado</div><div class="detail-value">${detalle.tiempo_estimado_horas || 'N/A'} hrs</div></div></div>
+                        <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-clock" style="color: var(--md-primary);"></i> Tiempo Estimado</div><div class="detail-value">${detalle.tiempo_estimado_minutos ? `${detalle.tiempo_estimado_minutos} min` : 'N/A'}</div></div></div>
                         <div class="col-md-4"><div class="detail-card"><div class="detail-label"><i class="fas fa-user-tie" style="color: var(--md-primary);"></i> Asignado a</div><div class="detail-value">${empleado.nombre ? `${empleado.nombre} ${empleado.apellido || ''}`.trim() : 'Sin asignar'}</div></div></div>
                         <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-calendar-alt" style="color: var(--md-primary);"></i> Fechas</div><div class="detail-value">Solicitud: ${data.fecha_solicitud ? new Date(data.fecha_solicitud).toLocaleDateString('es-ES') : '-'}<br>Entrega: ${data.fecha_entrega_prometida ? new Date(data.fecha_entrega_prometida).toLocaleDateString('es-ES') : '-'}</div></div></div>
-                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-info-circle" style="color: var(--md-primary);"></i> Información Adicional</div><div class="detail-value"><span class="md-badge ${estadoColor}">${estadoLabel}</span><br>${data.observaciones || 'Sin observaciones'}</div></div></div>
+                        <div class="col-md-6"><div class="detail-card"><div class="detail-label"><i class="fas fa-info-circle" style="color: var(--md-primary);"></i> Estado</div><div class="detail-value"><span class="md-badge ${estadoColor}">${estadoLabel}</span></div>${data.observaciones ? `<p style="margin-top:8px; font-size:13px;">${data.observaciones}</p>` : ''}</div></div>
                     </div>
                 `;
             }
         } catch (error) {
             console.error('❌ Error cargando detalle:', error);
             const modalBody = document.getElementById('modal-detalle-body');
-            if (modalBody) {
-                modalBody.innerHTML = '<div style="text-align:center; padding:30px; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:32px; display:block; margin-bottom:12px;"></i>No se pudo cargar el detalle del pedido.</div>';
-            }
-            ToastSystem.error('Error', 'No se pudo cargar el detalle del pedido');
+            if (modalBody) modalBody.innerHTML = '<div style="text-align:center; padding:30px; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:32px;"></i><p>Error al cargar el pedido</p></div>';
         }
     },
 
@@ -460,47 +425,47 @@ const App = {
     },
 
     async cargarEmpleadosYTareas() {
-        console.log('📊 Cargando empleados...');
         try {
-            const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('*').eq('activo', true).order('nombre');
+            const { data: empleados, error: errorEmpleados } = await withRetry(() =>
+                supabaseClient.from('empleados').select('id, nombre, apellido, cargo, email, telefono').eq('activo', true).order('nombre')
+            );
             if (errorEmpleados) throw errorEmpleados;
             STATE.empleados = empleados || [];
-            const grid = document.getElementById('empleadosAvatarGrid');
-            const badge = document.getElementById('empleados-total-badge');
-            if (!empleados || empleados.length === 0) {
-                if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color: var(--md-text-secondary);"><i class="fas fa-users" style="font-size:28px; display:block; margin-bottom:8px;"></i>No hay empleados activos</div>';
-                if (badge) badge.textContent = '0';
-                return;
-            }
-            const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*').in('estado', ['pendiente', 'en_progreso', 'notificado']).order('fecha_asignacion', { ascending: false });
+            const { data: tareas, error: errorTareas } = await withRetry(() =>
+                supabaseClient.from('tareas').select('id, empleado_id, estado').in('estado', ['pendiente', 'en_progreso', 'notificado'])
+            );
             if (errorTareas) throw errorTareas;
             STATE.tareas = tareas || [];
-            this.renderAvataresEmpleados(empleados, tareas || []);
+            const conteo = {};
+            tareas.forEach(t => { if (t.empleado_id) conteo[t.empleado_id] = (conteo[t.empleado_id] || 0) + 1; });
+            this.renderAvataresEmpleados(empleados, conteo);
         } catch (error) {
             console.error('❌ Error cargando empleados:', error);
             const grid = document.getElementById('empleadosAvatarGrid');
-            if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color: #EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px; display:block; margin-bottom:8px;"></i>No se pudieron cargar los empleados</div>';
-            ToastSystem.error('Error', 'No se pudieron cargar los empleados');
+            if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px;"></i>Error al cargar empleados</div>';
         }
     },
 
-    renderAvataresEmpleados(empleados, tareas) {
+    renderAvataresEmpleados(empleados, conteo) {
         const grid = document.getElementById('empleadosAvatarGrid');
-        let html = '';
-        empleados.forEach(empleado => {
-            const tareasPendientes = tareas.filter(t => t.empleado_id === empleado.id).length;
+        if (!grid) return;
+        if (!empleados || empleados.length === 0) {
+            grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:var(--md-text-secondary);">No hay empleados</div>';
+            return;
+        }
+        grid.innerHTML = empleados.map(empleado => {
+            const tareasPendientes = conteo[empleado.id] || 0;
             const color = this.getColorEmpleado(empleado.nombre);
             const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`;
             const badgeClass = tareasPendientes > 0 ? 'pendiente' : 'listo';
-            html += `
+            return `
                 <div class="empleado-avatar-card" onclick="App.abrirModalEmpleado(${empleado.id})" title="Ver tareas de ${empleado.nombre}">
                     <span class="avatar-badge ${badgeClass}">${tareasPendientes}</span>
                     <div class="avatar-circle" style="background:${color};">${iniciales}</div>
                     <span class="avatar-name">${empleado.nombre}</span>
                 </div>
             `;
-        });
-        if (grid) grid.innerHTML = html;
+        }).join('');
         const badge = document.getElementById('empleados-total-badge');
         if (badge) badge.textContent = empleados.length;
     },
@@ -509,7 +474,7 @@ const App = {
         try {
             const { data: empleado, error: errorEmpleado } = await supabaseClient.from('empleados').select('*').eq('id', empleadoId).single();
             if (errorEmpleado) throw errorEmpleado;
-            const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*, pedidos (id, cliente_id, fecha_solicitud, fecha_entrega_prometida, observaciones, clientes (nombre))').eq('empleado_id', empleadoId).order('fecha_asignacion', { ascending: false });
+            const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*, pedidos (id, fecha_solicitud, fecha_entrega_prometida, observaciones, clientes (nombre))').eq('empleado_id', empleadoId).order('fecha_asignacion', { ascending: false });
             if (errorTareas) throw errorTareas;
             this.renderModalEmpleado(empleado, tareas || []);
             new bootstrap.Modal(document.getElementById('modalEmpleadoDetalle')).show();
@@ -527,9 +492,7 @@ const App = {
         const pendientes = tareas.filter(t => t.estado === 'pendiente').length;
         const total = tareas.length;
         const titleEl = document.getElementById('modalEmpleadoTitle');
-        if (titleEl) {
-            titleEl.innerHTML = `<span class="avatar-lg" style="background:${color};">${iniciales}</span>${empleado.nombre} ${empleado.apellido || ''}<span class="ms-2 md-badge primary" style="font-size:12px;">${total} tareas</span>`;
-        }
+        if (titleEl) titleEl.innerHTML = `<span class="avatar-lg" style="background:${color};">${iniciales}</span>${empleado.nombre} ${empleado.apellido || ''}<span class="ms-2 md-badge primary" style="font-size:12px;">${total} tareas</span>`;
         const bodyEl = document.getElementById('modalEmpleadoBody');
         if (bodyEl) {
             bodyEl.innerHTML = `
@@ -537,7 +500,7 @@ const App = {
                     <div class="info-item"><span class="label">📋 Cargo:</span> ${empleado.cargo || 'Sin cargo'}</div>
                     ${empleado.email ? `<div class="info-item"><span class="label">📧 Email:</span> ${empleado.email}</div>` : ''}
                     ${empleado.telefono ? `<div class="info-item"><span class="label">📱 Teléfono:</span> ${empleado.telefono}</div>` : ''}
-                    <div class="info-item"><span class="label">📊 Total tareas:</span> ${total}</div>
+                    <div class="info-item"><span class="label">📊 Total:</span> ${total}</div>
                 </div>
                 <div class="stats-row">
                     <span class="stat completadas">✅ ${completadas} completadas</span>
@@ -547,9 +510,7 @@ const App = {
                 ${tareas.length > 0 ? `
                     <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
                         <table class="tareas-empleado-modal">
-                            <thead>
-                                <tr><th style="min-width:80px;">Recepción</th><th style="min-width:120px;">Tarea</th><th style="min-width:100px;">Entrega</th><th style="min-width:150px;">Detalle</th><th style="min-width:110px;">Estado</th><th style="min-width:100px;">Fin</th></tr>
-                            </thead>
+                            <thead><tr><th>Recepción</th><th>Tarea</th><th>Entrega</th><th>Detalle</th><th>Estado</th><th>Fin</th></tr></thead>
                             <tbody>${this.renderTareasModal(tareas, empleado)}</tbody>
                         </table>
                     </div>
@@ -568,12 +529,11 @@ const App = {
             const fechaRecepcion = pedido.fecha_solicitud ? new Date(pedido.fecha_solicitud).toLocaleDateString('es-ES') : '-';
             const fechaEntrega = pedido.fecha_entrega_prometida ? new Date(pedido.fecha_entrega_prometida).toLocaleDateString('es-ES') : '-';
             const fechaFin = tarea.fecha_fin ? new Date(tarea.fecha_fin).toLocaleDateString('es-ES') : '-';
-            const tareaNombre = tarea.tipo_tarea || 'Sin tarea';
             const detalles = pedido.observaciones || tarea.observaciones || cliente.nombre || 'Sin detalles';
             return `
                 <tr data-tarea-id="${tarea.id}">
                     <td>${fechaRecepcion}</td>
-                    <td><strong>${tareaNombre}</strong></td>
+                    <td><strong>${tarea.tipo_tarea || 'Sin tarea'}</strong></td>
                     <td>${fechaEntrega}</td>
                     <td style="max-width:150px; word-wrap:break-word;">${detalles}</td>
                     <td>
@@ -589,7 +549,7 @@ const App = {
 
     async actualizarStatusTarea(tareaId, nuevoStatus, empleadoId) {
         try {
-            const updateData = { estado: nuevoStatus, updated_at: new Date().toISOString() };
+            const updateData = { estado: nuevoStatus };
             if (nuevoStatus === 'completado') {
                 updateData.fecha_fin = new Date().toISOString();
                 updateData.completada = true;
@@ -598,7 +558,8 @@ const App = {
             if (error) throw error;
             await this.calcularEficienciaEmpleado(empleadoId);
             ToastSystem.success('✅ Actualizado', `Tarea cambiada a ${nuevoStatus}`);
-            await Promise.all([this.cargarEmpleadosYTareas(), this.cargarEficiencia(), this.cargarPedidosUrgentes()]);
+            Cache.invalidate('eficiencia', 'empleados', 'pedidos');
+            await Promise.all([this.cargarEmpleadosYTareas(), this.cargarEficienciaOptimizada(), this.cargarPedidosUrgentes()]);
             await this.abrirModalEmpleado(empleadoId);
         } catch (error) {
             console.error('❌ Error actualizando tarea:', error);
@@ -608,7 +569,7 @@ const App = {
 
     async calcularEficienciaEmpleado(empleadoId) {
         try {
-            const { data: tareas, error } = await supabaseClient.from('tareas').select('*').eq('empleado_id', empleadoId);
+            const { data: tareas, error } = await supabaseClient.from('tareas').select('estado, completada').eq('empleado_id', empleadoId);
             if (error) throw error;
             const total = tareas.length;
             const completadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
@@ -622,75 +583,58 @@ const App = {
                 tareas_retrasadas: 0,
                 tasa_exito: tasaExito
             }, { onConflict: 'empleado_id, fecha' });
-        } catch (error) {
-            console.error('Error calculando eficiencia:', error);
-        }
+        } catch (error) { console.error('Error calculando eficiencia:', error); }
     },
 
-    suscribirRealtime() {
+    async cargarEficienciaOptimizada() {
         try {
-            if (STATE.realtimeChannel) supabaseClient.removeChannel(STATE.realtimeChannel);
-            STATE.realtimeChannel = supabaseClient.channel('dashboard-updates')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
-                    console.log('🔄 Cambio detectado en pedidos');
-                    this.refrescarDatosSilencioso();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'tareas' }, () => {
-                    console.log('🔄 Cambio detectado en tareas');
-                    this.refrescarDatosSilencioso();
-                })
-                .subscribe((status, err) => {
-                    if (status === 'SUBSCRIBED') console.log('✅ Suscrito a cambios en tiempo real');
-                    else if (err) console.error('❌ Error en suscripción:', err);
-                });
-        } catch (error) {
-            console.error('❌ Error suscribiendo a Realtime:', error);
-        }
-    },
-
-    async cargarEficiencia() {
-        try {
-            const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('id, nombre, apellido, cargo').eq('activo', true);
+            const { data: empleados, error: errorEmpleados } = await withRetry(() =>
+                supabaseClient.from('empleados').select('id, nombre, apellido, cargo').eq('activo', true)
+            );
             if (errorEmpleados) throw errorEmpleados;
             const tbody = document.getElementById('tbody-eficiencia');
             if (!tbody) return;
             if (!empleados || empleados.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px; color: var(--md-text-secondary);"><i class="fas fa-inbox" style="font-size:32px; display:block; margin-bottom:10px;"></i>No hay empleados activos</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:40px;">No hay empleados</td></tr>';
                 return;
             }
+            const { data: todasTareas, error: errorTareas } = await withRetry(() =>
+                supabaseClient.from('tareas').select('empleado_id, estado, completada')
+            );
+            if (errorTareas) throw errorTareas;
+            const tareasPorEmpleado = {};
+            todasTareas.forEach(t => {
+                if (!t.empleado_id) return;
+                if (!tareasPorEmpleado[t.empleado_id]) tareasPorEmpleado[t.empleado_id] = { total: 0, completadas: 0, pendientes: 0 };
+                tareasPorEmpleado[t.empleado_id].total++;
+                if (t.estado === 'completado' || t.completada === true) tareasPorEmpleado[t.empleado_id].completadas++;
+                else tareasPorEmpleado[t.empleado_id].pendientes++;
+            });
             let totalExito = 0, totalEmpleados = 0, mejorEmpleado = '', mejorTasa = 0;
             let html = '';
             for (const empleado of empleados) {
-                const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*').eq('empleado_id', empleado.id);
-                if (errorTareas) continue;
-                const totalTareas = tareas.length;
-                const tareasCompletadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
-                const tareasPendientes = tareas.filter(t => t.estado !== 'completado' && t.completada !== true).length;
-                let tasaExito = totalTareas > 0 ? Math.round((tareasCompletadas / totalTareas) * 100) : 0;
+                const stats = tareasPorEmpleado[empleado.id] || { total: 0, completadas: 0, pendientes: 0 };
+                const tasaExito = stats.total > 0 ? Math.round((stats.completadas / stats.total) * 100) : 0;
                 let eficienciaClass = '', eficienciaLabel = '', progressClass = '';
                 if (tasaExito >= 90) { eficienciaClass = 'success'; eficienciaLabel = 'Excelente 🏆'; progressClass = 'success'; }
                 else if (tasaExito >= 70) { eficienciaClass = 'primary'; eficienciaLabel = 'Bueno 👍'; progressClass = 'primary'; }
                 else if (tasaExito >= 50) { eficienciaClass = 'warning'; eficienciaLabel = 'Regular ⚠️'; progressClass = 'warning'; }
                 else if (tasaExito > 0) { eficienciaClass = 'danger'; eficienciaLabel = 'Necesita Mejorar 🔴'; progressClass = 'danger'; }
                 else { eficienciaClass = 'default'; eficienciaLabel = 'Sin Datos 📊'; progressClass = 'default'; }
-
                 html += `<tr>
                     <td><strong>${empleado.nombre} ${empleado.apellido || ''}</strong></td>
                     <td>${empleado.cargo || 'Sin cargo'}</td>
-                    <td><span class="md-badge success">${tareasCompletadas}</span></td>
-                    <td><span class="md-badge warning">${tareasPendientes}</span></td>
+                    <td><span class="md-badge success">${stats.completadas}</span></td>
+                    <td><span class="md-badge warning">${stats.pendientes}</span></td>
                     <td>0</td>
-                    <td><div style="display:flex; align-items:center; gap:12px;"><div class="md-progress" style="width:100px;"><div class="progress-fill ${progressClass}" style="width:${tasaExito}%"></div></div></div></td>
+                    <td><div style="display:flex; align-items:center; gap:12px;"><div class="md-progress" style="width:100px;"><div class="progress-fill ${progressClass}" style="width:${tasaExito}%"></div></div><span style="font-weight:600;">${tasaExito}%</span></div></td>
                     <td>-</td><td>-</td>
                     <td><span class="md-badge ${eficienciaClass}">${eficienciaLabel}</span></td>
                 </tr>`;
-                if (tareasCompletadas > 0) {
+                if (stats.completadas > 0) {
                     totalExito += tasaExito;
                     totalEmpleados++;
-                    if (tasaExito > mejorTasa) {
-                        mejorTasa = tasaExito;
-                        mejorEmpleado = `${empleado.nombre} ${empleado.apellido || ''}`;
-                    }
+                    if (tasaExito > mejorTasa) { mejorTasa = tasaExito; mejorEmpleado = `${empleado.nombre} ${empleado.apellido || ''}`; }
                 }
             }
             tbody.innerHTML = html;
@@ -701,10 +645,7 @@ const App = {
             if (el1) el1.textContent = `${tasaGeneral}%`;
             if (el2) el2.textContent = `${tasaGeneral}% General`;
             if (el3) el3.textContent = mejorEmpleado || 'Sin datos';
-        } catch (error) {
-            console.error('❌ Error cargando eficiencia:', error);
-            ToastSystem.error('Error', 'No se pudo cargar la eficiencia de empleados');
-        }
+        } catch (error) { console.error('❌ Error cargando eficiencia:', error); }
     },
 
     async calcularEficienciaTodos() {
@@ -712,73 +653,101 @@ const App = {
             ToastSystem.warning('⏳ Calculando', 'Procesando eficiencia de todos los empleados...');
             const { data: empleados, error: errorEmpleados } = await supabaseClient.from('empleados').select('id').eq('activo', true);
             if (errorEmpleados) throw errorEmpleados;
+            const { data: todasTareas, error: errorTareas } = await supabaseClient.from('tareas').select('empleado_id, estado, completada');
+            if (errorTareas) throw errorTareas;
+            const tareasPorEmpleado = {};
+            todasTareas.forEach(t => {
+                if (!t.empleado_id) return;
+                if (!tareasPorEmpleado[t.empleado_id]) tareasPorEmpleado[t.empleado_id] = { total: 0, completadas: 0, pendientes: 0 };
+                tareasPorEmpleado[t.empleado_id].total++;
+                if (t.estado === 'completado' || t.completada === true) tareasPorEmpleado[t.empleado_id].completadas++;
+                else tareasPorEmpleado[t.empleado_id].pendientes++;
+            });
             let actualizados = 0;
             for (const emp of empleados) {
-                const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*').eq('empleado_id', emp.id);
-                if (errorTareas) continue;
-                const total = tareas.length;
-                const completadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
-                const pendientes = tareas.filter(t => t.estado !== 'completado' && t.completada !== true).length;
-                const tasaExito = total > 0 ? Math.round((completadas / total) * 100) : 0;
+                const stats = tareasPorEmpleado[emp.id] || { total: 0, completadas: 0, pendientes: 0 };
+                const tasaExito = stats.total > 0 ? Math.round((stats.completadas / stats.total) * 100) : 0;
                 await supabaseClient.from('eficiencia_empleados').upsert({
                     empleado_id: emp.id,
                     fecha: new Date().toISOString().split('T')[0],
-                    tareas_completadas: completadas,
-                    tareas_pendientes: pendientes,
+                    tareas_completadas: stats.completadas,
+                    tareas_pendientes: stats.pendientes,
                     tareas_retrasadas: 0,
                     tasa_exito: tasaExito
                 }, { onConflict: 'empleado_id, fecha' });
                 actualizados++;
             }
             ToastSystem.success('✅ Completado', `Eficiencia calculada para ${actualizados} empleados`);
-            await this.cargarEficiencia();
+            Cache.invalidate('eficiencia');
+            await this.cargarEficienciaOptimizada();
         } catch (error) {
             console.error('Error calculando eficiencia:', error);
             ToastSystem.error('Error', 'No se pudo calcular la eficiencia');
         }
     },
 
+    suscribirRealtime() {
+        try {
+            if (STATE.realtimeChannel) supabaseClient.removeChannel(STATE.realtimeChannel);
+            STATE.realtimeChannel = supabaseClient.channel('dashboard-updates')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
+                    Cache.invalidate('kpi', 'estados', 'urgentes');
+                    this.refrescarDatosSilencioso();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'tareas' }, () => {
+                    Cache.invalidate('empleados', 'eficiencia', 'carga');
+                    this.refrescarDatosSilencioso();
+                })
+                .subscribe((status, err) => {
+                    if (status === 'SUBSCRIBED') console.log('✅ Suscrito a Realtime');
+                    else if (err) console.error('❌ Error en suscripción:', err);
+                });
+        } catch (error) { console.error('❌ Error suscribiendo a Realtime:', error); }
+    },
+
     reintentar() {
         ErrorHandler.clear();
+        Cache.clear();
         LoadingSystem.show('⏳ Reintentando conexión...');
         this.cargarTodosLosDatos();
     },
 
     async cargarClientes() {
         try {
-            const { data, error } = await supabaseClient.from('clientes').select('*').order('nombre');
+            const { data, error } = await supabaseClient.from('clientes').select('id, nombre, telefono, email').order('nombre');
             if (error) throw error;
             STATE.clientes = data || [];
             const select = document.getElementById('pedido_cliente');
-            if (select) {
-                select.innerHTML = '<option value="">Seleccionar cliente...</option>' + STATE.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-            }
+            if (select) select.innerHTML = '<option value="">Seleccionar cliente...</option>' + STATE.clientes.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
             const tbody = document.getElementById('tbody-clientes');
-            if (tbody) {
-                tbody.innerHTML = STATE.clientes.length ? STATE.clientes.map(c => `<tr><td>${c.id}</td><td>${c.nombre}</td><td>${c.telefono || '-'}</td><td>${c.email || '-'}</td><td><button class="md-btn md-btn-text md-btn-sm" onclick="eliminarCliente(${c.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="5">Sin clientes</td></tr>';
-            }
-        } catch (error) {
-            console.error('Error clientes:', error);
-            ToastSystem.error('Error', 'No se pudieron cargar los clientes');
-        }
+            if (tbody) tbody.innerHTML = STATE.clientes.length ? STATE.clientes.map(c => `<tr><td>${c.id}</td><td>${c.nombre}</td><td>${c.telefono || '-'}</td><td>${c.email || '-'}</td></tr>`).join('') : '<tr><td colspan="4">Sin clientes</td></tr>';
+        } catch (error) { console.error('Error clientes:', error); }
+    },
+
+    async cargarProductos() {
+        try {
+            const { data, error } = await supabaseClient.from('productos').select('id, nombre, categoria, material, precio_unitario, precio_por_m2').order('nombre');
+            if (error) throw error;
+            STATE.productos = data || [];
+            const select = document.getElementById('pedido_producto');
+            if (select) select.innerHTML = '<option value="">Seleccionar producto...</option>' + STATE.productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
+        } catch (error) { console.error('Error productos:', error); }
     },
 
     async guardarNuevoCliente() {
-        const nombre = document.getElementById('cliente_nombre').value.trim();
-        if (!nombre) {
-            ToastSystem.error('Error', 'El nombre es obligatorio');
-            return;
-        }
+        const nombre = document.getElementById('cliente_nombre')?.value.trim();
+        if (!nombre) { ToastSystem.error('Error', 'El nombre es obligatorio'); return; }
         try {
             const { error } = await supabaseClient.from('clientes').insert({
                 nombre,
-                telefono: document.getElementById('cliente_telefono').value.trim() || null,
-                email: document.getElementById('cliente_email').value.trim() || null
+                telefono: document.getElementById('cliente_telefono')?.value.trim() || null,
+                email: document.getElementById('cliente_email')?.value.trim() || null
             });
             if (error) throw error;
-            ToastSystem.success('✅ Cliente creado', `Cliente "${nombre}" registrado exitosamente`);
-            bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente')).hide();
-            document.getElementById('formNuevoCliente').reset();
+            ToastSystem.success('✅ Cliente creado', `Cliente "${nombre}" registrado`);
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevoCliente'))?.hide();
+            document.getElementById('formNuevoCliente')?.reset();
+            Cache.invalidate('clientes');
             await this.cargarClientes();
         } catch (error) {
             console.error('Error guardar cliente:', error);
@@ -786,96 +755,16 @@ const App = {
         }
     },
 
-    async eliminarCliente(id) {
-        const cliente = STATE.clientes.find(c => c.id === id);
-        if (!confirm(`¿Eliminar cliente "${cliente?.nombre}"?`)) return;
-        try {
-            const { error } = await supabaseClient.from('clientes').delete().eq('id', id);
-            if (error) throw error;
-            ToastSystem.success('✅ Cliente eliminado', 'Cliente eliminado correctamente');
-            await this.cargarClientes();
-        } catch (error) {
-            console.error('Error eliminar cliente:', error);
-            ToastSystem.error('Error', 'No se pudo eliminar el cliente');
-        }
-    },
-
-    async cargarProductos() {
-        try {
-            const { data, error } = await supabaseClient.from('productos').select('*').order('nombre');
-            if (error) throw error;
-            STATE.productos = data || [];
-            const select = document.getElementById('pedido_producto');
-            if (select) {
-                select.innerHTML = '<option value="">Seleccionar producto...</option>' + STATE.productos.map(p => `<option value="${p.id}">${p.nombre}</option>`).join('');
-            }
-            const tbody = document.getElementById('tbody-productos');
-            if (tbody) {
-                tbody.innerHTML = STATE.productos.length ? STATE.productos.map(p => `<tr><td>${p.id}</td><td>${p.nombre}</td><td>${p.categoria || '-'}</td><td>${p.material || '-'}</td><td>${p.precio_unitario || p.precio_por_m2 || '-'}</td><td><button class="md-btn md-btn-text md-btn-sm" onclick="eliminarProducto(${p.id})"><i class="fas fa-trash"></i></button></td></tr>`).join('') : '<tr><td colspan="6">Sin productos</td></tr>';
-            }
-        } catch (error) {
-            console.error('Error productos:', error);
-            ToastSystem.error('Error', 'No se pudieron cargar los productos');
-        }
-    },
-
-    async guardarNuevoProducto() {
-        const nombre = document.getElementById('producto_nombre').value.trim();
-        if (!nombre) {
-            ToastSystem.error('Error', 'El nombre es obligatorio');
-            return;
-        }
-        const tipoPrecio = document.getElementById('producto_tipo_precio').value;
-        const precio = parseFloat(document.getElementById('producto_precio').value) || 0;
-        try {
-            const dataInsert = {
-                nombre,
-                categoria: document.getElementById('producto_categoria').value || null,
-                material: document.getElementById('producto_material').value.trim() || null,
-                tipo_producto: tipoPrecio === 'm2' ? 'servicio' : 'producto',
-                tipo_precio: tipoPrecio,
-                velocidad_impresion_m2_hora: parseFloat(document.getElementById('producto_velocidad').value) || null,
-                activo: true
-            };
-            if (tipoPrecio === 'm2') dataInsert.precio_por_m2 = precio; else dataInsert.precio_unitario = precio;
-            const { error } = await supabaseClient.from('productos').insert(dataInsert);
-            if (error) throw error;
-            ToastSystem.success('✅ Producto creado', `"${nombre}" registrado exitosamente`);
-            bootstrap.Modal.getInstance(document.getElementById('modalNuevoProducto')).hide();
-            document.getElementById('formNuevoProducto').reset();
-            await this.cargarProductos();
-        } catch (error) {
-            console.error('Error guardar producto:', error);
-            ToastSystem.error('Error', 'No se pudo guardar el producto');
-        }
-    },
-
-    async eliminarProducto(id) {
-        if (!confirm('¿Eliminar este producto?')) return;
-        try {
-            const { error } = await supabaseClient.from('productos').update({ activo: false }).eq('id', id);
-            if (error) throw error;
-            ToastSystem.success('✅ Producto eliminado', 'Producto eliminado correctamente');
-            await this.cargarProductos();
-        } catch (error) {
-            console.error('Error eliminar producto:', error);
-            ToastSystem.error('Error', 'No se pudo eliminar el producto');
-        }
-    },
-
     async guardarNuevoPedido() {
-        const clienteId = document.getElementById('pedido_cliente').value;
-        const productoId = document.getElementById('pedido_producto').value;
-        if (!clienteId || !productoId) {
-            ToastSystem.error('Error', 'Cliente y producto son obligatorios');
-            return;
-        }
+        const clienteId = document.getElementById('pedido_cliente')?.value;
+        const productoId = document.getElementById('pedido_producto')?.value;
+        if (!clienteId || !productoId) { ToastSystem.error('Error', 'Cliente y producto son obligatorios'); return; }
         try {
             const { data: pedido, error: errorPedido } = await supabaseClient.from('pedidos').insert({
                 cliente_id: parseInt(clienteId),
-                prioridad: document.getElementById('pedido_prioridad').value || 'normal',
-                fecha_entrega_prometida: document.getElementById('pedido_fecha_entrega').value || null,
-                observaciones: document.getElementById('pedido_observaciones').value.trim() || null,
+                prioridad: document.getElementById('pedido_prioridad')?.value || 'normal',
+                fecha_entrega_prometida: document.getElementById('pedido_fecha_entrega')?.value || null,
+                observaciones: document.getElementById('pedido_observaciones')?.value.trim() || null,
                 estado: 'cotizando'
             }).select();
             if (errorPedido) throw errorPedido;
@@ -883,14 +772,15 @@ const App = {
             const { error: errorDetalle } = await supabaseClient.from('detalles_pedido').insert({
                 pedido_id: pedidoId,
                 producto_id: parseInt(productoId),
-                cantidad: parseInt(document.getElementById('pedido_cantidad').value) || 1,
-                medida_ancho_cm: parseFloat(document.getElementById('pedido_ancho').value) || null,
-                medida_alto_cm: parseFloat(document.getElementById('pedido_alto').value) || null
+                cantidad: parseInt(document.getElementById('pedido_cantidad')?.value) || 1,
+                medida_ancho_cm: parseFloat(document.getElementById('pedido_ancho')?.value) || null,
+                medida_alto_cm: parseFloat(document.getElementById('pedido_alto')?.value) || null
             });
             if (errorDetalle) throw errorDetalle;
-            ToastSystem.success('✅ Pedido creado', `Pedido #${pedidoId} registrado exitosamente`);
-            bootstrap.Modal.getInstance(document.getElementById('modalNuevoPedido')).hide();
-            document.getElementById('formNuevoPedido').reset();
+            ToastSystem.success('✅ Pedido creado', `Pedido #${pedidoId} registrado`);
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevoPedido'))?.hide();
+            document.getElementById('formNuevoPedido')?.reset();
+            Cache.clear();
             await this.refrescarDatosSilencioso();
         } catch (error) {
             console.error('Error guardar pedido:', error);
@@ -898,52 +788,15 @@ const App = {
         }
     },
 
-    async abrirModalEditarPedido(id) {
-        try {
-            const { data, error } = await supabaseClient.from('pedidos').select('*').eq('id', id).single();
-            if (error) throw error;
-            document.getElementById('editar_pedido_id').textContent = id;
-            document.getElementById('editar_pedido_id_hidden').value = id;
-            document.getElementById('editar_pedido_estado').value = data.estado || 'cotizando';
-            document.getElementById('editar_pedido_prioridad').value = data.prioridad || 'normal';
-            document.getElementById('editar_pedido_observaciones').value = data.observaciones || '';
-            new bootstrap.Modal(document.getElementById('modalEditarPedido')).show();
-        } catch (error) {
-            console.error('Error cargar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo cargar el pedido');
-        }
-    },
-
-    async guardarEditarPedido() {
-        const id = parseInt(document.getElementById('editar_pedido_id_hidden').value);
-        try {
-            const { error } = await supabaseClient.from('pedidos').update({
-                estado: document.getElementById('editar_pedido_estado').value,
-                prioridad: document.getElementById('editar_pedido_prioridad').value,
-                observaciones: document.getElementById('editar_pedido_observaciones').value.trim() || null,
-                updated_at: new Date().toISOString()
-            }).eq('id', id);
-            if (error) throw error;
-            ToastSystem.success('✅ Pedido actualizado', `Pedido #${id} actualizado correctamente`);
-            bootstrap.Modal.getInstance(document.getElementById('modalEditarPedido')).hide();
-            await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error actualizar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo actualizar el pedido');
-        }
-    },
-
     async completarPedido(id) {
-        if (!confirm(`¿Marcar pedido #${id} como completado?`)) return;
+        if (!confirm(`¿Marcar pedido #${id} como entregado?`)) return;
         try {
             const { error } = await supabaseClient.from('pedidos').update({ estado: 'entregado', updated_at: new Date().toISOString() }).eq('id', id);
             if (error) throw error;
             ToastSystem.success('✅ Pedido completado', `Pedido #${id} marcado como entregado`);
+            Cache.clear();
             await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error completar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo completar el pedido');
-        }
+        } catch (error) { console.error('Error completar pedido:', error); }
     },
 
     async eliminarPedido(id) {
@@ -952,11 +805,9 @@ const App = {
             const { error } = await supabaseClient.from('pedidos').update({ estado: 'cancelado', updated_at: new Date().toISOString() }).eq('id', id);
             if (error) throw error;
             ToastSystem.success('✅ Pedido cancelado', `Pedido #${id} cancelado`);
+            Cache.clear();
             await this.refrescarDatosSilencioso();
-        } catch (error) {
-            console.error('Error cancelar pedido:', error);
-            ToastSystem.error('Error', 'No se pudo cancelar el pedido');
-        }
+        } catch (error) { console.error('Error cancelar pedido:', error); }
     },
 
     verPedido(id) { this.verPedidoDetalle(id); },
@@ -966,16 +817,12 @@ const App = {
     abrirModalNuevoCliente() { new bootstrap.Modal(document.getElementById('modalNuevoCliente')).show(); },
     abrirModalProductos() { new bootstrap.Modal(document.getElementById('modalProductos')).show(); this.cargarProductos(); },
     abrirModalNuevoProducto() { new bootstrap.Modal(document.getElementById('modalNuevoProducto')).show(); },
-    mostrarNotificaciones() {
-        const urgentes = parseInt(document.getElementById('kpi-urgentes').textContent) || 0;
-        if (urgentes > 0) ToastSystem.warning('📢 Notificaciones', `Tienes ${urgentes} pedido(s) urgente(s) pendiente(s)`);
-        else ToastSystem.success('✅ Sin notificaciones', 'No hay pedidos urgentes pendientes');
-    },
 
     destroy() {
         if (STATE.refreshInterval) { clearInterval(STATE.refreshInterval); STATE.refreshInterval = null; }
         if (STATE.realtimeChannel) { supabaseClient.removeChannel(STATE.realtimeChannel); STATE.realtimeChannel = null; }
-        console.log('🧹 Aplicación destruida correctamente');
+        Cache.clear();
+        console.log('🧹 Aplicación destruida');
     }
 };
 
@@ -986,26 +833,15 @@ window.abrirModalNuevoCliente = () => App.abrirModalNuevoCliente();
 window.abrirModalProductos = () => App.abrirModalProductos();
 window.abrirModalNuevoProducto = () => App.abrirModalNuevoProducto();
 window.refrescarDatos = () => App.refrescarDatos();
-window.mostrarNotificaciones = () => App.mostrarNotificaciones();
+window.mostrarNotificaciones = () => ToastSystem.info('Notificaciones', 'Sección en desarrollo');
 window.guardarNuevoCliente = () => App.guardarNuevoCliente();
-window.guardarNuevoProducto = () => App.guardarNuevoProducto();
 window.guardarNuevoPedido = () => App.guardarNuevoPedido();
-window.guardarEditarPedido = () => App.guardarEditarPedido();
 window.completarPedido = (id) => App.completarPedido(id);
 window.eliminarPedido = (id) => App.eliminarPedido(id);
 window.verPedido = (id) => App.verPedido(id);
 window.verPedidoDetalle = (id) => App.verPedidoDetalle(id);
-window.eliminarCliente = (id) => App.eliminarCliente(id);
-window.eliminarProducto = (id) => App.eliminarProducto(id);
 window.reintentar = () => App.reintentar();
 window.calcularEficienciaTodos = () => App.calcularEficienciaTodos();
-window.toggleAccordion = (id) => App.toggleAccordion?.(id);
-window.toggleCalendar = () => App.toggleCalendar?.();
-window.closeCalendar = () => App.closeCalendar?.();
-window.calendarNavigate = (delta) => App.calendarNavigate?.(delta);
-window.calendarGoToday = () => App.calendarGoToday?.();
-window.selectDate = (year, month, day) => App.selectDate?.(year, month, day);
-window.suscribirRealtime = () => App.suscribirRealtime();
 window.cargarEmpleadosYTareas = () => App.cargarEmpleadosYTareas();
 window.abrirModalEmpleado = (id) => App.abrirModalEmpleado(id);
 window.calcularEficienciaEmpleado = (id) => App.calcularEficienciaEmpleado(id);
@@ -1013,4 +849,4 @@ window.actualizarStatusTarea = (tareaId, nuevoStatus, empleadoId) => App.actuali
 
 document.addEventListener('DOMContentLoaded', () => { App.init(); });
 window.addEventListener('beforeunload', () => { App.destroy(); });
-console.log('✅ Dashboard INVEMEX v6.0.1 cargado correctamente');
+console.log('✅ Dashboard INVEMEX v7.0 cargado correctamente');
