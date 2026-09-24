@@ -417,59 +417,108 @@ const App = {
         }
     },
 
-    empleadoColores: ['#0B218B', '#E84C3D', '#27AE60', '#F39C12', '#8E44AD', '#E74C8B', '#1A3BA8', '#2ECC71'],
-    getColorEmpleado(nombre) {
-        let hash = 0;
-        for (let i = 0; i < nombre.length; i++) hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
-        return this.empleadoColores[Math.abs(hash) % this.empleadoColores.length];
-    },
+   empleadoGradients: [
+    'linear-gradient(135deg, #6366F1, #8B5CF6)',
+    'linear-gradient(135deg, #EC4899, #F43F5E)',
+    'linear-gradient(135deg, #F59E0B, #FBBF24)',
+    'linear-gradient(135deg, #10B981, #34D399)',
+    'linear-gradient(135deg, #06B6D4, #22D3EE)',
+    'linear-gradient(135deg, #F97316, #FB923C)',
+    'linear-gradient(135deg, #8B5CF6, #A78BFA)',
+    'linear-gradient(135deg, #14B8A6, #5EEAD4)'
+],
+
+getGradientEmpleado(nombre) {
+    let hash = 0;
+    for (let i = 0; i < nombre.length; i++) hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+    return this.empleadoGradients[Math.abs(hash) % this.empleadoGradients.length];
+},
 
     async cargarEmpleadosYTareas() {
-        try {
-            const { data: empleados, error: errorEmpleados } = await withRetry(() =>
-                supabaseClient.from('empleados').select('id, nombre, apellido, cargo, email, telefono').eq('activo', true).order('nombre')
-            );
-            if (errorEmpleados) throw errorEmpleados;
-            STATE.empleados = empleados || [];
-            const { data: tareas, error: errorTareas } = await withRetry(() =>
-                supabaseClient.from('tareas').select('id, empleado_id, estado').in('estado', ['pendiente', 'en_progreso', 'notificado'])
-            );
-            if (errorTareas) throw errorTareas;
-            STATE.tareas = tareas || [];
-            const conteo = {};
-            tareas.forEach(t => { if (t.empleado_id) conteo[t.empleado_id] = (conteo[t.empleado_id] || 0) + 1; });
-            this.renderAvataresEmpleados(empleados, conteo);
-        } catch (error) {
-            console.error('❌ Error cargando empleados:', error);
-            const grid = document.getElementById('empleadosAvatarGrid');
-            if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px;"></i>Error al cargar empleados</div>';
-        }
-    },
+    try {
+        const { data: empleados, error: errorEmpleados } = await withRetry(() =>
+            supabaseClient.from('empleados').select('id, nombre, apellido, cargo, email, telefono').eq('activo', true).order('nombre')
+        );
+        if (errorEmpleados) throw errorEmpleados;
+        STATE.empleados = empleados || [];
 
-    renderAvataresEmpleados(empleados, conteo) {
+        const { data: tareas, error: errorTareas } = await withRetry(() =>
+            supabaseClient.from('tareas').select('id, empleado_id, estado').in('estado', ['pendiente', 'en_progreso', 'notificado'])
+        );
+        if (errorTareas) throw errorTareas;
+        STATE.tareas = tareas || [];
+
+        const conteo = {};
+        let totalPendientes = 0, totalProceso = 0, totalListo = 0;
+
+        tareas.forEach(t => {
+            if (t.empleado_id) conteo[t.empleado_id] = (conteo[t.empleado_id] || 0) + 1;
+            if (t.estado === 'pendiente' || t.estado === 'notificado') totalPendientes++;
+            else if (t.estado === 'en_progreso') totalProceso++;
+        });
+
+        // Contar completadas del total
+        const { count: completadas } = await supabaseClient
+            .from('tareas')
+            .select('*', { count: 'exact', head: true })
+            .eq('estado', 'completado');
+        totalListo = completadas || 0;
+
+        // Actualizar stats globales
+        const statsPendientes = document.getElementById('stats-pendientes');
+        const statsProceso = document.getElementById('stats-proceso');
+        const statsListo = document.getElementById('stats-listo');
+        if (statsPendientes) statsPendientes.textContent = totalPendientes;
+        if (statsProceso) statsProceso.textContent = totalProceso;
+        if (statsListo) statsListo.textContent = totalListo;
+
+        this.renderAvataresEmpleados(empleados, conteo);
+    } catch (error) {
+        console.error('❌ Error cargando empleados:', error);
         const grid = document.getElementById('empleadosAvatarGrid');
-        if (!grid) return;
-        if (!empleados || empleados.length === 0) {
-            grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:var(--md-text-secondary);">No hay empleados</div>';
-            return;
-        }
-        grid.innerHTML = empleados.map(empleado => {
-            const tareasPendientes = conteo[empleado.id] || 0;
-            const color = this.getColorEmpleado(empleado.nombre);
-            const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`;
-            const badgeClass = tareasPendientes > 0 ? 'pendiente' : 'listo';
-            return `
-                <div class="empleado-avatar-card" onclick="App.abrirModalEmpleado(${empleado.id})" title="Ver tareas de ${empleado.nombre}">
-                    <span class="avatar-badge ${badgeClass}">${tareasPendientes}</span>
-                    <div class="avatar-circle" style="background:${color};">${iniciales}</div>
-                    <span class="avatar-name">${empleado.nombre}</span>
-                </div>
-            `;
-        }).join('');
-        const badge = document.getElementById('empleados-total-badge');
-        if (badge) badge.textContent = empleados.length;
-    },
+        if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px;"></i>Error al cargar empleados</div>';
+    }
+},
+    
+    renderAvataresEmpleados(empleados, conteo) {
+    const grid = document.getElementById('empleadosAvatarGrid');
+    if (!grid) return;
 
+    if (!empleados || empleados.length === 0) {
+        grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:var(--md-text-secondary);">No hay empleados</div>';
+        return;
+    }
+
+    const valoresConteo = Object.values(conteo);
+    const maxTareas = Math.max(1, ...valoresConteo);
+
+    grid.innerHTML = empleados.map(empleado => {
+        const tareasPendientes = conteo[empleado.id] || 0;
+        const gradient = this.getGradientEmpleado(empleado.nombre);
+        const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`.toUpperCase();
+        const badgeClass = tareasPendientes > 0 ? 'pendiente' : 'listo';
+        const porcentaje = tareasPendientes > 0 ? Math.min(100, (tareasPendientes / maxTareas) * 100) : 100;
+
+        return `
+            <div class="empleado-avatar-card"
+                 onclick="App.abrirModalEmpleado(${empleado.id})"
+                 style="--card-gradient: ${gradient};"
+                 title="Ver tareas de ${empleado.nombre}">
+                <span class="avatar-badge ${badgeClass}">${tareasPendientes}</span>
+                <div class="avatar-circle">${iniciales}</div>
+                <span class="avatar-name">${empleado.nombre}</span>
+                <span class="empleado-cargo">${empleado.cargo || 'Sin cargo'}</span>
+                <div class="empleado-progress">
+                    <div class="empleado-progress-fill" style="width: ${porcentaje}%"></div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    const badge = document.getElementById('empleados-total-badge');
+    if (badge) badge.textContent = empleados.length;
+},
+    
     async abrirModalEmpleado(empleadoId) {
         try {
             const { data: empleado, error: errorEmpleado } = await supabaseClient.from('empleados').select('*').eq('id', empleadoId).single();
