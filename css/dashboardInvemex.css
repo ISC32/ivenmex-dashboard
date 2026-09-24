@@ -1,11 +1,8 @@
 /* ==========================================
    MATERIAL DESIGN 3 - INVEMEX DASHBOARD
-   Versión: 7.1 - Sin marco decorativo, con scroll, brillos, accordion
+   Versión: 10.0 - Optimizado, sin marco decorativo, scroll, brillos
 ========================================== */
 
-/* ==========================================
-   VARIABLES
-========================================== */
 :root {
     --md-primary: #0B218B;
     --md-primary-dark: #091A6E;
@@ -20,7 +17,7 @@
     --md-text-secondary: #6B7280;
     --md-text-light: #9CA3AF;
     --md-warning-text: #7a5a00;
-    
+
     --md-success: #10B981;
     --md-success-bg: #D1FAE5;
     --md-warning: #F59E0B;
@@ -35,7 +32,7 @@
     --md-elevation-3: 0 10px 15px -3px rgba(0,0,0,0.05), 0 4px 6px -2px rgba(0,0,0,0.025);
     --md-elevation-4: 0 20px 25px -5px rgba(0,0,0,0.05), 0 10px 10px -5px rgba(0,0,0,0.02);
     --md-elevation-5: 0 30px 40px -10px rgba(0,0,0,0.08), 0 15px 20px -8px rgba(0,0,0,0.04);
-    
+
     --md-radius-sm: 8px;
     --md-radius-md: 12px;
     --md-radius-lg: 16px;
@@ -44,9 +41,6 @@
     --md-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-/* ==========================================
-   ACCESSIBILITY & RESET
-========================================== */
 .hidden { display: none !important; }
 .sr-only { position: absolute !important; width: 1px !important; height: 1px !important; padding: 0 !important; margin: -1px !important; overflow: hidden !important; clip: rect(0,0,0,0) !important; white-space: nowrap !important; border: 0 !important; }
 .skip-link { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
@@ -73,9 +67,6 @@ body {
 :focus-visible { outline: 3px solid rgba(11,33,139,0.16); outline-offset: 2px; border-radius: 6px; }
 .md-btn:focus-visible, .md-chip:focus-visible, .empleado-avatar-card:focus-visible, .clickable-row:focus-visible { box-shadow: 0 0 0 3px var(--md-primary-light); }
 
-/* ==========================================
-   LOADER
-========================================== */
 #ivx-loader {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: linear-gradient(135deg, #F0F2F5 0%, #E8EAFF 100%);
@@ -99,9 +90,6 @@ body {
 @keyframes ivxSpin { to { transform: rotate(360deg); } }
 @keyframes ivxPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.85; transform: scale(1.03); } }
 
-/* ==========================================
-   TOOLBAR
-========================================== */
 .md-toolbar {
     background: rgba(255, 255, 255, 0.92);
     border-radius: var(--md-radius-lg);
@@ -125,9 +113,6 @@ body {
 }
 .md-chip:hover { background: var(--md-primary-light); color: var(--md-primary); border-color: var(--md-primary); }
 
-/* ==========================================
-   EMPLEADOS
-========================================== */
 .empleados-section { margin-bottom: 24px; }
 .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
 .section-title { font-size: 18px; font-weight: 700; color: var(--md-text); display: flex; align-items: center; gap: 10px; }
@@ -163,9 +148,6 @@ body {
 }
 .avatar-badge.listo { background: var(--md-success); }
 
-/* ==========================================
-   KPI CARDS
-========================================== */
 .md-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 24px; }
 .md-card {
     background: var(--md-white); border-radius: var(--md-radius-lg); padding: 24px;
@@ -206,9 +188,6 @@ body {
 .card-change { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .card-change.up { color: var(--md-success); }
 
-/* ==========================================
-   ACCORDION
-========================================== */
 .md-accordion {
     background: var(--md-white);
     border-radius: var(--md-radius-lg);
@@ -218,139 +197,46 @@ body {
     border: 1px solid rgba(0, 0, 0, 0.04);
     transition: box-shadow 0.3s ease, transform 0.2s ease;
 }
-
-.md-accordion:hover {
-    box-shadow: var(--md-elevation-2);
-}
-
+.md-accordion:hover { box-shadow: var(--md-elevation-2); }
 .md-accordion-header {
-    padding: 18px 24px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    cursor: pointer;
-    user-select: none;
-    background: var(--md-white);
+    padding: 18px 24px; display: flex; justify-content: space-between; align-items: center;
+    cursor: pointer; user-select: none; background: var(--md-white);
     transition: background 0.2s ease, padding 0.2s ease;
-    border-bottom: 1px solid transparent;
-    gap: 12px;
+    border-bottom: 1px solid transparent; gap: 12px;
 }
-
-.md-accordion.active .md-accordion-header {
-    background: var(--md-primary-light);
-    border-bottom: 1px solid var(--md-gray-dark);
-}
-
-.md-accordion-header:hover {
-    background: var(--md-gray);
-}
-
-.md-accordion.active .md-accordion-header:hover {
-    background: var(--md-primary-light);
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    flex: 1;
-    min-width: 0;
-}
-
+.md-accordion.active .md-accordion-header { background: var(--md-primary-light); border-bottom: 1px solid var(--md-gray-dark); }
+.md-accordion-header:hover { background: var(--md-gray); }
+.md-accordion.active .md-accordion-header:hover { background: var(--md-primary-light); }
+.header-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
 .header-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: var(--md-radius-md);
-    background: var(--md-primary-light);
-    color: var(--md-primary);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 18px;
-    flex-shrink: 0;
-    transition: var(--md-transition);
+    width: 40px; height: 40px; border-radius: var(--md-radius-md);
+    background: var(--md-primary-light); color: var(--md-primary);
+    display: flex; align-items: center; justify-content: center; font-size: 18px;
+    flex-shrink: 0; transition: var(--md-transition);
 }
-
-.md-accordion.active .header-icon {
-    background: var(--md-primary);
-    color: var(--md-white);
-}
-
-.header-title {
-    font-weight: 700;
-    font-size: 16px;
-    color: var(--md-text);
-    flex: 1;
-}
-
+.md-accordion.active .header-icon { background: var(--md-primary); color: var(--md-white); }
+.header-title { font-weight: 700; font-size: 16px; color: var(--md-text); flex: 1; }
 .header-badge {
-    background: var(--md-success-bg);
-    color: var(--md-success);
-    padding: 4px 12px;
-    border-radius: var(--md-radius-full);
-    font-size: 12px;
-    font-weight: 600;
-    white-space: nowrap;
+    background: var(--md-success-bg); color: var(--md-success); padding: 4px 12px;
+    border-radius: var(--md-radius-full); font-size: 12px; font-weight: 600; white-space: nowrap;
 }
-
-.header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-shrink: 0;
-}
-
+.header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 .accordion-chevron {
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    color: var(--md-text-secondary);
-    font-size: 16px;
-    width: 28px;
-    height: 28px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    background: var(--md-gray);
-    transition: all 0.3s ease;
+    color: var(--md-text-secondary); font-size: 16px;
+    width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--md-gray); transition: all 0.3s ease;
 }
-
-.md-accordion.active .accordion-chevron {
-    transform: rotate(180deg);
-    background: var(--md-primary);
-    color: var(--md-white);
-}
-
+.md-accordion.active .accordion-chevron { transform: rotate(180deg); background: var(--md-primary); color: var(--md-white); }
 .md-accordion-body {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
-                padding 0.4s ease;
+    max-height: 0; overflow: hidden;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1), padding 0.4s ease;
     padding: 0 24px;
 }
+.md-accordion.active .md-accordion-body { max-height: 5000px; padding: 20px 24px 24px 24px; }
+.body-content { animation: fadeSlideIn 0.5s ease; }
+@keyframes fadeSlideIn { from { opacity: 0; transform: translateY(-12px); } to { opacity: 1; transform: translateY(0); } }
 
-.md-accordion.active .md-accordion-body {
-    max-height: 5000px;
-    padding: 20px 24px 24px 24px;
-}
-
-.body-content {
-    animation: fadeSlideIn 0.5s ease;
-}
-
-@keyframes fadeSlideIn {
-    from {
-        opacity: 0;
-        transform: translateY(-12px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* ==========================================
-   TABLAS CON SCROLL
-========================================== */
 .md-table-wrapper {
     overflow-x: auto;
     border-radius: var(--md-radius-md);
@@ -367,16 +253,12 @@ body {
 }
 .md-table td { padding: 14px 16px; border-bottom: 1px solid var(--md-gray-dark); color: var(--md-text); vertical-align: middle; }
 .md-table tbody tr { transition: all 0.2s ease; }
-.md-table tbody tr:hover { 
-    background: rgba(11, 33, 139, 0.05);
-    transform: scale(1.002);
-}
+.md-table tbody tr:hover { background: rgba(11, 33, 139, 0.05); transform: scale(1.002); }
 .md-table tbody tr.clickable-row { cursor: pointer; }
 .md-table tbody tr:last-child td { border-bottom: none; }
 
 .table-responsive {
-    max-height: 400px;
-    overflow-y: auto;
+    max-height: 400px; overflow-y: auto;
     border-radius: var(--md-radius-md);
     border: 1px solid var(--md-gray-dark);
 }
@@ -386,8 +268,7 @@ body {
 .table-responsive::-webkit-scrollbar-thumb:hover { background: var(--md-primary-dark); }
 
 .tareas-empleado-modal-wrapper {
-    max-height: 350px;
-    overflow-y: auto;
+    max-height: 350px; overflow-y: auto;
     border-radius: var(--md-radius-md);
     border: 1px solid var(--md-gray-dark);
 }
@@ -401,13 +282,7 @@ body {
     .tareas-empleado-modal-wrapper { max-height: 250px; }
 }
 
-/* ==========================================
-   MODALES & FORMULARIOS
-========================================== */
-.md-modal .modal-content {
-    border: none; border-radius: var(--md-radius-xl);
-    box-shadow: var(--md-elevation-4); overflow: hidden;
-}
+.md-modal .modal-content { border: none; border-radius: var(--md-radius-xl); box-shadow: var(--md-elevation-4); overflow: hidden; }
 .md-modal .modal-header { border-bottom: 1px solid var(--md-gray-dark); padding: 20px 24px; background: var(--md-white); }
 .md-modal .modal-title { font-weight: 700; font-size: 18px; color: var(--md-text); display: flex; align-items: center; }
 .md-modal .modal-body { padding: 24px; background: var(--md-gray); }
@@ -426,9 +301,6 @@ body {
     background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 12px;
 }
 
-/* ==========================================
-   BOTONES & BADGES
-========================================== */
 .md-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 10px 20px; border-radius: var(--md-radius-md); font-size: 14px;
@@ -451,9 +323,6 @@ body {
 .md-badge.danger { background: var(--md-danger-bg); color: var(--md-danger); }
 .md-badge.default { background: var(--md-gray); color: var(--md-text-secondary); }
 
-/* ==========================================
-   TOASTS
-========================================== */
 .md-toast-container { position: fixed; top: 24px; right: 24px; z-index: 999999; display: flex; flex-direction: column; gap: 12px; }
 .md-toast {
     background: var(--md-white); border-radius: var(--md-radius-md); box-shadow: var(--md-elevation-3);
@@ -476,9 +345,6 @@ body {
 .toast-close:hover { color: var(--md-text); }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* ==========================================
-   COMPONENTES ESPECÍFICOS
-========================================== */
 .profile-summary { background: var(--md-gray); border-radius: var(--md-radius-md); padding: 16px; margin-bottom: 20px; }
 .info-item { display: flex; gap: 8px; margin-bottom: 8px; font-size: 14px; }
 .info-item .label { font-weight: 600; color: var(--md-text-secondary); min-width: 80px; }
@@ -530,40 +396,16 @@ body {
 .color-box { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 .avatar-lg { width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; margin-right: 12px; }
 
-/* ==========================================
-   RESPONSIVE
-========================================== */
 @media (max-width: 768px) {
     body { padding: 16px; }
-    
     .md-grid { grid-template-columns: 1fr 1fr; }
     .md-card { padding: 16px; }
     .card-value { font-size: 24px; }
-
-    .md-accordion-header {
-        padding: 14px 16px;
-        flex-wrap: wrap;
-    }
-
-    .header-left {
-        flex-wrap: wrap;
-        gap: 8px;
-    }
-
-    .header-title {
-        font-size: 14px;
-    }
-
-    .header-actions {
-        width: 100%;
-        justify-content: flex-end;
-        margin-top: 4px;
-    }
-
-    .md-accordion.active .md-accordion-body {
-        padding: 12px 16px 16px 16px;
-    }
-
+    .md-accordion-header { padding: 14px 16px; flex-wrap: wrap; }
+    .header-left { flex-wrap: wrap; gap: 8px; }
+    .header-title { font-size: 14px; }
+    .header-actions { width: 100%; justify-content: flex-end; margin-top: 4px; }
+    .md-accordion.active .md-accordion-body { padding: 12px 16px 16px 16px; }
     .md-modal .modal-dialog { margin: 8px; max-width: calc(100vw - 16px); }
     .md-modal .modal-content { border-radius: var(--md-radius-lg); }
 }
@@ -574,23 +416,8 @@ body {
     .md-toolbar-actions { justify-content: space-between; }
     .md-toast-container { right: 12px; left: 12px; }
     .md-toast { min-width: auto; width: 100%; }
-
-    .md-accordion-header {
-        padding: 12px 14px;
-    }
-
-    .header-icon {
-        width: 32px;
-        height: 32px;
-        font-size: 14px;
-    }
-
-    .header-title {
-        font-size: 13px;
-    }
-
-    .header-badge {
-        font-size: 10px;
-        padding: 2px 8px;
-    }
+    .md-accordion-header { padding: 12px 14px; }
+    .header-icon { width: 32px; height: 32px; font-size: 14px; }
+    .header-title { font-size: 13px; }
+    .header-badge { font-size: 10px; padding: 2px 8px; }
 }
