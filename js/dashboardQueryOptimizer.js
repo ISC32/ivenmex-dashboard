@@ -14,7 +14,10 @@
     let timer = null;
     let running = false;
 
-    function invalidate(...keys) { keys.forEach(key => cache.delete(key)); }
+    function invalidate(...keys) {
+        keys.forEach(key => cache.delete(key));
+    }
+
     async function cached(key, loader, ttl = TTL) {
         const hit = cache.get(key);
         if (hit && Date.now() - hit.time < ttl) return hit.value;
@@ -37,20 +40,24 @@
             try {
                 if (originalRefresh) await originalRefresh();
                 else await App.cargarDatos?.();
-            } finally { running = false; }
-        }, 500);
+            } finally {
+                running = false;
+            }
+        }, 800);
     };
 
     App.cargarClientes = App.cargarClientes ? (() => {
         const load = App.cargarClientes.bind(App);
         return () => cached('clientes', load);
     })() : App.cargarClientes;
+
     App.cargarProductos = App.cargarProductos ? (() => {
         const load = App.cargarProductos.bind(App);
         return () => cached('productos', load);
     })() : App.cargarProductos;
+
     App.invalidateQueryCache = () => {
-        invalidate('clientes', 'productos');
+        invalidate('clientes', 'productos', 'kpi', 'estados', 'urgentes', 'eficiencia');
         App.refrescarDatosSilencioso();
     };
 
