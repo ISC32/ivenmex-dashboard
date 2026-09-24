@@ -7,7 +7,7 @@
     if (clock) clock.classList.add('tv-clock');
     var link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/dashboard-tv.css?v=1';
+    link.href = 'css/dashboard-tv.css?v=2';
     document.head.appendChild(link);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initTV, { once: true });
