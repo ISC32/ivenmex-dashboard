@@ -434,6 +434,10 @@ getGradientEmpleado(nombre) {
     return this.empleadoGradients[Math.abs(hash) % this.empleadoGradients.length];
 },
 
+    getColorEmpleado(nombre) {
+    return this.getGradientEmpleado(nombre);
+},
+
     async cargarEmpleadosYTareas() {
     try {
         const { data: empleados, error: errorEmpleados } = await withRetry(() =>
