@@ -1,17 +1,19 @@
 // ==========================================
-// DASHBOARD INVEMEX - OPTIMIZADO v7.0
+// DASHBOARD INVEMEX - v7.1
+// Optimizado + Realtime mejorado + Logs
 // ==========================================
 
 const CONFIG = {
     SUPABASE_URL: 'https://ubyesdxizxywfwysechk.supabase.co',
     SUPABASE_ANON_KEY: 'sb_publishable_ocKHSbzB3BuoZRWu4GvCFQ_fonZWWgQ',
-    REFRESH_INTERVAL: 45000,
+    REFRESH_INTERVAL: 10000,        // ← 10 segundos (antes 45s)
+    EMPLEADOS_INTERVAL: 5000,       // ← 5 segundos solo empleados
     TOAST_DURATION: 4000,
     MAX_RETRIES: 3,
     RETRY_DELAY: 2000
 };
 
-console.log('🚀 Iniciando Dashboard INVEMEX v7.0');
+console.log('🚀 Iniciando Dashboard INVEMEX v7.1');
 
 const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 window.supabaseClient = supabaseClient;
@@ -19,7 +21,10 @@ window.supabaseClient = supabaseClient;
 const STATE = {
     clientes: [], productos: [], pedidos: [], urgentes: [],
     empleados: [], tareas: [], eficiencia: [], loading: false,
-    refreshInterval: null, realtimeChannel: null, ultimaActualizacion: null
+    refreshInterval: null,
+    empleadosInterval: null,
+    realtimeChannel: null,
+    ultimaActualizacion: null
 };
 
 const Cache = {
@@ -141,12 +146,20 @@ async function withRetry(fn, retries = CONFIG.MAX_RETRIES) {
 
 const App = {
     async init() {
-        console.log('📋 Inicializando aplicación v7.0...');
+        console.log('📋 Inicializando aplicación v7.1...');
         this.updateDateDisplay(new Date());
         ToastSystem.init();
         await this.cargarTodosLosDatos();
         this.suscribirRealtime();
+
+        // Refresco general cada 10s
         STATE.refreshInterval = setInterval(() => this.refrescarDatosSilencioso(), CONFIG.REFRESH_INTERVAL);
+
+        // Refresco específico del panel de empleados cada 5s
+        STATE.empleadosInterval = setInterval(() => {
+            this.cargarEmpleadosYTareas().catch(err => console.error('Error refrescando empleados:', err));
+        }, CONFIG.EMPLEADOS_INTERVAL);
+
         console.log('✅ Aplicación inicializada correctamente');
     },
 
@@ -417,112 +430,112 @@ const App = {
         }
     },
 
-   empleadoGradients: [
-    'linear-gradient(135deg, #6366F1, #8B5CF6)',
-    'linear-gradient(135deg, #EC4899, #F43F5E)',
-    'linear-gradient(135deg, #F59E0B, #FBBF24)',
-    'linear-gradient(135deg, #10B981, #34D399)',
-    'linear-gradient(135deg, #06B6D4, #22D3EE)',
-    'linear-gradient(135deg, #F97316, #FB923C)',
-    'linear-gradient(135deg, #8B5CF6, #A78BFA)',
-    'linear-gradient(135deg, #14B8A6, #5EEAD4)'
-],
+    empleadoGradients: [
+        'linear-gradient(135deg, #6366F1, #8B5CF6)',
+        'linear-gradient(135deg, #EC4899, #F43F5E)',
+        'linear-gradient(135deg, #F59E0B, #FBBF24)',
+        'linear-gradient(135deg, #10B981, #34D399)',
+        'linear-gradient(135deg, #06B6D4, #22D3EE)',
+        'linear-gradient(135deg, #F97316, #FB923C)',
+        'linear-gradient(135deg, #8B5CF6, #A78BFA)',
+        'linear-gradient(135deg, #14B8A6, #5EEAD4)'
+    ],
 
-getGradientEmpleado(nombre) {
-    let hash = 0;
-    for (let i = 0; i < nombre.length; i++) hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
-    return this.empleadoGradients[Math.abs(hash) % this.empleadoGradients.length];
-},
+    getGradientEmpleado(nombre) {
+        let hash = 0;
+        for (let i = 0; i < nombre.length; i++) hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+        return this.empleadoGradients[Math.abs(hash) % this.empleadoGradients.length];
+    },
 
     getColorEmpleado(nombre) {
-    return this.getGradientEmpleado(nombre);
-},
+        return this.getGradientEmpleado(nombre);
+    },
 
     async cargarEmpleadosYTareas() {
-    try {
-        const { data: empleados, error: errorEmpleados } = await withRetry(() =>
-            supabaseClient.from('empleados').select('id, nombre, apellido, cargo, email, telefono').eq('activo', true).order('nombre')
-        );
-        if (errorEmpleados) throw errorEmpleados;
-        STATE.empleados = empleados || [];
+        try {
+            const { data: empleados, error: errorEmpleados } = await withRetry(() =>
+                supabaseClient.from('empleados').select('id, nombre, apellido, cargo, email, telefono').eq('activo', true).order('nombre')
+            );
+            if (errorEmpleados) throw errorEmpleados;
+            STATE.empleados = empleados || [];
 
-        const { data: tareas, error: errorTareas } = await withRetry(() =>
-            supabaseClient.from('tareas').select('id, empleado_id, estado').in('estado', ['pendiente', 'en_progreso', 'notificado'])
-        );
-        if (errorTareas) throw errorTareas;
-        STATE.tareas = tareas || [];
+            const { data: tareas, error: errorTareas } = await withRetry(() =>
+                supabaseClient.from('tareas').select('id, empleado_id, estado').in('estado', ['pendiente', 'en_progreso', 'notificado'])
+            );
+            if (errorTareas) throw errorTareas;
+            STATE.tareas = tareas || [];
 
-        const conteo = {};
-        let totalPendientes = 0, totalProceso = 0, totalListo = 0;
+            const conteo = {};
+            let totalPendientes = 0, totalProceso = 0, totalListo = 0;
 
-        tareas.forEach(t => {
-            if (t.empleado_id) conteo[t.empleado_id] = (conteo[t.empleado_id] || 0) + 1;
-            if (t.estado === 'pendiente' || t.estado === 'notificado') totalPendientes++;
-            else if (t.estado === 'en_progreso') totalProceso++;
-        });
+            tareas.forEach(t => {
+                if (t.empleado_id) conteo[t.empleado_id] = (conteo[t.empleado_id] || 0) + 1;
+                if (t.estado === 'pendiente' || t.estado === 'notificado') totalPendientes++;
+                else if (t.estado === 'en_progreso') totalProceso++;
+            });
 
-        // Contar completadas del total
-        const { count: completadas } = await supabaseClient
-            .from('tareas')
-            .select('*', { count: 'exact', head: true })
-            .eq('estado', 'completado');
-        totalListo = completadas || 0;
+            // Contar completadas del total
+            const { count: completadas } = await supabaseClient
+                .from('tareas')
+                .select('*', { count: 'exact', head: true })
+                .eq('estado', 'completado');
+            totalListo = completadas || 0;
 
-        // Actualizar stats globales
-        const statsPendientes = document.getElementById('stats-pendientes');
-        const statsProceso = document.getElementById('stats-proceso');
-        const statsListo = document.getElementById('stats-listo');
-        if (statsPendientes) statsPendientes.textContent = totalPendientes;
-        if (statsProceso) statsProceso.textContent = totalProceso;
-        if (statsListo) statsListo.textContent = totalListo;
+            // Actualizar stats globales
+            const statsPendientes = document.getElementById('stats-pendientes');
+            const statsProceso = document.getElementById('stats-proceso');
+            const statsListo = document.getElementById('stats-listo');
+            if (statsPendientes) statsPendientes.textContent = totalPendientes;
+            if (statsProceso) statsProceso.textContent = totalProceso;
+            if (statsListo) statsListo.textContent = totalListo;
 
-        this.renderAvataresEmpleados(empleados, conteo);
-    } catch (error) {
-        console.error('❌ Error cargando empleados:', error);
-        const grid = document.getElementById('empleadosAvatarGrid');
-        if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px;"></i>Error al cargar empleados</div>';
-    }
-},
-    
+            this.renderAvataresEmpleados(empleados, conteo);
+        } catch (error) {
+            console.error('❌ Error cargando empleados:', error);
+            const grid = document.getElementById('empleadosAvatarGrid');
+            if (grid) grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:#EF4444;"><i class="fas fa-exclamation-circle" style="font-size:28px;"></i>Error al cargar empleados</div>';
+        }
+    },
+
     renderAvataresEmpleados(empleados, conteo) {
-    const grid = document.getElementById('empleadosAvatarGrid');
-    if (!grid) return;
+        const grid = document.getElementById('empleadosAvatarGrid');
+        if (!grid) return;
 
-    if (!empleados || empleados.length === 0) {
-        grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:var(--md-text-secondary);">No hay empleados</div>';
-        return;
-    }
+        if (!empleados || empleados.length === 0) {
+            grid.innerHTML = '<div style="text-align:center; padding:20px; width:100%; color:var(--md-text-secondary);">No hay empleados</div>';
+            return;
+        }
 
-    const valoresConteo = Object.values(conteo);
-    const maxTareas = Math.max(1, ...valoresConteo);
+        const valoresConteo = Object.values(conteo);
+        const maxTareas = Math.max(1, ...valoresConteo);
 
-    grid.innerHTML = empleados.map(empleado => {
-        const tareasPendientes = conteo[empleado.id] || 0;
-        const gradient = this.getGradientEmpleado(empleado.nombre);
-        const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`.toUpperCase();
-        const badgeClass = tareasPendientes > 0 ? 'pendiente' : 'listo';
-        const porcentaje = tareasPendientes > 0 ? Math.min(100, (tareasPendientes / maxTareas) * 100) : 100;
+        grid.innerHTML = empleados.map(empleado => {
+            const tareasPendientes = conteo[empleado.id] || 0;
+            const gradient = this.getGradientEmpleado(empleado.nombre);
+            const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`.toUpperCase();
+            const badgeClass = tareasPendientes > 0 ? 'pendiente' : 'listo';
+            const porcentaje = tareasPendientes > 0 ? Math.min(100, (tareasPendientes / maxTareas) * 100) : 100;
 
-        return `
-            <div class="empleado-avatar-card"
-                 onclick="App.abrirModalEmpleado(${empleado.id})"
-                 style="--card-gradient: ${gradient};"
-                 title="Ver tareas de ${empleado.nombre}">
-                <span class="avatar-badge ${badgeClass}">${tareasPendientes}</span>
-                <div class="avatar-circle">${iniciales}</div>
-                <span class="avatar-name">${empleado.nombre}</span>
-                <span class="empleado-cargo">${empleado.cargo || 'Sin cargo'}</span>
-                <div class="empleado-progress">
-                    <div class="empleado-progress-fill" style="width: ${porcentaje}%"></div>
+            return `
+                <div class="empleado-avatar-card"
+                     onclick="App.abrirModalEmpleado(${empleado.id})"
+                     style="--card-gradient: ${gradient};"
+                     title="Ver tareas de ${empleado.nombre}">
+                    <span class="avatar-badge ${badgeClass}">${tareasPendientes}</span>
+                    <div class="avatar-circle">${iniciales}</div>
+                    <span class="avatar-name">${empleado.nombre}</span>
+                    <span class="empleado-cargo">${empleado.cargo || 'Sin cargo'}</span>
+                    <div class="empleado-progress">
+                        <div class="empleado-progress-fill" style="width: ${porcentaje}%"></div>
+                    </div>
                 </div>
-            </div>
-        `;
-    }).join('');
+            `;
+        }).join('');
 
-    const badge = document.getElementById('empleados-total-badge');
-    if (badge) badge.textContent = empleados.length;
-},
-    
+        const badge = document.getElementById('empleados-total-badge');
+        if (badge) badge.textContent = empleados.length;
+    },
+
     async abrirModalEmpleado(empleadoId) {
         try {
             const { data: empleado, error: errorEmpleado } = await supabaseClient.from('empleados').select('*').eq('id', empleadoId).single();
@@ -742,20 +755,48 @@ getGradientEmpleado(nombre) {
     suscribirRealtime() {
         try {
             if (STATE.realtimeChannel) supabaseClient.removeChannel(STATE.realtimeChannel);
+
+            console.log('📡 Suscribiéndose a Realtime...');
+
             STATE.realtimeChannel = supabaseClient.channel('dashboard-updates')
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'pedidos' }, () => {
-                    Cache.invalidate('kpi', 'estados', 'urgentes');
-                    this.refrescarDatosSilencioso();
-                })
-                .on('postgres_changes', { event: '*', schema: 'public', table: 'tareas' }, () => {
-                    Cache.invalidate('empleados', 'eficiencia', 'carga');
-                    this.refrescarDatosSilencioso();
-                })
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'pedidos' },
+                    (payload) => {
+                        console.log('🔔 Cambio en PEDIDOS:', payload.eventType, payload.new?.id);
+                        Cache.invalidate('kpi', 'estados', 'urgentes');
+                        this.refrescarDatosSilencioso();
+                    }
+                )
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'tareas' },
+                    (payload) => {
+                        console.log('🔔 Cambio en TAREAS:', payload.eventType, payload.new?.id);
+                        Cache.invalidate('empleados', 'eficiencia', 'carga');
+                        this.refrescarDatosSilencioso();
+                    }
+                )
+                .on('postgres_changes',
+                    { event: '*', schema: 'public', table: 'empleados' },
+                    (payload) => {
+                        console.log('🔔 Cambio en EMPLEADOS:', payload.eventType, payload.new?.id);
+                        this.cargarEmpleadosYTareas();
+                    }
+                )
                 .subscribe((status, err) => {
-                    if (status === 'SUBSCRIBED') console.log('✅ Suscrito a Realtime');
-                    else if (err) console.error('❌ Error en suscripción:', err);
+                    console.log('📡 Estado Realtime:', status);
+                    if (status === 'SUBSCRIBED') {
+                        console.log('✅ SUSCRITO A REALTIME CORRECTAMENTE');
+                    } else if (status === 'CHANNEL_ERROR') {
+                        console.error('❌ Error de canal:', err);
+                    } else if (status === 'TIMED_OUT') {
+                        console.error('⏱️ Timeout de Realtime');
+                    } else if (status === 'CLOSED') {
+                        console.warn('⚠️ Canal cerrado');
+                    }
                 });
-        } catch (error) { console.error('❌ Error suscribiendo a Realtime:', error); }
+        } catch (error) {
+            console.error('❌ Error suscribiendo a Realtime:', error);
+        }
     },
 
     reintentar() {
@@ -873,6 +914,7 @@ getGradientEmpleado(nombre) {
 
     destroy() {
         if (STATE.refreshInterval) { clearInterval(STATE.refreshInterval); STATE.refreshInterval = null; }
+        if (STATE.empleadosInterval) { clearInterval(STATE.empleadosInterval); STATE.empleadosInterval = null; }
         if (STATE.realtimeChannel) { supabaseClient.removeChannel(STATE.realtimeChannel); STATE.realtimeChannel = null; }
         Cache.clear();
         console.log('🧹 Aplicación destruida');
@@ -902,4 +944,4 @@ window.actualizarStatusTarea = (tareaId, nuevoStatus, empleadoId) => App.actuali
 
 document.addEventListener('DOMContentLoaded', () => { App.init(); });
 window.addEventListener('beforeunload', () => { App.destroy(); });
-console.log('✅ Dashboard INVEMEX v7.0 cargado correctamente');
+console.log('✅ Dashboard INVEMEX v7.1 cargado correctamente');
