@@ -1,5 +1,5 @@
 /* ==========================================
-   DASHBOARD TV - Diseño adaptativo y rotación
+   DASHBOARD TV - Paneles compactos
 ========================================== */
 
 .panel-highlight {
@@ -16,95 +16,114 @@
 
 @media (min-width: 1400px) {
     :root {
-        --panel-padding: 32px;
-        --grid-gap: 20px;
-        --grid-cols: 8;
-        --card-min: 140px;
-        --card-padding: 22px 14px 18px;
-        --avatar-size: 76px;
-        --avatar-font: 28px;
-        --name-size: 15px;
-        --cargo-size: 12px;
-        --title-size: 24px;
-        --stat-size: 15px;
+        --panel-padding: 20px;
+        --grid-gap: 14px;
+        --card-min: 130px;
+        --card-padding: 16px 12px 14px;
+        --avatar-size: 60px;
+        --avatar-font: 22px;
+        --name-size: 13px;
+        --cargo-size: 10px;
+        --title-size: 20px;
+        --stat-size: 13px;
     }
 
     body {
         max-width: 1920px;
         margin: 0 auto;
-        padding: clamp(28px, 2.2vw, 52px);
-        font-size: clamp(16px, 1vw, 22px);
+        padding: clamp(20px, 1.6vw, 36px);
+        font-size: clamp(14px, 0.9vw, 18px);
     }
 
     #dashboard { min-height: 100vh; }
 
-    .md-toolbar { padding: 22px 34px; margin-bottom: 34px; top: 18px; }
-    .md-toolbar-brand img { height: 50px; }
-    .md-toolbar-brand .brand-text { font-size: clamp(30px, 2vw, 42px); }
-    .md-toolbar-actions, .md-chip { font-size: clamp(16px, 1.1vw, 22px); }
-    .md-chip { padding: 12px 20px; }
+    .md-toolbar { padding: 16px 24px; margin-bottom: 22px; top: 12px; }
+    .md-toolbar-brand img { height: 40px; }
+    .md-toolbar-brand .brand-text { font-size: clamp(22px, 1.6vw, 30px); }
+    .md-toolbar-actions, .md-chip { font-size: clamp(13px, 0.9vw, 17px); }
+    .md-chip { padding: 10px 16px; }
 
-    .empleados-section { padding: 32px; margin-bottom: 34px; }
-    .empleados-title { font-size: 24px; }
-    .empleados-stat { font-size: 15px; }
-    .empleados-avatar-grid { gap: 20px; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-    .empleado-avatar-card { padding: 22px 14px 18px; }
-    .avatar-circle { width: 76px; height: 76px; font-size: 28px; }
-    .avatar-name { font-size: 15px; }
-    .empleado-cargo { font-size: 12px; }
-    .avatar-badge { min-width: 28px; height: 28px; font-size: 12px; }
+    /* Avatares más compactos */
+    .empleados-section { padding: 20px; margin-bottom: 22px; }
+    .empleados-title { font-size: 20px; }
+    .empleados-stat { font-size: 13px; }
+    .empleados-avatar-grid { gap: 14px; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .empleado-avatar-card { padding: 16px 10px 14px; }
+    .avatar-circle { width: 60px; height: 60px; font-size: 22px; }
+    .avatar-name { font-size: 13px; }
+    .empleado-cargo { font-size: 10px; }
+    .avatar-badge { min-width: 24px; height: 24px; font-size: 11px; }
 
-    .md-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 28px; margin-bottom: 34px; }
-    .md-card { min-height: 190px; padding: 30px; }
-    .card-icon { width: 64px; height: 64px; font-size: 28px; }
-    .card-label { font-size: 15px; }
-    .card-value { font-size: clamp(48px, 3.4vw, 76px); }
-    .card-change { font-size: 17px; }
+    /* Tabla KPI compacta */
+    .empleados-tabla-section { padding: 20px; margin-bottom: 22px; }
+    .empleados-tabla-title { font-size: 20px; }
+    .empleados-tabla { font-size: 12px; min-width: 1000px; }
+    .empleados-tabla thead th { padding: 10px 12px; font-size: 10px; }
+    .empleados-tabla td { padding: 10px 12px; }
+    .emp-avatar { width: 34px; height: 34px; font-size: 12px; }
+    .emp-nombre { font-size: 12.5px; }
+    .emp-email { font-size: 11px; }
+    .emp-num { min-width: 28px; height: 22px; font-size: 11.5px; }
+    .emp-tasa-bar { width: 50px; height: 5px; }
+    .emp-tasa-txt { font-size: 11.5px; }
+    .emp-carga { width: 80px; height: 6px; }
+    .emp-estado { font-size: 10px; padding: 3px 8px; }
+    .emp-btn { width: 26px; height: 26px; font-size: 11px; }
 
-    .charts-section { gap: 28px !important; }
+    /* KPIs generales compactos */
+    .md-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+    .md-card { min-height: 120px; padding: 18px; }
+    .card-icon { width: 40px; height: 40px; font-size: 18px; margin-bottom: 10px; }
+    .card-label { font-size: 12px; }
+    .card-value { font-size: clamp(32px, 2.4vw, 48px); }
+    .card-change { font-size: 13px; }
+
+    /* Charts */
+    .charts-section { gap: 20px !important; }
     .charts-section > .card {
-        min-height: 430px;
-        padding: 28px !important;
+        min-height: 320px;
+        padding: 20px !important;
         border: 0;
-        border-radius: 28px;
-        box-shadow: 0 20px 40px rgba(0,0,0,0.06);
+        border-radius: 20px;
+        box-shadow: 0 12px 28px rgba(0,0,0,0.05);
     }
-    .charts-section h4, .urgentes-section h3 { font-size: 24px; }
-    #doughnut-chart { width: min(20vw, 360px) !important; height: min(20vw, 360px) !important; }
-    .legend-item, .bar-label { font-size: 18px; }
-    .bar-item { margin-bottom: 24px; }
-    .bar-track { height: 42px; }
-    .bar-fill { font-size: 17px; }
+    .charts-section h4, .urgentes-section h3 { font-size: 18px; }
+    #doughnut-chart { width: min(15vw, 240px) !important; height: min(15vw, 240px) !important; }
+    .legend-item, .bar-label { font-size: 14px; }
+    .bar-item { margin-bottom: 16px; }
+    .bar-track { height: 32px; }
+    .bar-fill { font-size: 14px; }
 
-    .urgentes-section, .eficiencia-section { margin-top: 34px !important; }
-    .table-responsive { max-height: 460px; }
-    .table { font-size: 17px; }
-    .table th, .table td { padding: 16px 18px; }
+    /* Tablas */
+    .urgentes-section, .eficiencia-section { margin-top: 22px !important; }
+    .table-responsive { max-height: 340px; }
+    .table { font-size: 14px; }
+    .table th, .table td { padding: 12px 14px; }
 
+    /* Ocultar acciones en TV */
     .md-toolbar-actions .md-btn, body.tv-display .md-btn-outline { display: none; }
+
     .tv-clock { font-variant-numeric: tabular-nums; font-weight: 800; }
+
+    /* Realtime indicator */
+    .realtime-indicator { font-size: 10px; padding: 3px 8px; }
 }
 
 @media (min-width: 2200px) {
     :root {
-        --panel-padding: 44px;
-        --grid-gap: 28px;
-        --grid-cols: 10;
-        --card-min: 170px;
-        --card-padding: 28px 18px 22px;
-        --avatar-size: 96px;
-        --avatar-font: 36px;
-        --name-size: 18px;
-        --cargo-size: 14px;
-        --title-size: 30px;
-        --stat-size: 18px;
+        --panel-padding: 26px;
+        --grid-gap: 20px;
+        --card-min: 150px;
+        --avatar-size: 72px;
+        --avatar-font: 26px;
     }
 
-    body { max-width: 2400px; padding-inline: 72px; }
-    .md-grid { gap: 38px; }
-    .md-card { min-height: 230px; }
-    .table-responsive { max-height: 560px; }
-    .empleados-section { padding: 44px; }
+    body { max-width: 2400px; padding-inline: 50px; }
+    .md-grid { gap: 22px; }
+    .md-card { min-height: 140px; }
+    .table-responsive { max-height: 420px; }
+    .empleados-section { padding: 26px; }
+    .empleados-tabla-section { padding: 26px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
