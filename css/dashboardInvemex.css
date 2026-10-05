@@ -1,6 +1,6 @@
 /* ==========================================
    MATERIAL DESIGN 3 - INVEMEX DASHBOARD
-   Versión: 13.0 - Tabla KPI + Scroll mejorado
+   Versión: 13.0 - Tabla KPI + Modales universales
 ========================================== */
 
 :root {
@@ -79,6 +79,7 @@ body {
 :focus-visible { outline: 3px solid rgba(11,33,139,0.16); outline-offset: 2px; border-radius: 6px; }
 .md-btn:focus-visible, .md-chip:focus-visible, .empleado-avatar-card:focus-visible, .clickable-row:focus-visible { box-shadow: 0 0 0 3px var(--md-primary-light); }
 
+/* LOADER */
 #ivx-loader {
     position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
     background: linear-gradient(135deg, #F0F2F5 0%, #E8EAFF 100%);
@@ -102,6 +103,7 @@ body {
 @keyframes ivxSpin { to { transform: rotate(360deg); } }
 @keyframes ivxPulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.85; transform: scale(1.03); } }
 
+/* TOOLBAR */
 .md-toolbar {
     background: rgba(255, 255, 255, 0.92);
     border-radius: var(--md-radius-lg);
@@ -125,9 +127,7 @@ body {
 }
 .md-chip:hover { background: var(--md-primary-light); color: var(--md-primary); border-color: var(--md-primary); }
 
-/* ==========================================
-   EMPLEADOS - PANEL DE AVATARES
-========================================== */
+/* EMPLEADOS - PANEL DE AVATARES */
 .empleados-section {
     margin-bottom: 24px;
     background: var(--md-white);
@@ -158,7 +158,6 @@ body {
     color: var(--md-text);
     letter-spacing: -0.4px;
 }
-
 .empleados-title i { color: var(--md-primary); }
 
 .empleados-stats {
@@ -176,12 +175,7 @@ body {
     font-weight: 600;
     color: var(--md-text-secondary);
 }
-
-.empleados-stat .stat-value {
-    font-weight: 800;
-    color: var(--md-text);
-}
-
+.empleados-stat .stat-value { font-weight: 800; color: var(--md-text); }
 .empleados-stat.pendiente .stat-value { color: #F59E0B; }
 .empleados-stat.proceso .stat-value { color: #6366F1; }
 .empleados-stat.listo .stat-value { color: #10B981; }
@@ -238,7 +232,6 @@ body {
     border-color: transparent;
     box-shadow: 0 10px 28px rgba(99, 102, 241, 0.12);
 }
-
 .empleado-avatar-card:hover::before { opacity: 1; }
 
 .avatar-circle {
@@ -257,7 +250,6 @@ body {
     letter-spacing: 0.5px;
     flex-shrink: 0;
 }
-
 .empleado-avatar-card:hover .avatar-circle {
     transform: scale(1.08) rotate(-2deg);
 }
@@ -335,12 +327,9 @@ body {
     border-color: transparent;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 8px 24px rgba(99, 102, 241, 0.2);
 }
-
 .empleado-avatar-card.active::before { opacity: 1; }
 
-/* ==========================================
-   TABLA KPI DE EMPLEADOS - Sección adicional
-========================================== */
+/* TABLA KPI DE EMPLEADOS */
 .empleados-tabla-section {
     margin-bottom: 24px;
     background: var(--md-white);
@@ -370,7 +359,6 @@ body {
     color: var(--md-text);
     letter-spacing: -0.4px;
 }
-
 .empleados-tabla-title i { color: var(--md-primary); }
 
 .empleados-tabla-tools {
@@ -413,16 +401,13 @@ body {
     color: var(--md-text);
 }
 
-.empleados-tabla-search input::placeholder {
-    color: var(--md-text-light);
-}
+.empleados-tabla-search input::placeholder { color: var(--md-text-light); }
 
 .empleados-tabla-wrapper {
     overflow-x: auto;
     border-radius: var(--md-radius-md);
     border: 1px solid var(--md-gray-dark);
 }
-
 .empleados-tabla-wrapper::-webkit-scrollbar { height: 8px; }
 .empleados-tabla-wrapper::-webkit-scrollbar-track { background: var(--md-gray); }
 .empleados-tabla-wrapper::-webkit-scrollbar-thumb {
@@ -476,9 +461,7 @@ body {
     transition: background 0.2s ease;
     cursor: pointer;
 }
-.empleados-tabla tbody tr:hover {
-    background: rgba(11, 33, 139, 0.04);
-}
+.empleados-tabla tbody tr:hover { background: rgba(11, 33, 139, 0.04); }
 .empleados-tabla tbody tr:last-child { border-bottom: none; }
 
 .empleados-tabla td {
@@ -488,11 +471,7 @@ body {
 }
 .empleados-tabla td.col-num { text-align: center; }
 
-.emp-cell {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
+.emp-cell { display: flex; align-items: center; gap: 12px; }
 
 .emp-avatar {
     width: 40px;
@@ -508,12 +487,7 @@ body {
     letter-spacing: 0.5px;
 }
 
-.emp-info {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    min-width: 0;
-}
+.emp-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
 .emp-nombre {
     font-weight: 700;
@@ -558,12 +532,7 @@ body {
 .emp-num.listo     { background: var(--md-success-bg); color: var(--md-success); }
 .emp-num.retraso   { background: var(--md-danger-bg);  color: var(--md-danger); }
 
-.emp-tasa {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    justify-content: center;
-}
+.emp-tasa { display: flex; align-items: center; gap: 8px; justify-content: center; }
 
 .emp-tasa-bar {
     width: 60px;
@@ -584,12 +553,7 @@ body {
 .emp-tasa-bar > span.danger  { background: var(--md-danger); }
 .emp-tasa-bar > span.default { background: var(--md-text-light); }
 
-.emp-tasa-txt {
-    font-weight: 700;
-    font-size: 12.5px;
-    min-width: 36px;
-    text-align: right;
-}
+.emp-tasa-txt { font-weight: 700; font-size: 12.5px; min-width: 36px; text-align: right; }
 
 .emp-carga {
     width: 100px;
@@ -616,11 +580,7 @@ body {
     white-space: nowrap;
 }
 
-.emp-acciones {
-    display: flex;
-    gap: 4px;
-    justify-content: center;
-}
+.emp-acciones { display: flex; gap: 4px; justify-content: center; }
 
 .emp-btn {
     width: 30px;
@@ -636,10 +596,7 @@ body {
     transition: var(--md-transition);
     font-size: 12px;
 }
-.emp-btn:hover {
-    background: var(--md-primary-light);
-    color: var(--md-primary);
-}
+.emp-btn:hover { background: var(--md-primary-light); color: var(--md-primary); }
 
 .tabla-loading {
     text-align: center;
@@ -647,10 +604,7 @@ body {
     color: var(--md-text-secondary);
     font-size: 14px;
 }
-.tabla-loading i {
-    margin-right: 8px;
-    color: var(--md-primary);
-}
+.tabla-loading i { margin-right: 8px; color: var(--md-primary); }
 
 .tabla-empty {
     text-align: center;
@@ -664,9 +618,7 @@ body {
     margin-bottom: 12px;
 }
 
-/* ==========================================
-   KPI CARDS
-========================================== */
+/* KPI CARDS */
 .md-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .md-card {
     background: var(--md-white); border-radius: var(--md-radius-md); padding: 16px 18px;
@@ -707,17 +659,13 @@ body {
 .card-change { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .card-change.up { color: var(--md-success); }
 
-/* ==========================================
-   TABLAS CON SCROLL (scroll normal visible)
-========================================== */
+/* TABLAS CON SCROLL */
 .table-responsive {
     max-height: 400px; overflow-y: auto;
     border-radius: var(--md-radius-md);
     border: 1px solid var(--md-gray-dark);
     padding-right: 4px;
 }
-
-/* Scroll visible siempre en tablas */
 .table-responsive::-webkit-scrollbar { width: 10px; height: 10px; }
 .table-responsive::-webkit-scrollbar-track { background: var(--md-gray); border-radius: 5px; }
 .table-responsive::-webkit-scrollbar-thumb {
@@ -726,33 +674,23 @@ body {
     border: 2px solid var(--md-gray);
 }
 .table-responsive::-webkit-scrollbar-thumb:hover { background: var(--md-primary-dark); }
-
-/* Firefox */
 .table-responsive { scrollbar-width: thin; scrollbar-color: var(--md-primary) var(--md-gray); }
-
-.tareas-empleado-modal-wrapper {
-    max-height: 350px; overflow-y: auto;
-    border-radius: var(--md-radius-md);
-    border: 1px solid var(--md-gray-dark);
-}
-.tareas-empleado-modal-wrapper::-webkit-scrollbar { width: 6px; }
-.tareas-empleado-modal-wrapper::-webkit-scrollbar-track { background: var(--md-gray); border-radius: 3px; }
-.tareas-empleado-modal-wrapper::-webkit-scrollbar-thumb { background: var(--md-primary); border-radius: 3px; }
-
-/* ==========================================
-   MODALES
-========================================== */
-.md-modal-content {
+/* MODALES - RESPONSIVE UNIVERSAL (laptop + TV + móvil) */
+.modal-content.md-modal-content {
     border: none !important;
     border-radius: var(--md-radius-xl) !important;
     box-shadow: var(--md-elevation-4) !important;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
 }
 
 .md-modal-content .modal-header {
     border-bottom: 1px solid var(--md-gray-dark);
     padding: 18px 24px;
     background: var(--md-white);
+    flex-shrink: 0;
 }
 
 .md-modal-content .modal-title {
@@ -761,11 +699,15 @@ body {
     color: var(--md-text);
     display: flex;
     align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .md-modal-content .modal-body {
     padding: 24px;
     background: var(--md-gray);
+    flex: 1;
+    overflow-y: auto;
 }
 
 .md-modal-content .modal-footer {
@@ -775,11 +717,183 @@ body {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
+    flex-shrink: 0;
 }
 
-/* ==========================================
-   FORMULARIOS
-========================================== */
+/* MODAL DE EMPLEADO */
+#modalEmpleadoDetalle .modal-dialog { max-width: 80vw; width: 80vw; margin: 2vh auto; }
+#modalEmpleadoDetalle .modal-title { font-size: 20px; }
+
+#modalEmpleadoDetalle .avatar-lg {
+    width: 56px;
+    height: 56px;
+    font-size: 22px;
+    margin-right: 12px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+#modalEmpleadoDetalle .profile-summary {
+    background: var(--md-gray);
+    border-radius: var(--md-radius-md);
+    padding: 20px 24px;
+    margin-bottom: 20px;
+}
+
+#modalEmpleadoDetalle .info-item {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 10px;
+    font-size: 15px;
+    align-items: center;
+}
+
+#modalEmpleadoDetalle .info-item .label {
+    font-weight: 600;
+    color: var(--md-text-secondary);
+    min-width: 100px;
+    font-size: 14px;
+}
+
+#modalEmpleadoDetalle .stats-row {
+    display: flex;
+    gap: 14px;
+    margin-bottom: 22px;
+    flex-wrap: wrap;
+}
+
+#modalEmpleadoDetalle .stat {
+    flex: 1 1 130px;
+    text-align: center;
+    padding: 14px 16px;
+    border-radius: var(--md-radius-md);
+    font-size: 14px;
+    font-weight: 700;
+    border: 1px solid transparent;
+}
+
+#modalEmpleadoDetalle .stat.completadas {
+    color: var(--md-success);
+    border-color: rgba(16, 185, 129, 0.2);
+    background: var(--md-success-bg);
+}
+#modalEmpleadoDetalle .stat.proceso {
+    color: var(--md-info);
+    border-color: rgba(59, 130, 246, 0.2);
+    background: var(--md-info-bg);
+}
+#modalEmpleadoDetalle .stat.pendientes {
+    color: var(--md-warning-text);
+    border-color: rgba(245, 158, 11, 0.2);
+    background: var(--md-warning-bg);
+}
+
+#modalEmpleadoDetalle .table-wrapper {
+    max-height: 55vh;
+    overflow-y: auto;
+    border-radius: var(--md-radius-md);
+    border: 1px solid var(--md-gray-dark);
+    background: var(--md-white);
+}
+#modalEmpleadoDetalle .table-wrapper::-webkit-scrollbar { width: 10px; }
+#modalEmpleadoDetalle .table-wrapper::-webkit-scrollbar-track { background: var(--md-gray); border-radius: 5px; }
+#modalEmpleadoDetalle .table-wrapper::-webkit-scrollbar-thumb {
+    background: var(--md-primary);
+    border-radius: 5px;
+    border: 2px solid var(--md-gray);
+}
+#modalEmpleadoDetalle .table-wrapper::-webkit-scrollbar-thumb:hover { background: var(--md-primary-dark); }
+
+#modalEmpleadoDetalle .tareas-empleado-modal {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+}
+
+#modalEmpleadoDetalle .tareas-empleado-modal th {
+    text-align: left;
+    padding: 14px 16px;
+    background: var(--md-gray);
+    color: var(--md-text-secondary);
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    border-bottom: 2px solid var(--md-gray-dark);
+}
+
+#modalEmpleadoDetalle .tareas-empleado-modal td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--md-gray-dark);
+    vertical-align: middle;
+    font-size: 14px;
+}
+
+#modalEmpleadoDetalle .tareas-empleado-modal tr:hover td {
+    background: rgba(11, 33, 139, 0.03);
+}
+
+#modalEmpleadoDetalle .status-select {
+    padding: 8px 12px;
+    border-radius: var(--md-radius-sm);
+    border: 1px solid var(--md-gray-dark);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    background: var(--md-white);
+    min-width: 130px;
+    transition: var(--md-transition);
+}
+#modalEmpleadoDetalle .status-select:focus {
+    outline: none;
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 3px var(--md-primary-light);
+}
+#modalEmpleadoDetalle .status-select.status-pendiente {
+    border-color: var(--md-warning);
+    color: var(--md-warning);
+    background: var(--md-warning-bg);
+}
+#modalEmpleadoDetalle .status-select.status-en_progreso {
+    border-color: var(--md-info);
+    color: var(--md-info);
+    background: var(--md-info-bg);
+}
+#modalEmpleadoDetalle .status-select.status-completado {
+    border-color: var(--md-success);
+    color: var(--md-success);
+    background: var(--md-success-bg);
+}
+
+#modalEmpleadoDetalle .status-badge-sm {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: var(--md-radius-full);
+    font-size: 12px;
+    font-weight: 700;
+}
+#modalEmpleadoDetalle .status-badge-sm.completado { background: var(--md-success-bg); color: var(--md-success); }
+#modalEmpleadoDetalle .status-badge-sm.en_progreso { background: var(--md-info-bg); color: var(--md-info); }
+#modalEmpleadoDetalle .status-badge-sm.pendiente { background: var(--md-warning-bg); color: var(--md-warning-text); }
+
+/* MODALES PEQUEÑOS */
+#modalNuevoPedido .modal-dialog { max-width: 780px; width: 90vw; }
+#modalEditarPedido .modal-dialog,
+#modalNuevoCliente .modal-dialog,
+#modalNuevoProducto .modal-dialog { max-width: 620px; width: 90vw; }
+#modalClientes .modal-dialog,
+#modalProductos .modal-dialog,
+#modalDetallePedido .modal-dialog { max-width: 900px; width: 90vw; }
+
+/* FORMULARIOS */
 .md-form-label { display: block; font-size: 13px; font-weight: 600; color: var(--md-text-secondary); margin-bottom: 6px; }
 .md-form-control {
     width: 100%; padding: 10px 14px; border-radius: var(--md-radius-sm);
@@ -793,9 +907,7 @@ body {
     background-repeat: no-repeat; background-position: right 12px center; background-size: 16px 12px;
 }
 
-/* ==========================================
-   BOTONES & BADGES
-========================================== */
+/* BOTONES & BADGES */
 .md-btn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     padding: 10px 20px; border-radius: var(--md-radius-md); font-size: 14px;
@@ -818,9 +930,7 @@ body {
 .md-badge.danger { background: var(--md-danger-bg); color: var(--md-danger); }
 .md-badge.default { background: var(--md-gray); color: var(--md-text-secondary); }
 
-/* ==========================================
-   TOASTS
-========================================== */
+/* TOASTS */
 .md-toast-container { position: fixed; top: 24px; right: 24px; z-index: 999999; display: flex; flex-direction: column; gap: 12px; }
 .md-toast {
     background: var(--md-white); border-radius: var(--md-radius-md); box-shadow: var(--md-elevation-3);
@@ -843,30 +953,7 @@ body {
 .toast-close:hover { color: var(--md-text); }
 @keyframes slideInRight { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 
-/* ==========================================
-   DETALLE / PERFILES
-========================================== */
-.profile-summary { background: var(--md-gray); border-radius: var(--md-radius-md); padding: 16px; margin-bottom: 20px; }
-.info-item { display: flex; gap: 8px; margin-bottom: 8px; font-size: 14px; }
-.info-item .label { font-weight: 600; color: var(--md-text-secondary); min-width: 80px; }
-.stats-row { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-.stat { flex: 1; text-align: center; padding: 12px; border-radius: var(--md-radius-md); font-size: 13px; font-weight: 600; background: var(--md-white); border: 1px solid var(--md-gray-dark); }
-.stat.completadas { color: var(--md-success); border-color: var(--md-success-bg); background: var(--md-success-bg); }
-.stat.proceso { color: var(--md-info); border-color: var(--md-info-bg); background: var(--md-info-bg); }
-.stat.pendientes { color: var(--md-warning); border-color: var(--md-warning-bg); background: var(--md-warning-bg); }
-
-.tareas-empleado-modal { width: 100%; border-collapse: collapse; font-size: 13px; }
-.tareas-empleado-modal th { text-align: left; padding: 12px; background: var(--md-gray); color: var(--md-text-secondary); font-weight: 600; position: sticky; top: 0; }
-.tareas-empleado-modal td { padding: 12px; border-bottom: 1px solid var(--md-gray-dark); vertical-align: middle; }
-.status-select { padding: 6px 10px; border-radius: var(--md-radius-sm); border: 1px solid var(--md-gray-dark); font-size: 12px; font-weight: 500; cursor: pointer; background: var(--md-white); }
-.status-select.status-pendiente { border-color: var(--md-warning); color: var(--md-warning); }
-.status-select.status-en_progreso { border-color: var(--md-info); color: var(--md-info); }
-.status-select.status-completado { border-color: var(--md-success); color: var(--md-success); }
-.status-badge-sm { display: inline-block; padding: 4px 8px; border-radius: var(--md-radius-full); font-size: 11px; font-weight: 600; }
-.status-badge-sm.completado { background: var(--md-success-bg); color: var(--md-success); }
-.status-badge-sm.en_progreso { background: var(--md-info-bg); color: var(--md-info); }
-.status-badge-sm.pendiente { background: var(--md-warning-bg); color: var(--md-warning); }
-
+/* DETALLE / PERFILES */
 .detail-card { background: var(--md-gray); border-radius: var(--md-radius-md); padding: 16px; height: 100%; border: 1px solid transparent; transition: var(--md-transition); }
 .detail-card:hover { border-color: var(--md-primary-light); background: var(--md-white); box-shadow: var(--md-elevation-1); }
 .detail-label { font-size: 12px; font-weight: 600; color: var(--md-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
@@ -896,10 +983,13 @@ body {
 .color-box { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
 .avatar-lg { width: 48px; height: 48px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: white; margin-right: 12px; }
 
-/* ==========================================
-   RESPONSIVE
-========================================== */
-@media (max-width: 768px) {
+/* RESPONSIVE - LAPTOP MEDIANA */
+@media (max-width: 1399px) {
+    #modalEmpleadoDetalle .modal-dialog { max-width: 85vw; width: 85vw; }
+}
+
+/* RESPONSIVE - MÓVIL / TABLET */
+@media (max-width: 900px) {
     body { padding: 16px; }
     .md-grid { grid-template-columns: 1fr 1fr; }
     .md-card { padding: 12px 14px !important; }
@@ -907,15 +997,39 @@ body {
     .md-card .card-value { font-size: 22px !important; }
     .md-card .card-label { font-size: 10px !important; }
     .md-card .card-change { font-size: 10px !important; }
-    .empleados-avatar-grid {
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 10px;
-    }
+    .empleados-avatar-grid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 10px; }
     .avatar-circle { width: 48px; height: 48px; font-size: 16px; }
     .avatar-name { font-size: 11px; }
     .empleado-cargo { font-size: 9px; }
     .avatar-badge { min-width: 20px; height: 20px; font-size: 9px; }
-    .md-modal-content .modal-dialog { margin: 8px; max-width: calc(100vw - 16px); }
+
+    .modal-content.md-modal-content { max-height: 96vh; border-radius: var(--md-radius-lg) !important; }
+    #modalEmpleadoDetalle .modal-dialog,
+    #modalNuevoPedido .modal-dialog,
+    #modalEditarPedido .modal-dialog,
+    #modalNuevoCliente .modal-dialog,
+    #modalNuevoProducto .modal-dialog,
+    #modalClientes .modal-dialog,
+    #modalProductos .modal-dialog,
+    #modalDetallePedido .modal-dialog {
+        max-width: calc(100vw - 16px);
+        width: calc(100vw - 16px);
+        margin: 8px auto;
+    }
+    .md-modal-content .modal-body { padding: 16px; }
+    #modalEmpleadoDetalle .avatar-lg { width: 44px; height: 44px; font-size: 18px; }
+    #modalEmpleadoDetalle .modal-title { font-size: 17px; }
+    #modalEmpleadoDetalle .profile-summary { padding: 14px 16px; }
+    #modalEmpleadoDetalle .info-item { font-size: 13.5px; gap: 8px; }
+    #modalEmpleadoDetalle .info-item .label { min-width: 80px; font-size: 12.5px; }
+    #modalEmpleadoDetalle .stats-row { gap: 8px; }
+    #modalEmpleadoDetalle .stat { padding: 10px 8px; font-size: 12px; flex: 1 1 90px; }
+    #modalEmpleadoDetalle .tareas-empleado-modal { font-size: 12.5px; }
+    #modalEmpleadoDetalle .tareas-empleado-modal th { padding: 10px 8px; font-size: 10.5px; }
+    #modalEmpleadoDetalle .tareas-empleado-modal td { padding: 10px 8px; font-size: 12.5px; }
+    #modalEmpleadoDetalle .status-select { font-size: 11.5px; padding: 6px 8px; min-width: 100px; }
+    #modalEmpleadoDetalle .status-badge-sm { font-size: 10.5px; padding: 4px 8px; }
+
     .empleados-tabla-search { min-width: 180px; }
     .empleados-tabla { font-size: 12px; }
     .empleados-tabla thead th { padding: 10px 12px; font-size: 10px; }
@@ -928,10 +1042,7 @@ body {
     .md-toolbar-actions { justify-content: space-between; }
     .md-toast-container { right: 12px; left: 12px; }
     .md-toast { min-width: auto; width: 100%; }
-    .empleados-avatar-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-    }
+    .empleados-avatar-grid { grid-template-columns: repeat(2, 1fr); gap: 8px; }
     .empleado-avatar-card { padding: 10px 6px 8px; }
     .avatar-circle { width: 40px; height: 40px; font-size: 14px; }
     .avatar-name { font-size: 10px; }
@@ -941,73 +1052,13 @@ body {
     .empleados-tabla-header { flex-direction: column; align-items: stretch; }
     .empleados-tabla-tools { justify-content: space-between; }
     .empleados-tabla-search { flex: 1; min-width: 0; }
-}
 
-/* ==========================================
-   SCROLL INTELIGENTE - Solo aparece al hacer hover
-   Aplica a paneles específicos (KPIs, tarjetas), no a tablas
-========================================== */
-.scroll-hover {
-    overflow-y: auto;
-    overflow-x: hidden;
-    max-height: 100%;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    position: relative;
-    padding-right: 0;
-    transition: padding-right 0.25s ease;
+    #modalEmpleadoDetalle .modal-title { font-size: 15px; }
+    #modalEmpleadoDetalle .avatar-lg { width: 38px; height: 38px; font-size: 15px; }
+    #modalEmpleadoDetalle .info-item { flex-direction: column; align-items: flex-start; gap: 2px; }
+    #modalEmpleadoDetalle .info-item .label { min-width: auto; }
+    #modalEmpleadoDetalle .stat { font-size: 11px; padding: 8px 6px; }
+    #modalEmpleadoDetalle .table-wrapper { max-height: 45vh; }
+    #modalEmpleadoDetalle .tareas-empleado-modal th,
+    #modalEmpleadoDetalle .tareas-empleado-modal td { padding: 8px 6px; font-size: 11.5px; }
 }
-
-.scroll-hover::-webkit-scrollbar {
-    width: 0;
-    background: transparent;
-    transition: width 0.25s ease;
-}
-
-.scroll-hover:hover {
-    padding-right: 8px;
-}
-
-.scroll-hover:hover::-webkit-scrollbar {
-    width: 8px;
-}
-
-.scroll-hover:hover::-webkit-scrollbar-track {
-    background: rgba(11, 33, 139, 0.06);
-    border-radius: 4px;
-}
-
-.scroll-hover:hover::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, var(--md-primary), var(--md-primary-dark));
-    border-radius: 4px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-}
-
-.scroll-hover:hover::-webkit-scrollbar-thumb:hover {
-    background: var(--md-primary-dark);
-    background-clip: padding-box;
-}
-
-/* Flechita visual en el borde cuando hay más contenido */
-.scroll-hover::after {
-    content: '';
-    position: absolute;
-    right: 4px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 3px;
-    height: 30px;
-    border-radius: 3px;
-    background: linear-gradient(180deg, transparent, var(--md-primary), transparent);
-    opacity: 0;
-    transition: opacity 0.3s ease;
-    pointer-events: none;
-}
-
-.scroll-hover:hover::after {
-    opacity: 0.4;
-}
-
-/* Aplicar scroll-hover a los paneles que quieras */
-.empleados-tabla-wrapper.scroll-hover { max-height: 500px; }
