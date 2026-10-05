@@ -383,6 +383,14 @@ main#dashboard { position: relative; z-index: 1; }
 
 .table-wrapper { border: 1px solid var(--md-gray-dark); border-radius: var(--md-radius-md); }
 
+/* Faltantes detectados en el render dinámico */
+.emp-info { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
+.emp-tasa { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.toast-title { font-weight: 700; font-size: 11.5px; }
+.toast-message { color: var(--md-text-secondary); font-size: 11px; word-break: break-word; }
+.stat.retraso, .emp-estado.retraso { color: var(--md-danger); background: #FEF2F2; border-color: #FECACA; }
+.modal-dialog.modal-md { max-width: 560px; }
+
 /* ---------- FORMULARIOS ---------- */
 .md-form-label { font-size: 11.5px; font-weight: 600; color: var(--md-text-secondary); margin-bottom: 3px; display: block; }
 .md-form-control, .md-form-select {
