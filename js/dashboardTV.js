@@ -168,7 +168,7 @@
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/dashboard-tv.css?v=14';
+    link.href = 'css/dashboard-tv.css?v=15';
     document.head.appendChild(link);
 
     const tamano = detectarTamanoPantalla();

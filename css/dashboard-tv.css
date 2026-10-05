@@ -32,7 +32,7 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        padding: 10px 16px;
+        padding: 8px 14px;
         box-sizing: border-box;
         background: var(--md-gray);
     }
@@ -53,7 +53,7 @@
     ========================================== */
     .md-toolbar {
         flex: 0 0 auto;
-        padding: 8px 20px;
+        padding: 6px 16px;
         margin: 0;
         border-radius: 12px;
         position: static;
@@ -61,10 +61,10 @@
         height: 56px;
     }
     .md-toolbar-brand img { height: 34px; }
-    .md-toolbar-brand .brand-text { font-size: 22px; }
+    .md-toolbar-brand .brand-text { font-size: 17px; }
     .md-toolbar-actions { gap: 12px; }
-    .md-chip { padding: 6px 14px; font-size: 14px; }
-    .realtime-indicator { font-size: 12px; padding: 4px 12px; }
+    .md-chip { padding: 4px 10px; font-size: 11.5px; }
+    .realtime-indicator { font-size: 10.5px; padding: 3px 9px; }
     .realtime-indicator::before { width: 8px; height: 8px; }
 
     /* ==========================================
@@ -87,11 +87,11 @@
         gap: 10px;
         flex: 0 0 auto;
     }
-    .empleados-title { font-size: 18px; gap: 10px; }
-    .total-badge { padding: 2px 10px; font-size: 14px; }
+    .empleados-title { font-size: 14px; gap: 8px; }
+    .total-badge { padding: 2px 8px; font-size: 11.5px; }
     .empleados-stats { gap: 14px; }
-    .empleados-stat { font-size: 14px; gap: 6px; }
-    .empleados-stat .stat-value { font-size: 16px; }
+    .empleados-stat { font-size: 11.5px; gap: 5px; }
+    .empleados-stat .stat-value { font-size: 13px; }
     .empleados-stats .md-btn-text { display: none; }
 
     .empleados-avatar-grid {
@@ -108,12 +108,12 @@
         border-radius: 10px;
     }
     .avatar-circle {
-        width: 56px;
-        height: 56px;
-        font-size: 20px;
+        width: 44px;
+        height: 44px;
+        font-size: 15px;
     }
-    .avatar-name { font-size: 12px; font-weight: 700; }
-    .empleado-cargo { font-size: 9px; }
+    .avatar-name { font-size: 10.5px; font-weight: 700; }
+    .empleado-cargo { font-size: 8px; }
     .avatar-badge {
         min-width: 20px;
         height: 20px;
@@ -136,7 +136,7 @@
     }
     .md-card {
         min-height: 0;
-        padding: 18px 20px;
+        padding: 10px 14px;
         border-radius: 12px;
         display: flex;
         flex-direction: column;
@@ -144,25 +144,25 @@
         box-sizing: border-box;
     }
     .card-icon {
-        width: 46px;
-        height: 46px;
-        font-size: 20px;
-        margin-bottom: 10px;
-        border-radius: 10px;
+        width: 30px;
+        height: 30px;
+        font-size: 14px;
+        margin-bottom: 6px;
+        border-radius: 8px;
     }
     .card-label {
-        font-size: 13px;
+        font-size: 10.5px;
         font-weight: 700;
         letter-spacing: 0.4px;
-        margin-bottom: 6px;
+        margin-bottom: 3px;
     }
     .card-value {
-        font-size: 52px;
+        font-size: 26px;
         font-weight: 900;
         line-height: 1;
-        margin-bottom: 6px;
+        margin-bottom: 3px;
     }
-    .card-change { font-size: 13px; font-weight: 600; }
+    .card-change { font-size: 10px; font-weight: 600; }
 
     /* ==========================================
        ZONA INFERIOR: Tabla KPI + Urgentes
@@ -207,13 +207,13 @@
         gap: 10px;
         flex: 0 0 auto;
     }
-    .empleados-tabla-title { font-size: 16px; gap: 8px; }
+    .empleados-tabla-title { font-size: 13px; gap: 6px; }
     .empleados-tabla-tools { gap: 8px; }
     .empleados-tabla-search {
         min-width: 140px;
         padding: 4px 8px;
     }
-    .empleados-tabla-search input { font-size: 12px; }
+    .empleados-tabla-search input { font-size: 11px; }
     .empleados-tabla-search i { font-size: 11px; }
     .empleados-tabla-tools .md-btn-text { display: none; }
 
@@ -231,12 +231,12 @@
         width: 100%;
     }
     .empleados-tabla thead th {
-        padding: 6px 6px;
-        font-size: 8.5px;
+        padding: 4px 5px;
+        font-size: 8px;
         letter-spacing: 0.3px;
     }
     .empleados-tabla td {
-        padding: 6px 6px;
+        padding: 4px 5px;
     }
     .emp-avatar {
         width: 26px;
@@ -264,11 +264,11 @@
        PEDIDOS URGENTES
     ========================================== */
     .urgentes-section h3 {
-        font-size: 18px;
-        margin-bottom: 8px;
+        font-size: 13px;
+        margin-bottom: 5px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         flex: 0 0 auto;
     }
     .urgentes-section .d-flex.justify-content-between {
@@ -279,7 +279,7 @@
         font-size: 12px;
         color: var(--md-text-secondary);
     }
-    #urgentes-count-badge { font-size: 12px; padding: 2px 10px; }
+    #urgentes-count-badge { font-size: 10.5px; padding: 2px 8px; }
 
     .urgentes-section .table-responsive {
         flex: 1 1 auto;
@@ -288,14 +288,14 @@
         border-radius: 10px;
         max-height: none;
     }
-    .urgentes-section .table { font-size: 12.5px; }
+    .urgentes-section .table { font-size: 11px; }
     .urgentes-section .table th {
-        padding: 9px 8px;
-        font-size: 9.5px;
-        letter-spacing: 0.4px;
+        padding: 5px 6px !important;
+        font-size: 9px;
+        letter-spacing: 0.3px;
     }
     .urgentes-section .table td {
-        padding: 9px 8px;
+        padding: 5px 6px !important;
     }
     .urgentes-section .md-badge { font-size: 10px; padding: 2px 8px; }
     .urgentes-section .d-flex.justify-content-between:last-child {
@@ -340,9 +340,9 @@
         width: calc(50% - 26px);
     }
 
-    .avatar-circle { width: 60px; height: 60px; font-size: 22px; }
-    .avatar-name { font-size: 13px; }
-    .card-value { font-size: 56px; }
+    .avatar-circle { width: 48px; height: 48px; font-size: 16px; }
+    .avatar-name { font-size: 11px; }
+    .card-value { font-size: 30px; }
 }
 
 /* ==========================================
@@ -362,13 +362,13 @@
         width: calc(50% - 30px);
     }
 
-    .avatar-circle { width: 70px; height: 70px; font-size: 26px; }
-    .avatar-name { font-size: 15px; }
-    .empleado-cargo { font-size: 11px; }
+    .avatar-circle { width: 54px; height: 54px; font-size: 18px; }
+    .avatar-name { font-size: 12px; }
+    .empleado-cargo { font-size: 9px; }
 
-    .card-value { font-size: 72px; }
-    .card-icon { width: 60px; height: 60px; font-size: 24px; }
-    .card-label { font-size: 15px; }
+    .card-value { font-size: 36px; }
+    .card-icon { width: 38px; height: 38px; font-size: 17px; }
+    .card-label { font-size: 12px; }
 }
 
 /* ==========================================
