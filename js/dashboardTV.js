@@ -163,12 +163,16 @@
 
   function initTV() {
     document.body.classList.add('tv-display');
+    // El contenido del dashboard está dentro de <main id="dashboard">,
+    // así que la marca TV también debe vivir ahí para los selectores de layout.
+    var mainEl = document.getElementById('dashboard');
+    if (mainEl) mainEl.classList.add('tv-display');
     const clock = document.getElementById('fecha-texto');
     if (clock) clock.classList.add('tv-clock');
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/dashboard-tv.css?v=15';
+    link.href = 'css/dashboard-tv.css?v=16';
     document.head.appendChild(link);
 
     const tamano = detectarTamanoPantalla();

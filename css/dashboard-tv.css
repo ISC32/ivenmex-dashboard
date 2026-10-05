@@ -1,6 +1,6 @@
 /* ==========================================
    DASHBOARD TV - Layout fijo para control remoto
-   v15.0 - Todo cabe en 1 pantalla, sin scroll
+   v16.0 - Grid real en lugar de position:fixed con cálculos de altura rotos
 ========================================== */
 
 .panel-highlight {
@@ -17,6 +17,8 @@
 
 /* ==========================================
    TV >= 1400px - Layout fijo SIN SCROLL
+   Estructura: toolbar arriba; luego grid de 2 columnas
+   (izq: avatares + KPIs | der: tabla KPI + urgentes)
 ========================================== */
 @media (min-width: 1400px) {
 
@@ -28,14 +30,23 @@
         padding: 0;
     }
 
-    body {
-        display: flex;
-        flex-direction: column;
+    /* El contenido vive en <main>, no en <body>: aquí se ancla el grid */
+    main#dashboard {
+        display: grid !important;
+        grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
+        grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.15fr);
         gap: 10px;
         padding: 8px 14px;
         box-sizing: border-box;
+        height: 100vh;
         background: var(--md-gray);
     }
+
+    .md-toolbar { grid-column: 1 / -1; grid-row: 1; }
+    .empleados-section { grid-column: 1; grid-row: 2; }
+    .md-grid { grid-column: 1; grid-row: 3; align-content: start; }
+    .empleados-tabla-section { grid-column: 2; grid-row: 2; }
+    .urgentes-section { grid-column: 2; grid-row: 3; }
 
     /* Ocultar secciones no indispensables en TV */
     .eficiencia-section,
@@ -44,99 +55,96 @@
     }
 
     /* Ocultar botones de acciones rápidas en TV */
-    body > div[style*="display:flex"][style*="justify-content:center"] {
+    main#dashboard > div[style*="display:flex"][style*="justify-content:center"] {
         display: none !important;
     }
 
     /* ==========================================
-       TOOLBAR (~56px)
+       TOOLBAR
     ========================================== */
     .md-toolbar {
-        flex: 0 0 auto;
         padding: 6px 16px;
         margin: 0;
         border-radius: 12px;
-        position: static;
-        top: auto;
-        height: 56px;
+        height: 52px;
     }
-    .md-toolbar-brand img { height: 34px; }
-    .md-toolbar-brand .brand-text { font-size: 17px; }
+    .md-toolbar-brand img { height: 30px; }
+    .md-toolbar-brand .brand-text { font-size: 16px; }
     .md-toolbar-actions { gap: 12px; }
-    .md-chip { padding: 4px 10px; font-size: 11.5px; }
-    .realtime-indicator { font-size: 10.5px; padding: 3px 9px; }
-    .realtime-indicator::before { width: 8px; height: 8px; }
+    .md-chip { padding: 3px 9px; font-size: 11px; }
+    .realtime-indicator { font-size: 10px; padding: 2px 8px; }
+    .realtime-indicator::before { width: 7px; height: 7px; }
 
     /* ==========================================
-       AVATARES (~200px)
+       AVATARES
     ========================================== */
     .empleados-section {
-        flex: 0 0 200px;
-        padding: 12px 16px;
+        padding: 10px 14px;
         margin: 0;
         border-radius: 12px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
+        min-height: 0;
     }
     .empleados-header {
-        margin-bottom: 10px;
-        padding-bottom: 8px;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
         flex-wrap: nowrap;
         gap: 10px;
         flex: 0 0 auto;
     }
-    .empleados-title { font-size: 14px; gap: 8px; }
-    .total-badge { padding: 2px 8px; font-size: 11.5px; }
-    .empleados-stats { gap: 14px; }
-    .empleados-stat { font-size: 11.5px; gap: 5px; }
-    .empleados-stat .stat-value { font-size: 13px; }
+    .empleados-title { font-size: 13px; gap: 8px; }
+    .total-badge { padding: 2px 8px; font-size: 11px; }
+    .empleados-stats { gap: 12px; }
+    .empleados-stat { font-size: 11px; gap: 5px; }
+    .empleados-stat .stat-value { font-size: 12.5px; }
     .empleados-stats .md-btn-text { display: none; }
 
     .empleados-avatar-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-        gap: 10px;
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+        gap: 8px;
         overflow: hidden;
         flex: 1 1 auto;
         align-content: start;
     }
     .empleado-avatar-card {
-        padding: 8px 6px;
-        gap: 4px;
+        padding: 6px 5px;
+        gap: 3px;
         border-radius: 10px;
     }
     .avatar-circle {
-        width: 44px;
-        height: 44px;
-        font-size: 15px;
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
     }
-    .avatar-name { font-size: 10.5px; font-weight: 700; }
+    .avatar-name { font-size: 10px; font-weight: 700; }
     .empleado-cargo { font-size: 8px; }
     .avatar-badge {
-        min-width: 20px;
-        height: 20px;
-        font-size: 10px;
-        top: 4px;
-        right: 4px;
+        min-width: 18px;
+        height: 18px;
+        font-size: 9px;
+        top: 3px;
+        right: 3px;
         border-width: 2px;
     }
     .empleado-progress { height: 3px; margin-top: 2px; }
 
     /* ==========================================
-       KPIs GENERALES (~200px)
+       KPIs GENERALES
     ========================================== */
     .md-grid {
-        flex: 0 0 200px;
         display: grid;
-        grid-template-columns: repeat(4, 1fr);
-        gap: 12px;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
         margin: 0;
+        min-height: 0;
     }
     .md-card {
         min-height: 0;
-        padding: 10px 14px;
+        padding: 8px 12px;
         border-radius: 12px;
         display: flex;
         flex-direction: column;
@@ -144,77 +152,62 @@
         box-sizing: border-box;
     }
     .card-icon {
-        width: 30px;
-        height: 30px;
-        font-size: 14px;
-        margin-bottom: 6px;
+        width: 26px;
+        height: 26px;
+        font-size: 13px;
+        margin-bottom: 4px;
         border-radius: 8px;
     }
     .card-label {
-        font-size: 10.5px;
+        font-size: 10px;
         font-weight: 700;
         letter-spacing: 0.4px;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
     }
     .card-value {
-        font-size: 26px;
+        font-size: 24px;
         font-weight: 900;
         line-height: 1;
-        margin-bottom: 3px;
+        margin-bottom: 2px;
     }
-    .card-change { font-size: 10px; font-weight: 600; }
+    .card-change { font-size: 9.5px; font-weight: 600; }
 
     /* ==========================================
-       ZONA INFERIOR: Tabla KPI + Urgentes
+       ZONA DERECHA: Tabla KPI + Urgentes
     ========================================== */
     .empleados-tabla-section,
     .urgentes-section {
-        position: fixed !important;
-        bottom: 10px;
-        /* reducir altura para tabla KPI: restar más espacio para dejarla más compacta */
-        height: calc(100vh - 56px - 200px - 200px - 110px);
-        max-height: none;
-        padding: 12px 16px;
+        padding: 10px 14px;
         margin: 0;
         border-radius: 12px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
+        min-height: 0;
         background: var(--md-white);
         box-shadow: var(--md-elevation-1);
         border: 1px solid rgba(0, 0, 0, 0.03);
-        z-index: 5;
-    }
-    .empleados-tabla-section {
-        left: 16px;
-        /* hacer la sección ligeramente más estrecha */
-        width: calc(45% - 22px);
-    }
-    .urgentes-section {
-        right: 16px;
-        width: calc(55% - 22px);
-        margin-top: 0 !important;
     }
 
     /* ==========================================
        TABLA KPI POR EMPLEADO
     ========================================== */
     .empleados-tabla-header {
-        margin-bottom: 8px;
-        padding-bottom: 8px;
+        margin-bottom: 6px;
+        padding-bottom: 6px;
         flex-wrap: nowrap;
         gap: 10px;
         flex: 0 0 auto;
     }
-    .empleados-tabla-title { font-size: 13px; gap: 6px; }
+    .empleados-tabla-title { font-size: 12.5px; gap: 6px; }
     .empleados-tabla-tools { gap: 8px; }
     .empleados-tabla-search {
-        min-width: 140px;
-        padding: 4px 8px;
+        min-width: 130px;
+        padding: 3px 8px;
     }
-    .empleados-tabla-search input { font-size: 11px; }
-    .empleados-tabla-search i { font-size: 11px; }
+    .empleados-tabla-search input { font-size: 10.5px; width: 130px; }
+    .empleados-tabla-search i { font-size: 10.5px; }
     .empleados-tabla-tools .md-btn-text { display: none; }
 
     .empleados-tabla-wrapper {
@@ -224,62 +217,61 @@
         border-radius: 10px;
         border: 1px solid var(--md-gray-dark);
     }
-    /* reducir fuente y paddings para compactar la tabla */
     .empleados-tabla {
-        font-size: 11.5px;
+        font-size: 11px;
         min-width: 0;
         width: 100%;
     }
     .empleados-tabla thead th {
-        padding: 4px 5px;
+        padding: 4px 5px !important;
         font-size: 8px;
         letter-spacing: 0.3px;
     }
     .empleados-tabla td {
-        padding: 4px 5px;
+        padding: 4px 5px !important;
     }
     .emp-avatar {
-        width: 26px;
-        height: 26px;
-        font-size: 10px;
+        width: 24px;
+        height: 24px;
+        font-size: 9.5px;
     }
     .emp-cell { gap: 6px; }
-    .emp-nombre { font-size: 11px; }
-    .emp-email { font-size: 9px; }
-    .emp-cargo { font-size: 8.5px; }
+    .emp-nombre { font-size: 10.5px; }
+    .emp-email { font-size: 8.5px; }
+    .emp-cargo { font-size: 8px; }
     .emp-num {
-        min-width: 22px;
-        height: 18px;
-        padding: 0 6px;
-        font-size: 10px;
+        min-width: 20px;
+        height: 17px;
+        padding: 0 5px;
+        font-size: 9.5px;
     }
-    .emp-tasa-bar { width: 28px; height: 4px; }
-    .emp-tasa-txt { font-size: 10px; min-width: 24px; }
-    .emp-carga { width: 44px; height: 5px; }
-    .emp-estado { font-size: 9px; padding: 2px 6px; }
-    .emp-btn { width: 20px; height: 20px; font-size: 9px; }
+    .emp-tasa-bar { width: 26px; height: 4px; }
+    .emp-tasa-txt { font-size: 9.5px; min-width: 22px; }
+    .emp-carga { width: 40px; height: 4px; }
+    .emp-estado { font-size: 8.5px; padding: 1px 6px; }
+    .emp-btn { width: 19px; height: 19px; font-size: 8.5px; }
     .emp-acciones { display: none; }
 
     /* ==========================================
        PEDIDOS URGENTES
     ========================================== */
     .urgentes-section h3 {
-        font-size: 13px;
-        margin-bottom: 5px;
+        font-size: 12.5px;
+        margin-bottom: 4px;
         display: flex;
         align-items: center;
         gap: 8px;
         flex: 0 0 auto;
     }
     .urgentes-section .d-flex.justify-content-between {
-        margin-bottom: 8px !important;
+        margin-bottom: 6px !important;
         flex: 0 0 auto;
     }
     .urgentes-section .d-flex.justify-content-between > div:last-child {
-        font-size: 12px;
+        font-size: 11px;
         color: var(--md-text-secondary);
     }
-    #urgentes-count-badge { font-size: 10.5px; padding: 2px 8px; }
+    #urgentes-count-badge { font-size: 10px; padding: 2px 8px; }
 
     .urgentes-section .table-responsive {
         flex: 1 1 auto;
@@ -288,19 +280,19 @@
         border-radius: 10px;
         max-height: none;
     }
-    .urgentes-section .table { font-size: 11px; }
+    .urgentes-section .table { font-size: 10.5px; }
     .urgentes-section .table th {
-        padding: 5px 6px !important;
-        font-size: 9px;
+        padding: 4px 6px !important;
+        font-size: 8.5px;
         letter-spacing: 0.3px;
     }
     .urgentes-section .table td {
-        padding: 5px 6px !important;
+        padding: 4px 6px !important;
     }
-    .urgentes-section .md-badge { font-size: 10px; padding: 2px 8px; }
+    .urgentes-section .md-badge { font-size: 9.5px; padding: 2px 8px; }
     .urgentes-section .d-flex.justify-content-between:last-child {
-        font-size: 12px;
-        margin-top: 6px;
+        font-size: 11px;
+        margin-top: 5px;
         flex: 0 0 auto;
     }
 
@@ -327,48 +319,27 @@
    TV GRANDE (>=1800px) - Ajustes finos
 ========================================== */
 @media (min-width: 1800px) {
-    body { padding: 12px 20px; gap: 12px; }
+    main#dashboard { padding: 12px 20px; gap: 12px; }
 
-    .empleados-section { flex: 0 0 210px; }
-    .md-grid { flex: 0 0 210px; }
-
-    .empleados-tabla-section,
-    .urgentes-section {
-        height: calc(100vh - 60px - 210px - 210px - 52px);
-        left: 20px;
-        right: 20px;
-        width: calc(50% - 26px);
-    }
-
-    .avatar-circle { width: 48px; height: 48px; font-size: 16px; }
-    .avatar-name { font-size: 11px; }
-    .card-value { font-size: 30px; }
+    .avatar-circle { width: 44px; height: 44px; font-size: 15px; }
+    .avatar-name { font-size: 10.5px; }
+    .card-value { font-size: 28px; }
+    .md-grid { grid-template-columns: repeat(4, 1fr); }
 }
 
 /* ==========================================
    TV 4K (>=2200px)
 ========================================== */
 @media (min-width: 2200px) {
-    body { padding: 16px 24px; gap: 14px; }
+    main#dashboard { padding: 16px 24px; gap: 14px; }
 
-    .empleados-section { flex: 0 0 240px; padding: 16px 20px; }
-    .md-grid { flex: 0 0 240px; }
-
-    .empleados-tabla-section,
-    .urgentes-section {
-        height: calc(100vh - 70px - 240px - 240px - 60px);
-        left: 24px;
-        right: 24px;
-        width: calc(50% - 30px);
-    }
-
-    .avatar-circle { width: 54px; height: 54px; font-size: 18px; }
+    .avatar-circle { width: 50px; height: 50px; font-size: 17px; }
     .avatar-name { font-size: 12px; }
     .empleado-cargo { font-size: 9px; }
 
-    .card-value { font-size: 36px; }
-    .card-icon { width: 38px; height: 38px; font-size: 17px; }
-    .card-label { font-size: 12px; }
+    .card-value { font-size: 34px; }
+    .card-icon { width: 32px; height: 32px; font-size: 15px; }
+    .card-label { font-size: 11px; }
 }
 
 /* ==========================================

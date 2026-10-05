@@ -1,32 +1,415 @@
 /* ============================================
-   MODO COMPACTO GLOBAL (v15)
-   Tipografía y espaciados reducidos en todo el dashboard
+   DASHBOARD INVEMEX — BASE + MODO COMPACTO (v16)
+   Se reescribió este archivo porque las versiones anteriores
+   referenciaban variables CSS (--md-*) que NUNCA estuvieron
+   definidas aquí: eso dejaba bordes, radios, colores, sombras
+   y fuentes inválidos -> layouts y capas (z-index) rotos.
 ============================================ */
+
+/* ---------- DESIGN TOKENS (antes faltaban por completo) ---------- */
+:root {
+    --md-primary: #6366F1;
+    --md-primary-dark: #4F46E5;
+    --md-secondary: #8B5CF6;
+    --md-success: #16A34A;
+    --md-warning: #D97706;
+    --md-danger: #DC2626;
+    --md-info: #0284C7;
+
+    --md-white: #FFFFFF;
+    --md-gray: #F3F4F6;
+    --md-gray-dark: #E5E7EB;
+    --md-text: #1F2937;
+    --md-text-secondary: #6B7280;
+
+    --md-radius-sm: 6px;
+    --md-radius-md: 10px;
+    --md-radius-lg: 14px;
+    --md-radius-xl: 16px;
+
+    --md-elevation-1: 0 1px 2px rgba(17, 24, 39, .06), 0 1px 3px rgba(17, 24, 39, .08);
+    --md-elevation-2: 0 4px 10px rgba(17, 24, 39, .08);
+    --md-elevation-4: 0 16px 40px rgba(17, 24, 39, .18);
+
+    --md-font: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+}
+
+/* ---------- RESET / BASE ---------- */
+* { box-sizing: border-box; }
+
 html { font-size: 14px; } /* reduce los "rem" de Bootstrap (~12.5%) */
 
 body {
+    margin: 0;
+    font-family: var(--md-font);
     font-size: 13px;
     line-height: 1.45;
+    color: var(--md-text);
+    background: var(--md-gray);
 }
 
-/* KPIs más pequeños */
-.card-label   { font-size: 11px !important; }
-.card-value   { font-size: 26px !important; }
-.card-change  { font-size: 10.5px !important; }
-.card-icon    { font-size: 16px !important; }
+h1, h2, h3, h4, h5 { margin: 0; font-weight: 700; }
+img { max-width: 100%; }
+button { font-family: inherit; cursor: pointer; }
+.sr-only.skip-link { position: absolute; left: -9999px; }
+.sr-only.skip-link:focus { left: 8px; top: 8px; z-index: 3000; background: #fff; padding: 6px 10px; border-radius: 6px; }
+
+/* ---------- CAPAS (z-index consistente) ----------
+   loader 2000 > overlay 1500 > toasts 1200 > main 1 */
+/* El JS quita aria-hidden al terminar de cargar; así el loader cubre siempre el arranque */
+main#dashboard[aria-hidden="true"] { visibility: hidden; }
+main#dashboard { position: relative; z-index: 1; }
+
+/* ---------- LOADER PANTALLA COMPLETA ---------- */
+#ivx-loader {
+    position: fixed; inset: 0; z-index: 2000;
+    display: flex; align-items: center; justify-content: center;
+    background: linear-gradient(160deg, #EEF2FF 0%, #F8FAFC 60%, #EDE9FE 100%);
+    transition: opacity .35s ease;
+}
+.loader-card { text-align: center; padding: 24px 32px; }
+.loader-logo { height: 56px; margin-bottom: 10px; }
+.loader-spinner {
+    width: 38px; height: 38px; margin: 0 auto 12px;
+    border: 4px solid #E0E7FF; border-top-color: var(--md-primary);
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+}
+.loader-title { font-family: 'Genos', var(--md-font); font-size: 20px; letter-spacing: 1px; color: var(--md-primary-dark); }
+.loader-subtitle { font-size: 12px; color: var(--md-text-secondary); margin-top: 4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---------- OVERLAY DE CARGA ---------- */
+#loading-overlay {
+    position: fixed; inset: 0; z-index: 1500;
+    display: flex; flex-direction: column; gap: 10px;
+    align-items: center; justify-content: center;
+    background: rgba(255,255,255,.72); backdrop-filter: blur(2px);
+}
+#loading-overlay.hidden { display: none !important; }
+.md-loading-spinner {
+    width: 30px; height: 30px;
+    border: 3px solid #E0E7FF; border-top-color: var(--md-primary);
+    border-radius: 50%; animation: spin 0.9s linear infinite;
+}
+.md-loading-text { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--md-primary-dark); text-transform: uppercase; }
+
+/* ---------- TOOLBAR ---------- */
+.md-toolbar {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; flex-wrap: wrap;
+    background: var(--md-white);
+    border: 1px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-elevation-1);
+    padding: 8px 14px;
+    margin: 0 0 10px 0;
+}
+.md-toolbar-brand { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; color: var(--md-text); }
+.md-toolbar-brand img { height: 30px; }
+.md-toolbar-brand .brand-text { font-family: 'Genos', var(--md-font); font-size: 15px; font-weight: 800; color: var(--md-primary-dark); }
+.md-toolbar-actions { display: inline-flex; align-items: center; gap: 8px; }
+
+/* ---------- BOTONES ---------- */
+.md-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid transparent; border-radius: var(--md-radius-sm);
+    font-weight: 600; line-height: 1.2; text-decoration: none;
+    transition: filter .15s ease, box-shadow .15s ease;
+}
+.md-btn i { font-size: .9em; }
+.md-btn-primary   { background: var(--md-primary); color: #fff; }
+.md-btn-secondary { background: var(--md-secondary); color: #fff; }
+.md-btn-outline   { background: var(--md-white); color: var(--md-text); border-color: var(--md-gray-dark); }
+.md-btn-danger    { background: var(--md-danger); color: #fff; }
+.md-btn:hover { filter: brightness(.94); }
+.md-btn:disabled { opacity: .55; cursor: not-allowed; }
+
+/* ---------- CHIPS / BADGES ---------- */
+.md-chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--md-gray); border: 1px solid var(--md-gray-dark);
+    border-radius: 999px; color: var(--md-text-secondary); font-weight: 600;
+}
+.md-badge {
+    display: inline-block; border-radius: 999px; font-weight: 700;
+    background: var(--md-gray); color: var(--md-text-secondary);
+}
+.md-badge.primary { background: #EEF2FF; color: var(--md-primary-dark); }
+.md-badge.danger  { background: #FEF2F2; color: var(--md-danger); }
+.md-badge.warning { background: #FFFBEB; color: var(--md-warning); }
+.md-badge.success { background: #F0FDF4; color: var(--md-success); }
+
+/* ---------- KPIs (md-grid / md-card) ---------- */
+.md-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 10px;
+    margin: 0 0 10px 0;
+}
+.md-card {
+    position: relative;
+    background: var(--md-white);
+    border: 1px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-elevation-1);
+    padding: 10px 12px;
+    overflow: hidden;
+}
+.md-card::before {
+    content: '';
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--md-primary), var(--md-secondary));
+}
+.md-card.warning::before { background: linear-gradient(90deg, #F59E0B, #D97706); }
+.md-card.success::before { background: linear-gradient(90deg, #22C55E, #16A34A); }
+.md-card.danger::before  { background: linear-gradient(90deg, #EF4444, #DC2626); }
+
+.card-icon { font-size: 16px; color: var(--md-primary); margin-bottom: 2px; }
+.md-card.warning .card-icon { color: var(--md-warning); }
+.md-card.success .card-icon { color: var(--md-success); }
+.md-card.danger  .card-icon { color: var(--md-danger); }
+.card-label   { font-size: 11px; font-weight: 600; color: var(--md-text-secondary); text-transform: uppercase; letter-spacing: .4px; }
+.card-value   { font-size: 26px; font-weight: 800; line-height: 1.1; color: var(--md-text); }
+.card-change  { font-size: 10.5px; font-weight: 600; color: var(--md-text-secondary); }
+.card-change.up   { color: var(--md-success); }
+.card-change.down { color: var(--md-danger); }
+
+/* ---------- PANEL DE AVATARES ---------- */
+.empleados-section {
+    background: var(--md-white);
+    border: 1px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-elevation-1);
+    padding: 10px 12px;
+    margin: 0 0 10px 0;
+}
+.empleados-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.empleados-title { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.empleados-title i { color: var(--md-primary); }
+.total-badge {
+    background: #EEF2FF; color: var(--md-primary-dark);
+    border-radius: 999px; padding: 1px 7px; font-size: 10.5px; font-weight: 700;
+}
+.empleados-stats { display: inline-flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--md-text-secondary); }
+.empleados-stat { display: inline-flex; align-items: center; gap: 4px; }
+.empleados-stat.pendiente i { color: var(--md-warning); }
+.empleados-stat.proceso   i { color: var(--md-info); }
+.empleados-stat.listo     i { color: var(--md-success); }
+.empleados-stat .stat-value { font-weight: 800; color: var(--md-text); }
+
+.empleados-avatar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(92px, 1fr));
+    gap: 8px;
+}
+.empleado-avatar-card {
+    position: relative;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--md-gray);
+    border: 1px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-md);
+    padding: 8px 6px;
+    cursor: pointer;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.empleado-avatar-card:hover { box-shadow: var(--md-elevation-2); transform: translateY(-1px); }
+.avatar-circle {
+    width: 44px; height: 44px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-secondary));
+    color: #fff; font-size: 15px; font-weight: 800;
+}
+.avatar-badge {
+    position: absolute; top: 2px; right: 2px;
+    min-width: 16px; height: 16px; padding: 0 4px; border-radius: 999px;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: var(--md-primary); color: #fff; font-size: 8.5px; font-weight: 800;
+    border: 2px solid var(--md-white);
+}
+.avatar-name { font-size: 10.5px; font-weight: 700; text-align: center; line-height: 1.15; }
+.empleado-cargo { font-size: 8.5px; color: var(--md-text-secondary); text-align: center; }
+.empleado-progress { width: 100%; height: 3px; border-radius: 2px; background: var(--md-gray-dark); overflow: hidden; }
+.empleado-progress > span { display: block; height: 100%; background: linear-gradient(90deg, var(--md-primary), var(--md-secondary)); }
+.avatar-lg {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 38px; height: 38px; border-radius: 50%;
+    color: #fff; font-size: 14px; font-weight: 800; vertical-align: middle; margin-right: 8px;
+}
+
+/* ---------- TABLA KPI POR EMPLEADO ---------- */
+.empleados-tabla-section {
+    background: var(--md-white);
+    border: 1px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-elevation-1);
+    padding: 10px 12px;
+    margin: 0 0 10px 0;
+}
+.empleados-tabla-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; padding-bottom: 5px; }
+.empleados-tabla-title { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+.empleados-tabla-title i { color: var(--md-primary); }
+.empleados-tabla-tools { display: inline-flex; align-items: center; gap: 8px; }
+.empleados-tabla-search {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--md-gray); border: 1px solid var(--md-gray-dark);
+    border-radius: 999px; padding: 4px 10px;
+}
+.empleados-tabla-search i { color: var(--md-text-secondary); font-size: 11px; }
+.empleados-tabla-search input { border: none; outline: none; background: transparent; font-size: 11.5px; width: 170px; font-family: inherit; }
+.empleados-tabla-wrapper { overflow-x: auto; }
+
+.emp-cell { display: inline-flex; align-items: center; gap: 6px; }
+.emp-avatar {
+    width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-secondary));
+    color: #fff; font-size: 9px; font-weight: 800;
+}
+.emp-nombre { font-size: 11px; font-weight: 700; display: block; }
+.emp-email  { font-size: 9px; color: var(--md-text-secondary); display: block; }
+.emp-cargo  { font-size: 9.5px; color: var(--md-text-secondary); }
+.emp-num {
+    display: inline-block; min-width: 22px; text-align: center;
+    background: var(--md-gray); border-radius: 6px; padding: 1px 6px; font-size: 10.5px; font-weight: 700;
+}
+.emp-tasa-bar { display: inline-block; width: 34px; height: 5px; border-radius: 3px; background: var(--md-gray-dark); overflow: hidden; vertical-align: middle; }
+.emp-tasa-bar > span { display: block; height: 100%; background: var(--md-success); }
+.emp-tasa-txt { font-size: 10.5px; font-weight: 700; }
+.emp-carga { display: inline-block; width: 48px; height: 5px; border-radius: 3px; background: var(--md-gray-dark); overflow: hidden; vertical-align: middle; }
+.emp-carga > span { display: block; height: 100%; background: var(--md-primary); }
+.emp-estado { display: inline-block; border-radius: 999px; padding: 2px 7px; font-size: 9.5px; font-weight: 700; background: var(--md-gray); color: var(--md-text-secondary); }
+.emp-estado.ok { background: #F0FDF4; color: var(--md-success); }
+.emp-estado.warn { background: #FFFBEB; color: var(--md-warning); }
+.emp-estado.bad { background: #FEF2F2; color: var(--md-danger); }
+.emp-btn {
+    width: 20px; height: 20px; border-radius: 6px; border: 1px solid var(--md-gray-dark);
+    background: var(--md-white); color: var(--md-text-secondary);
+    display: inline-flex; align-items: center; justify-content: center; font-size: 9px;
+}
+.emp-btn:hover { background: var(--md-gray); color: var(--md-primary-dark); }
+.sortable { cursor: pointer; user-select: none; }
+.sortable:hover { color: var(--md-primary-dark); }
+.tabla-loading, .tabla-empty { text-align: center; color: var(--md-text-secondary); padding: 16px 8px !important; font-size: 11px; }
+
+/* ---------- SECCIONES URGENTES / EFICIENCIA / GRÁFICOS ---------- */
+.urgentes-section, .eficiencia-section, .charts-section {
+    background: var(--md-white);
+    border: 1px solid var(--md-gray-dark);
+    border-radius: var(--md-radius-lg);
+    box-shadow: var(--md-elevation-1);
+    padding: 10px 12px;
+    margin: 0 0 10px 0;
+}
+.charts-section .card { background: var(--md-gray); border: 1px solid var(--md-gray-dark); border-radius: var(--md-radius-md); }
+.charts-section h4 { font-size: 12px; margin-bottom: 6px; }
+#doughnut-legend { font-size: 11px; }
+.bar-item { display: flex; align-items: center; gap: 6px; font-size: 11px; margin-bottom: 4px; }
+.bar-track { flex: 1; height: 8px; background: var(--md-gray-dark); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--md-primary), var(--md-secondary)); border-radius: 4px; }
+
+/* ---------- ESTADOS VACÍOS / TOASTS ---------- */
+.md-empty { text-align: center; padding: 18px 10px; color: var(--md-text-secondary); font-size: 11.5px; }
+.empty-icon { font-size: 22px; color: var(--md-gray-dark); margin-bottom: 6px; }
+.empty-title { font-size: 12px; font-weight: 700; color: var(--md-text-secondary); }
+
+.md-toast-container { position: fixed; top: 12px; right: 12px; z-index: 1200; display: flex; flex-direction: column; gap: 8px; }
+.md-toast {
+    display: flex; align-items: flex-start; gap: 8px;
+    background: var(--md-white); border: 1px solid var(--md-gray-dark);
+    border-left: 4px solid var(--md-primary);
+    border-radius: var(--md-radius-md); box-shadow: var(--md-elevation-2);
+    padding: 8px 10px; min-width: 230px; max-width: 320px; font-size: 11.5px;
+    transition: opacity .25s ease, transform .25s ease;
+}
+.md-toast.success { border-left-color: var(--md-success); }
+.md-toast.error   { border-left-color: var(--md-danger); }
+.md-toast.warning { border-left-color: var(--md-warning); }
+.toast-icon { font-size: 13px; color: var(--md-primary); padding-top: 1px; }
+.md-toast.success .toast-icon { color: var(--md-success); }
+.md-toast.error .toast-icon   { color: var(--md-danger); }
+.md-toast.warning .toast-icon { color: var(--md-warning); }
+.toast-content { flex: 1; min-width: 0; }
+.md-toast-title { font-weight: 700; font-size: 11.5px; }
+.md-toast-message { color: var(--md-text-secondary); font-size: 11px; word-break: break-word; }
+.toast-close {
+    border: none; background: transparent; color: var(--md-text-secondary);
+    font-size: 14px; line-height: 1; padding: 0 2px; cursor: pointer;
+}
+.toast-close:hover { color: var(--md-text); }
+
+/* ---------- ELEMENTOS DINÁMICOS DEL JS (antes no tenían estilo) ---------- */
+.legend-item { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.color-box { width: 10px; height: 10px; border-radius: 3px; flex: 0 0 auto; }
+
+.bar-item { grid-template-columns: 110px 1fr; align-items: stretch; margin-bottom: 6px; }
+.bar-label { flex: 0 0 auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar-fill {
+    display: flex; align-items: center; justify-content: center;
+    min-width: 0; padding: 0 6px; color: #fff; font-size: 9.5px; font-weight: 700;
+    white-space: nowrap; overflow: hidden;
+}
+
+.clickable-row { cursor: pointer; }
+.clickable-row:hover td { background: #F3F4FF; }
+
+.empleado-progress-fill { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--md-primary), var(--md-secondary)); transition: width .4s ease; }
+
+.profile-summary {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 4px 12px; background: var(--md-gray);
+    border: 1px solid var(--md-gray-dark); border-radius: var(--md-radius-md);
+    padding: 8px 10px; margin-bottom: 8px; font-size: 11.5px;
+}
+.info-item { color: var(--md-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.info-item .label { color: var(--md-text-secondary); font-weight: 600; margin-right: 4px; }
+
+.stats-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.stats-row .stat {
+    background: var(--md-white); border: 1px solid var(--md-gray-dark);
+    border-radius: 999px; padding: 3px 10px; font-size: 11px; font-weight: 700;
+}
+.stats-row .stat.completadas { color: var(--md-success); background: #F0FDF4; border-color: #BBF7D0; }
+.stats-row .stat.proceso     { color: var(--md-info); background: #F0F9FF; border-color: #BAE6FD; }
+.stats-row .stat.pendientes  { color: var(--md-warning); background: #FFFBEB; border-color: #FDE68A; }
+
+.md-progress {
+    height: 8px; background: var(--md-gray-dark);
+    border-radius: 4px; overflow: hidden; display: inline-block;
+}
+.progress-fill { height: 100%; background: linear-gradient(90deg, var(--md-primary), var(--md-secondary)); }
+.progress-fill.good { background: var(--md-success); }
+.progress-fill.warn { background: var(--md-warning); }
+.progress-fill.bad  { background: var(--md-danger); }
+
+.table-wrapper { border: 1px solid var(--md-gray-dark); border-radius: var(--md-radius-md); }
+
+/* ---------- FORMULARIOS ---------- */
+.md-form-label { font-size: 11.5px; font-weight: 600; color: var(--md-text-secondary); margin-bottom: 3px; display: block; }
+.md-form-control, .md-form-select {
+    display: block; width: 100%;
+    background: var(--md-white); color: var(--md-text);
+    border: 1px solid var(--md-gray-dark); border-radius: var(--md-radius-sm);
+    font-family: inherit;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.md-form-control:focus, .md-form-select:focus {
+    outline: none; border-color: var(--md-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, .15);
+}
+textarea.md-form-control { resize: vertical; }
 
 /* Botones compactos */
-.md-btn { padding: 5px 10px !important; font-size: 12.5px !important; }
-.md-btn.md-btn-sm { padding: 4px 7px !important; font-size: 11.5px !important; }
-.md-btn.md-btn-text { padding: 3px 5px !important; font-size: 12px !important; }
+.md-btn { padding: 5px 10px; font-size: 12.5px; }
+.md-btn.md-btn-sm { padding: 4px 7px; font-size: 11.5px; }
+.md-btn.md-btn-text { padding: 3px 5px; font-size: 12px; background: transparent; border-color: transparent; color: var(--md-text-secondary); }
+.md-btn.md-btn-text:hover { background: var(--md-gray); color: var(--md-primary-dark); }
 
 /* Formularios compactos */
-.md-form-control, .md-form-select { font-size: 12.5px !important; padding: 6px 9px !important; }
-.md-form-label { font-size: 11.5px !important; margin-bottom: 3px !important; }
+.md-form-control, .md-form-select { font-size: 12.5px; padding: 6px 9px; }
 
 /* Chips / badges */
-.md-chip { font-size: 11.5px !important; padding: 4px 10px !important; }
-.md-badge { font-size: 10.5px !important; padding: 2px 8px !important; }
+.md-chip { font-size: 11.5px; padding: 4px 10px; }
+.md-badge { font-size: 10.5px; padding: 2px 8px; }
 
 /* Secciones con menos aire (solo las que ya traen margen Bootstrap) */
 section.mt-4 { margin-top: 12px !important; }
@@ -48,13 +431,22 @@ section.mt-4 { margin-top: 12px !important; }
 .table-responsive::-webkit-scrollbar-thumb:hover { background: var(--md-primary-dark); }
 .table-responsive { scrollbar-width: thin; scrollbar-color: var(--md-primary) var(--md-gray); }
 
-/* TIPOGRAFÍA COMPACTA PARA TABLAS */
+/* ---------- TABLAS: TIPOGRAFÍA COMPACTA ---------- */
 .table,
 .empleados-tabla,
 .tareas-empleado-modal {
     font-size: 11px;
     margin-bottom: 0;
+    color: var(--md-text);
 }
+
+/* Bootstrap tablas con fondo/borde propios para no depender del tema */
+.table > :not(caption) > * > * {
+    background-color: var(--md-white);
+    border-bottom-color: var(--md-gray-dark);
+}
+.table-striped > tbody > tr:nth-of-type(odd) > * { background-color: #FAFAFC; }
+.table thead th { background: var(--md-gray); }
 
 .table th,
 .table td,
@@ -74,7 +466,10 @@ section.mt-4 { margin-top: 12px !important; }
 .tareas-empleado-modal th {
     font-size: 9.5px;
     letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: var(--md-text-secondary);
     padding: 5px 6px !important;
+    position: sticky; top: 0; z-index: 2; /* header fijo al hacer scroll interno */
 }
 
 /* Celdas de Bootstrap con padding mínimo */
@@ -88,14 +483,16 @@ section.mt-4 { margin-top: 12px !important; }
 }
 
 .empleados-tabla thead th {
-    padding: 6px 8px;
+    padding: 6px 8px !important;
     font-size: 9.5px;
 }
 
 .empleados-tabla td {
-    padding: 5px 8px;
+    padding: 5px 8px !important;
     font-size: 11px;
+    border-bottom: 1px solid var(--md-gray-dark);
 }
+.empleados-tabla tbody tr:hover td { background: #F8FAFF; }
 
 #modalEmpleadoDetalle .tareas-empleado-modal {
     width: 100%;
@@ -104,16 +501,35 @@ section.mt-4 { margin-top: 12px !important; }
 }
 
 #modalEmpleadoDetalle .tareas-empleado-modal th {
-    padding: 6px 8px;
+    padding: 6px 8px !important;
     font-size: 9.5px;
+    border-bottom: 1px solid var(--md-gray-dark);
 }
 
 #modalEmpleadoDetalle .tareas-empleado-modal td {
-    padding: 5px 8px;
+    padding: 5px 8px !important;
     font-size: 11px;
+    border-bottom: 1px solid var(--md-gray-dark);
 }
 
-/* MODALES - RESPONSIVE UNIVERSAL (laptop + TV + móvil) */
+/* ---------- MODALES (solo cuando Bootstrap NO cargó — CDN fallback) ---------- */
+html.no-bootstrap .modal { display: none; }
+html.no-bootstrap .modal.show {
+    display: block; position: fixed; inset: 0; z-index: 1055;
+    background: rgba(17, 24, 39, .5); overflow-y: auto;
+}
+html.no-bootstrap .modal-dialog { max-width: 640px; margin: 40px auto; }
+html.no-bootstrap .modal-content { background: #fff; border-radius: 12px; box-shadow: var(--md-elevation-4); }
+html.no-bootstrap .btn-close {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    width: 22px; height: 22px; border-radius: 6px; color: var(--md-text-secondary);
+}
+html.no-bootstrap .btn-close::before { content: '\00d7'; font-size: 16px; }
+html.no-bootstrap .mb-3 { margin-bottom: 10px; }
+html.no-bootstrap .row { display: flex; gap: 10px; }
+html.no-bootstrap .col-md-6 { flex: 1; }
+
+/* Contenedor del modal: sin doble padding ni recorte que rompa el scroll */
 .modal-content.md-modal-content {
     border: none !important;
     border-radius: var(--md-radius-xl) !important;
@@ -122,6 +538,7 @@ section.mt-4 { margin-top: 12px !important; }
     display: flex;
     flex-direction: column;
     max-height: 92vh;
+    padding: 0;
 }
 
 /* TITULOS DE TABLAS - COMPACTOS */
@@ -149,43 +566,26 @@ section.mt-4 { margin-top: 12px !important; }
 /* Texto auxiliar de urgentes / eficiencia */
 .urgentes-section, .eficiencia-section { font-size: 11.5px; }
 
-/* Reducir espacio superior/inferior del header de la tabla KPI */
-.empleados-tabla-header {
-    margin-bottom: 8px;
-    padding-bottom: 5px;
-}
+/* --- Modales compactos (sin romper el scroll interno de Bootstrap) --- */
+.modal-dialog.modal-xl { max-width: 860px; }
+.modal-dialog.modal-lg { max-width: 700px; }
 
-/* Encabezados más compactos en modales */
-#modalEmpleadoDetalle .modal-title {
-    font-size: 13px;
-    margin-bottom: 4px;
-}
-
-/* --- Cambios añadidos: compactar modales y mini-paneles --- */
-/* Compactar modales y mini-paneles (más pequeños y compactos) */
-.modal-dialog.modal-xl { max-width: 820px; }
-.modal-dialog.modal-lg { max-width: 680px; }
-.modal-dialog { margin: 0.5rem; } /* menos espacio alrededor */
-
-.modal-content.md-modal-content {
-  padding: 8px;
-  border-radius: 10px;
-}
-
-.modal-header { padding: 6px 9px; }
-.modal-header .modal-title { font-size: 13px; margin: 0; }
-.modal-body { padding: 8px; font-size: 12px; }
-.modal-footer { padding: 6px 9px; }
+.modal-header { padding: 8px 12px; border-bottom: 1px solid var(--md-gray-dark); align-items: center; }
+.modal-header .modal-title { font-size: 13px; margin: 0; display: flex; align-items: center; gap: 6px; }
+.modal-body { padding: 10px 12px; font-size: 12px; }
+.modal-footer { padding: 8px 12px; border-top: 1px solid var(--md-gray-dark); }
 
 /* Tarjetas de detalle / mini panels creados dinámicamente */
 .detail-card {
-  padding: 6px;
+  background: var(--md-gray);
+  border: 1px solid var(--md-gray-dark);
+  padding: 6px 8px;
   border-radius: 8px;
   margin-bottom: 5px;
   font-size: 11.5px;
 }
-.detail-card .detail-label { font-size: 10.5px; margin-bottom: 2px; }
-.detail-card .detail-value { font-size: 11.5px; }
+.detail-card .detail-label { font-size: 10.5px; margin-bottom: 2px; color: var(--md-text-secondary); text-transform: uppercase; letter-spacing: .3px; }
+.detail-card .detail-value { font-size: 11.5px; font-weight: 600; }
 
 /* Botones de acciones más compactos */
 .md-btn.md-btn-sm { padding: 4px 7px; font-size: 11.5px; }
@@ -198,24 +598,17 @@ section.mt-4 { margin-top: 12px !important; }
   font-size: 11.5px;
 }
 
-/* Mini-panels / tarjetas en TV - reducir un poco */
-.empleado-avatar-card, .md-card {
-  padding: 6px;
-  gap: 6px;
-}
-
-/* Modificación específica para pantallas grandes (sobrescribe reglas más grandes) */
+/* En pantallas medianas/grandes los modales recuperan algo de ancho */
 @media (min-width: 1200px) {
-  .modal-dialog.modal-lg, .modal-dialog.modal-xl { max-width: 780px; }
-  .card-value { font-size: 26px !important; } /* valores KPI compactos incluso en TV */
+  .modal-dialog.modal-lg { max-width: 740px; }
+  .modal-dialog.modal-xl { max-width: 920px; }
 }
 
-/* Avatares más pequeños y compactos (desktop) */
-.avatar-circle { width: 44px; height: 44px; font-size: 15px; }
-.emp-avatar    { width: 22px; height: 22px; font-size: 9px; }
-.avatar-badge  { min-width: 16px; height: 16px; font-size: 8.5px; top: 2px; right: 2px; }
-.avatar-lg     { width: 38px; height: 38px; font-size: 14px; }
-.empleado-avatar-card .avatar-name { font-size: 10.5px; }
-.empleado-avatar-card .empleado-cargo { font-size: 8.5px; }
-
-/* En TV se mantienen los tamaños propios del modo TV (sin !important) */
+/* ---------- RESPONSIVE MÓVIL ---------- */
+@media (max-width: 640px) {
+    .md-toolbar { padding: 6px 10px; }
+    .md-grid { grid-template-columns: repeat(2, 1fr); }
+    .empleados-avatar-grid { grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); }
+    .table-responsive { max-height: 300px; }
+    .modal-dialog.modal-xl, .modal-dialog.modal-lg { max-width: calc(100vw - 16px); }
+}
