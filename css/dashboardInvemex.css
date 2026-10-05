@@ -1,6 +1,6 @@
 /* ==========================================
    MATERIAL DESIGN 3 - INVEMEX DASHBOARD
-   Versión: 11.0 - Panel de empleados dinámico
+   Versión: 13.0 - Tabla KPI + Scroll mejorado
 ========================================== */
 
 :root {
@@ -40,7 +40,6 @@
     --md-radius-full: 9999px;
     --md-transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
-    /* Variables dinámicas del panel de empleados (se sobrescriben por JS según pantalla) */
     --panel-padding: 24px;
     --grid-gap: 14px;
     --grid-cols: 6;
@@ -127,10 +126,10 @@ body {
 .md-chip:hover { background: var(--md-primary-light); color: var(--md-primary); border-color: var(--md-primary); }
 
 /* ==========================================
-   EMPLEADOS - DISEÑO MINIMALISTA ADAPTATIVO
+   EMPLEADOS - PANEL DE AVATARES
 ========================================== */
 .empleados-section {
-    margin-bottom: 28px;
+    margin-bottom: 24px;
     background: var(--md-white);
     border-radius: var(--md-radius-xl);
     padding: var(--panel-padding);
@@ -340,11 +339,337 @@ body {
 .empleado-avatar-card.active::before { opacity: 1; }
 
 /* ==========================================
+   TABLA KPI DE EMPLEADOS - Sección adicional
+========================================== */
+.empleados-tabla-section {
+    margin-bottom: 24px;
+    background: var(--md-white);
+    border-radius: var(--md-radius-xl);
+    padding: var(--panel-padding);
+    box-shadow: var(--md-elevation-1);
+    border: 1px solid rgba(0, 0, 0, 0.03);
+}
+
+.empleados-tabla-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--md-gray);
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.empleados-tabla-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: var(--title-size);
+    font-weight: 800;
+    color: var(--md-text);
+    letter-spacing: -0.4px;
+}
+
+.empleados-tabla-title i { color: var(--md-primary); }
+
+.empleados-tabla-tools {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.empleados-tabla-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: var(--md-gray);
+    border-radius: var(--md-radius-md);
+    border: 1px solid transparent;
+    transition: var(--md-transition);
+    min-width: 240px;
+}
+
+.empleados-tabla-search:focus-within {
+    background: var(--md-white);
+    border-color: var(--md-primary);
+    box-shadow: 0 0 0 3px var(--md-primary-light);
+}
+
+.empleados-tabla-search i {
+    color: var(--md-text-secondary);
+    font-size: 13px;
+}
+
+.empleados-tabla-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-family: inherit;
+    font-size: 13px;
+    color: var(--md-text);
+}
+
+.empleados-tabla-search input::placeholder {
+    color: var(--md-text-light);
+}
+
+.empleados-tabla-wrapper {
+    overflow-x: auto;
+    border-radius: var(--md-radius-md);
+    border: 1px solid var(--md-gray-dark);
+}
+
+.empleados-tabla-wrapper::-webkit-scrollbar { height: 8px; }
+.empleados-tabla-wrapper::-webkit-scrollbar-track { background: var(--md-gray); }
+.empleados-tabla-wrapper::-webkit-scrollbar-thumb {
+    background: var(--md-primary);
+    border-radius: 4px;
+}
+
+.empleados-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 1050px;
+}
+
+.empleados-tabla thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-primary-dark));
+    color: white;
+    text-align: left;
+    padding: 14px 16px;
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    white-space: nowrap;
+}
+
+.empleados-tabla thead th.col-num { text-align: center; }
+
+.empleados-tabla thead th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: opacity 0.2s ease;
+}
+.empleados-tabla thead th.sortable:hover { opacity: 0.85; }
+.empleados-tabla thead th.sortable::after {
+    content: '\f0dc';
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    margin-left: 6px;
+    opacity: 0.5;
+    font-size: 10px;
+}
+.empleados-tabla thead th.sortable.asc::after  { content: '\f0de'; opacity: 1; }
+.empleados-tabla thead th.sortable.desc::after { content: '\f0dd'; opacity: 1; }
+
+.empleados-tabla tbody tr {
+    border-bottom: 1px solid var(--md-gray-dark);
+    transition: background 0.2s ease;
+    cursor: pointer;
+}
+.empleados-tabla tbody tr:hover {
+    background: rgba(11, 33, 139, 0.04);
+}
+.empleados-tabla tbody tr:last-child { border-bottom: none; }
+
+.empleados-tabla td {
+    padding: 14px 16px;
+    vertical-align: middle;
+    color: var(--md-text);
+}
+.empleados-tabla td.col-num { text-align: center; }
+
+.emp-cell {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.emp-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+
+.emp-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.emp-nombre {
+    font-weight: 700;
+    font-size: 13.5px;
+    color: var(--md-text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emp-email {
+    font-size: 11.5px;
+    color: var(--md-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.emp-cargo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--md-text-secondary);
+}
+
+.emp-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: var(--md-radius-full);
+    font-size: 12.5px;
+    font-weight: 800;
+    background: var(--md-gray);
+    color: var(--md-text-secondary);
+}
+.emp-num.pendiente { background: var(--md-warning-bg); color: var(--md-warning-text); }
+.emp-num.proceso   { background: var(--md-info-bg);    color: var(--md-info); }
+.emp-num.listo     { background: var(--md-success-bg); color: var(--md-success); }
+.emp-num.retraso   { background: var(--md-danger-bg);  color: var(--md-danger); }
+
+.emp-tasa {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: center;
+}
+
+.emp-tasa-bar {
+    width: 60px;
+    height: 6px;
+    background: var(--md-gray-dark);
+    border-radius: var(--md-radius-full);
+    overflow: hidden;
+}
+.emp-tasa-bar > span {
+    display: block;
+    height: 100%;
+    border-radius: var(--md-radius-full);
+    transition: width 0.6s ease;
+}
+.emp-tasa-bar > span.success { background: var(--md-success); }
+.emp-tasa-bar > span.primary { background: var(--md-primary); }
+.emp-tasa-bar > span.warning { background: var(--md-warning); }
+.emp-tasa-bar > span.danger  { background: var(--md-danger); }
+.emp-tasa-bar > span.default { background: var(--md-text-light); }
+
+.emp-tasa-txt {
+    font-weight: 700;
+    font-size: 12.5px;
+    min-width: 36px;
+    text-align: right;
+}
+
+.emp-carga {
+    width: 100px;
+    height: 8px;
+    background: var(--md-gray-dark);
+    border-radius: var(--md-radius-full);
+    overflow: hidden;
+}
+.emp-carga > span {
+    display: block;
+    height: 100%;
+    background: linear-gradient(90deg, var(--md-primary), #6366F1);
+    border-radius: var(--md-radius-full);
+    transition: width 0.6s ease;
+}
+
+.emp-estado {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: var(--md-radius-full);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.emp-acciones {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+}
+
+.emp-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--md-radius-sm);
+    border: none;
+    background: transparent;
+    color: var(--md-text-secondary);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--md-transition);
+    font-size: 12px;
+}
+.emp-btn:hover {
+    background: var(--md-primary-light);
+    color: var(--md-primary);
+}
+
+.tabla-loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--md-text-secondary);
+    font-size: 14px;
+}
+.tabla-loading i {
+    margin-right: 8px;
+    color: var(--md-primary);
+}
+
+.tabla-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--md-text-secondary);
+}
+.tabla-empty i {
+    font-size: 42px;
+    color: var(--md-gray-dark);
+    display: block;
+    margin-bottom: 12px;
+}
+
+/* ==========================================
    KPI CARDS
 ========================================== */
-.md-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 24px; }
+.md-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 20px; }
 .md-card {
-    background: var(--md-white); border-radius: var(--md-radius-lg); padding: 24px;
+    background: var(--md-white); border-radius: var(--md-radius-md); padding: 16px 18px;
     box-shadow: var(--md-elevation-2);
     border: 1px solid rgba(0,0,0,0.04);
     transition: var(--md-transition); position: relative; overflow: hidden;
@@ -352,8 +677,8 @@ body {
 .md-card:hover { transform: translateY(-6px); box-shadow: var(--md-elevation-4); }
 .md-card::before {
     content: '';
-    position: absolute; top: 0; left: 0; right: 0; height: 4px;
-    border-radius: var(--md-radius-lg) var(--md-radius-lg) 0 0;
+    position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    border-radius: var(--md-radius-md) var(--md-radius-md) 0 0;
     opacity: 0.9;
 }
 .md-card.primary::before { background: linear-gradient(90deg, #0B218B, #1A3BA8, #10B981); }
@@ -362,38 +687,48 @@ body {
 .md-card.danger::before { background: linear-gradient(90deg, #EF4444, #F87171, #EC4899); }
 
 .card-icon {
-    width: 48px; height: 48px; border-radius: var(--md-radius-md);
-    display: flex; align-items: center; justify-content: center; font-size: 20px; margin-bottom: 16px;
+    width: 36px; height: 36px; border-radius: var(--md-radius-sm);
+    display: flex; align-items: center; justify-content: center; font-size: 16px; margin-bottom: 8px;
 }
 .md-card.primary .card-icon { background: var(--md-primary-light); color: var(--md-primary); }
 .md-card.warning .card-icon { background: var(--md-warning-bg); color: var(--md-warning); }
 .md-card.success .card-icon { background: var(--md-success-bg); color: var(--md-success); }
 .md-card.danger .card-icon { background: var(--md-danger-bg); color: var(--md-danger); }
 
-.card-label { font-size: 13px; font-weight: 600; color: var(--md-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+.card-label { font-size: 11px; font-weight: 600; color: var(--md-text-secondary); text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 4px; }
 .card-value {
-    font-size: 32px; font-weight: 900; line-height: 1; margin-bottom: 8px;
+    font-size: 26px; font-weight: 900; line-height: 1; margin-bottom: 4px;
     font-family: 'Genos', sans-serif;
     background: linear-gradient(135deg, var(--md-text), var(--md-primary));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
 }
-.card-change { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+.card-change { font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
 .card-change.up { color: var(--md-success); }
 
 /* ==========================================
-   TABLAS CON SCROLL
+   TABLAS CON SCROLL (scroll normal visible)
 ========================================== */
 .table-responsive {
     max-height: 400px; overflow-y: auto;
     border-radius: var(--md-radius-md);
     border: 1px solid var(--md-gray-dark);
+    padding-right: 4px;
 }
-.table-responsive::-webkit-scrollbar { width: 8px; height: 8px; }
-.table-responsive::-webkit-scrollbar-track { background: var(--md-gray); border-radius: 4px; }
-.table-responsive::-webkit-scrollbar-thumb { background: var(--md-primary); border-radius: 4px; }
+
+/* Scroll visible siempre en tablas */
+.table-responsive::-webkit-scrollbar { width: 10px; height: 10px; }
+.table-responsive::-webkit-scrollbar-track { background: var(--md-gray); border-radius: 5px; }
+.table-responsive::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--md-primary), var(--md-primary-dark));
+    border-radius: 5px;
+    border: 2px solid var(--md-gray);
+}
 .table-responsive::-webkit-scrollbar-thumb:hover { background: var(--md-primary-dark); }
+
+/* Firefox */
+.table-responsive { scrollbar-width: thin; scrollbar-color: var(--md-primary) var(--md-gray); }
 
 .tareas-empleado-modal-wrapper {
     max-height: 350px; overflow-y: auto;
@@ -403,11 +738,6 @@ body {
 .tareas-empleado-modal-wrapper::-webkit-scrollbar { width: 6px; }
 .tareas-empleado-modal-wrapper::-webkit-scrollbar-track { background: var(--md-gray); border-radius: 3px; }
 .tareas-empleado-modal-wrapper::-webkit-scrollbar-thumb { background: var(--md-primary); border-radius: 3px; }
-
-@media (max-width: 640px) {
-    .table-responsive { max-height: 300px; }
-    .tareas-empleado-modal-wrapper { max-height: 250px; }
-}
 
 /* ==========================================
    MODALES
@@ -572,8 +902,11 @@ body {
 @media (max-width: 768px) {
     body { padding: 16px; }
     .md-grid { grid-template-columns: 1fr 1fr; }
-    .md-card { padding: 16px; }
-    .card-value { font-size: 24px; }
+    .md-card { padding: 12px 14px !important; }
+    .md-card .card-icon { width: 30px !important; height: 30px !important; font-size: 13px !important; margin-bottom: 6px !important; }
+    .md-card .card-value { font-size: 22px !important; }
+    .md-card .card-label { font-size: 10px !important; }
+    .md-card .card-change { font-size: 10px !important; }
     .empleados-avatar-grid {
         grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
         gap: 10px;
@@ -583,6 +916,10 @@ body {
     .empleado-cargo { font-size: 9px; }
     .avatar-badge { min-width: 20px; height: 20px; font-size: 9px; }
     .md-modal-content .modal-dialog { margin: 8px; max-width: calc(100vw - 16px); }
+    .empleados-tabla-search { min-width: 180px; }
+    .empleados-tabla { font-size: 12px; }
+    .empleados-tabla thead th { padding: 10px 12px; font-size: 10px; }
+    .empleados-tabla td { padding: 10px 12px; }
 }
 
 @media (max-width: 480px) {
@@ -601,96 +938,76 @@ body {
     .empleado-cargo { font-size: 8px; }
     .empleados-header { flex-direction: column; align-items: flex-start; }
     .empleados-stats { width: 100%; justify-content: space-between; }
+    .empleados-tabla-header { flex-direction: column; align-items: stretch; }
+    .empleados-tabla-tools { justify-content: space-between; }
+    .empleados-tabla-search { flex: 1; min-width: 0; }
 }
 
 /* ==========================================
-   KPI CARDS - TAMAÑO COMPACTO
+   SCROLL INTELIGENTE - Solo aparece al hacer hover
+   Aplica a paneles específicos (KPIs, tarjetas), no a tablas
 ========================================== */
-
-/* Reducir padding y altura de las tarjetas KPI */
-.md-grid {
-    gap: 14px !important;
-    margin-bottom: 20px !important;
+.scroll-hover {
+    overflow-y: auto;
+    overflow-x: hidden;
+    max-height: 100%;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    position: relative;
+    padding-right: 0;
+    transition: padding-right 0.25s ease;
 }
 
-.md-card {
-    padding: 16px 18px !important;
-    min-height: auto !important;
-    border-radius: var(--md-radius-md) !important;
+.scroll-hover::-webkit-scrollbar {
+    width: 0;
+    background: transparent;
+    transition: width 0.25s ease;
 }
 
-/* Reducir el ícono */
-.md-card .card-icon {
-    width: 36px !important;
-    height: 36px !important;
-    font-size: 16px !important;
-    margin-bottom: 8px !important;
-    border-radius: var(--md-radius-sm) !important;
+.scroll-hover:hover {
+    padding-right: 8px;
 }
 
-/* Reducir el label */
-.md-card .card-label {
-    font-size: 11px !important;
-    margin-bottom: 4px !important;
-    letter-spacing: 0.3px !important;
+.scroll-hover:hover::-webkit-scrollbar {
+    width: 8px;
 }
 
-/* Reducir el valor */
-.md-card .card-value {
-    font-size: 26px !important;
-    margin-bottom: 4px !important;
+.scroll-hover:hover::-webkit-scrollbar-track {
+    background: rgba(11, 33, 139, 0.06);
+    border-radius: 4px;
 }
 
-/* Reducir el cambio */
-.md-card .card-change {
-    font-size: 11px !important;
+.scroll-hover:hover::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--md-primary), var(--md-primary-dark));
+    border-radius: 4px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
 }
 
-/* Ajustar el borde superior de las tarjetas */
-.md-card::before {
-    height: 3px !important;
+.scroll-hover:hover::-webkit-scrollbar-thumb:hover {
+    background: var(--md-primary-dark);
+    background-clip: padding-box;
 }
 
-/* Responsive para móvil */
-@media (max-width: 768px) {
-    .md-grid {
-        gap: 10px !important;
-    }
-    .md-card {
-        padding: 12px 14px !important;
-    }
-    .md-card .card-icon {
-        width: 30px !important;
-        height: 30px !important;
-        font-size: 13px !important;
-        margin-bottom: 6px !important;
-    }
-    .md-card .card-value {
-        font-size: 22px !important;
-    }
-    .md-card .card-label {
-        font-size: 10px !important;
-    }
-    .md-card .card-change {
-        font-size: 10px !important;
-    }
+/* Flechita visual en el borde cuando hay más contenido */
+.scroll-hover::after {
+    content: '';
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 30px;
+    border-radius: 3px;
+    background: linear-gradient(180deg, transparent, var(--md-primary), transparent);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
 
-/* Responsive para TV - que se vean más grandes pero proporcionadas */
-@media (min-width: 1400px) {
-    .md-card {
-        padding: 22px 26px !important;
-        min-height: 140px !important;
-    }
-    .md-card .card-icon {
-        width: 48px !important;
-        height: 48px !important;
-        font-size: 22px !important;
-    }
-    .md-card .card-value {
-        font-size: 42px !important;
-    }
-    .md-card .card-label {
-        font-size: 13px !important;
-    }
+.scroll-hover:hover::after {
+    opacity: 0.4;
 }
+
+/* Aplicar scroll-hover a los paneles que quieras */
+.empleados-tabla-wrapper.scroll-hover { max-height: 500px; }
