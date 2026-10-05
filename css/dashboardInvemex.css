@@ -82,3 +82,37 @@
     flex-direction: column;
     max-height: 92vh;
 }
+
+/* TITULOS DE TABLAS - COMPACTOS */
+.empleados-tabla-title,
+.empleados-title,
+.urgentes-section h3,
+.table-section-title,
+.table-title {
+    font-size: 13px;
+    font-weight: 700;
+    margin: 0 0 6px 0;
+    line-height: 1.15;
+    letter-spacing: -0.2px;
+}
+
+/* Ajuste específico para el h3 de Pedidos Urgentes */
+.urgentes-section h3 {
+    font-size: 13px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Reducir espacio superior/inferior del header de la tabla KPI */
+.empleados-tabla-header {
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+}
+
+/* Encabezados más compactos en modales */
+#modalEmpleadoDetalle .modal-title {
+    font-size: 14px;
+    margin-bottom: 6px;
+}
