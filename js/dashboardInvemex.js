@@ -128,7 +128,12 @@ const LoadingSystem = {
         const overlay = document.getElementById('loading-overlay');
         if (overlay) overlay.style.display = 'none';
         const dashboard = document.getElementById('dashboard');
-        if (dashboard) dashboard.style.display = 'block';
+        if (dashboard) {
+            dashboard.style.display = 'block';
+            // Hace visible el main (regla [aria-hidden="true"] en CSS) y habilita el grid TV
+            dashboard.removeAttribute('aria-hidden');
+            dashboard.classList.remove('d-none');
+        }
         const newLoader = document.getElementById('ivx-loader');
         if (newLoader) {
             newLoader.style.opacity = '0';
