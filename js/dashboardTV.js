@@ -1,58 +1,92 @@
 /* ==========================================
    DASHBOARD TV - Detección robusta
-   v14.0 - Corrige detección errónea
+   v16.0 - Soporte para TV 34x64 cm (25")
    ========================================== */
 (function () {
   'use strict';
 
+  // ==========================================
+  // DETECCIÓN POR TAMAÑO FÍSICO (cm)
+  // ==========================================
+  function estimarTamanoFisico(anchoPx, altoPx, dpi) {
+    // 1 pulgada = 2.54 cm
+    // Asumimos DPI típico de Smart TV: 72-96
+    const dpiEfectivo = dpi || 96;
+    const anchoPulgadas = anchoPx / dpiEfectivo;
+    const altoPulgadas = altoPx / dpiEfectivo;
+    const anchoCm = anchoPulgadas * 2.54;
+    const altoCm = altoPulgadas * 2.54;
+    const diagonalPulgadas = Math.sqrt(anchoPulgadas ** 2 + altoPulgadas ** 2);
+    return { anchoCm, altoCm, diagonalPulgadas };
+  }
+
   function detectarTamanoPantalla() {
-    // Usar documentElement si innerHeight es sospechoso
     const docEl = document.documentElement;
     let ancho = window.innerWidth || docEl.clientWidth || 0;
     let alto = window.innerHeight || docEl.clientHeight || 0;
 
-    // FALLBACK: si alto es absurdo (< 200px), usar screen.height
+    // Fallback si innerHeight es absurdo
     if (alto < 200) {
-      console.warn(`⚠️ window.innerHeight inválido (${alto}px). Usando screen.height como fallback.`);
-      alto = window.screen?.height || 1080;
+      console.warn(`⚠️ window.innerHeight inválido (${alto}px). Usando screen.height.`);
+      alto = window.screen?.height || 768;
     }
-
-    // FALLBACK: si ancho es absurdo (< 500px), usar screen.width
     if (ancho < 500) {
-      console.warn(`⚠️ window.innerWidth inválido (${ancho}px). Usando screen.width como fallback.`);
-      ancho = window.screen?.width || 1920;
+      console.warn(`⚠️ window.innerWidth inválido (${ancho}px). Usando screen.width.`);
+      ancho = window.screen?.width || 1366;
     }
 
-    // Corregir por zoom del navegador (ratio entre screen y window)
     const screenW = window.screen?.width || ancho;
     const screenH = window.screen?.height || alto;
     const zoomRatio = screenW / ancho;
+    const dpi = window.devicePixelRatio || 1;
 
-    // Si el zoom es significativo (> 1.2x), advertir
-    if (zoomRatio > 1.2) {
-      console.warn(`⚠️ Zoom detectado: ${(zoomRatio * 100).toFixed(0)}%. El dashboard puede verse mal.`);
-    }
+    // Estimar tamaño físico
+    const fisico = estimarTamanoFisico(ancho, alto, 96);
 
     const ratio = ancho / alto;
     const areaTotal = ancho * alto;
 
+    // ==========================================
+    // CLASIFICACIÓN MEJORADA
+    // ==========================================
     let tipo = 'desktop';
-    if (ancho <= 480) tipo = 'movil';
-    else if (ancho <= 768) tipo = 'tablet';
-    else if (ancho <= 1399) tipo = 'desktop';
-    else if (ancho <= 2199) tipo = 'tv';
-    else tipo = 'tv-4k';
+
+    // Móvil
+    if (ancho <= 480) {
+      tipo = 'movil';
+    }
+    // Tablet
+    else if (ancho <= 768) {
+      tipo = 'tablet';
+    }
+    // TV pequeña (25"-32"): 1024-1599px
+    // 1366x768 es el caso típico de Smart TV 25"
+    else if (ancho <= 1599) {
+      // Si el área es pequeña o la diagonal estimada es < 32", es TV
+      if (fisico.diagonalPulgadas < 32 || areaTotal < 1600 * 900) {
+        tipo = 'tv';
+      } else {
+        tipo = 'desktop';
+      }
+    }
+    // TV mediana (32"-43"): 1600-2199px
+    else if (ancho <= 2199) {
+      tipo = 'tv';
+    }
+    // TV grande / 4K: >= 2200px
+    else {
+      tipo = 'tv-4k';
+    }
 
     const orientacion = ancho > alto ? 'horizontal' : 'vertical';
-    const esTV = Math.abs(ratio - 1.777) < 0.15;
+    const esTV = tipo === 'tv' || tipo === 'tv-4k';
     const esUltraWide = ratio > 2.5;
 
     return {
       ancho, alto, areaTotal, ratio, tipo, orientacion, esTV, esUltraWide,
-      dpi: window.devicePixelRatio || 1,
-      zoomRatio: zoomRatio,
-      screenW, screenH,
-      rawInnerHeight: window.innerHeight
+      dpi, zoomRatio, screenW, screenH,
+      rawInnerHeight: window.innerHeight,
+      fisico // { anchoCm, altoCm, diagonalPulgadas }
     };
   }
 
@@ -72,13 +106,9 @@
     document.documentElement.style.setProperty('--screen-height', `${tamano.alto}px`);
     document.documentElement.style.setProperty('--screen-ratio', tamano.ratio);
 
-    console.log(`📺 Pantalla detectada: ${tamano.tipo} (${tamano.ancho}x${tamano.alto}) - ${tamano.orientacion}`);
-    if (tamano.rawInnerHeight !== tamano.alto) {
-      console.log(`   ⚠️ innerHeight original: ${tamano.rawInnerHeight}px (usando ${tamano.alto}px)`);
-    }
-    if (tamano.zoomRatio > 1.2) {
-      console.log(`   ⚠️ Zoom del navegador: ${(tamano.zoomRatio * 100).toFixed(0)}%`);
-    }
+    console.log(`📺 Pantalla: ${tamano.tipo} (${tamano.ancho}x${tamano.alto})`);
+    console.log(`   📐 Físico estimado: ${tamano.fisico.anchoCm.toFixed(1)}x${tamano.fisico.altoCm.toFixed(1)} cm (~${tamano.fisico.diagonalPulgadas.toFixed(1)}")`);
+    console.log(`   🔍 Zoom: ${(tamano.zoomRatio * 100).toFixed(0)}% | DPI: ${tamano.dpi}`);
   }
 
   function ajustarGridEmpleados(tamano) {
@@ -86,8 +116,8 @@
     if (!grid) return;
 
     const anchoPanel = grid.parentElement?.clientWidth || tamano.ancho;
-    const cardMin = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-min')) || 120;
-    const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-gap')) || 14;
+    const cardMin = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--card-min')) || 78;
+    const gap = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--grid-gap')) || 6;
 
     const columnasCalculadas = Math.max(2, Math.floor((anchoPanel + gap) / (cardMin + gap)));
     grid.style.gridTemplateColumns = `repeat(${columnasCalculadas}, minmax(${cardMin}px, 1fr))`;
@@ -103,7 +133,7 @@
 
   function iniciarRotacionAutomatica() {
     const ancho = window.innerWidth;
-    if (ancho < 1400) { detenerRotacionAutomatica(); return; }
+    if (ancho < 1024) { detenerRotacionAutomatica(); return; }
     if (rotacionActiva) return;
     rotacionActiva = true;
 
@@ -111,9 +141,7 @@
       document.querySelector('.empleados-section'),
       document.querySelector('.empleados-tabla-section'),
       document.querySelector('.md-grid'),
-      document.querySelector('.urgentes-section'),
-      document.querySelector('.charts-section'),
-      document.querySelector('.eficiencia-section')
+      document.querySelector('.urgentes-section')
     ].filter(p => p !== null);
 
     if (paneles.length === 0) return;
@@ -168,7 +196,7 @@
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/dashboard-tv.css?v=14';
+    link.href = 'css/dashboard-tv.css?v=16';
     document.head.appendChild(link);
 
     const tamano = detectarTamanoPantalla();
