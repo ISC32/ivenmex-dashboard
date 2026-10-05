@@ -1,17 +1,17 @@
 /* ==========================================
    DASHBOARD TV - Layout claro y legible para pantallas grandes
-   v16.0 - Mejor jerarquía visual y proporciones para TV
+   v16.1 - Rediseño conceptual premium para TV
 ========================================== */
 
 .panel-highlight {
     animation: panelPulse 2s ease;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15), 0 16px 42px rgba(99, 102, 241, 0.18) !important;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12), 0 18px 48px rgba(72, 84, 206, 0.18) !important;
     transition: all 0.45s ease;
 }
 
 @keyframes panelPulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.35); }
-    50% { transform: scale(1.002); box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.28); }
+    50% { transform: scale(1.003); box-shadow: 0 0 0 12px rgba(99, 102, 241, 0); }
     100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
 }
 
@@ -31,7 +31,10 @@
         gap: 12px;
         padding: 12px 18px;
         box-sizing: border-box;
-        background: linear-gradient(180deg, #eef2ff 0%, #f5f7fa 100%);
+        background:
+            radial-gradient(circle at top left, rgba(99, 102, 241, 0.08), transparent 28%),
+            radial-gradient(circle at bottom right, rgba(16, 185, 129, 0.07), transparent 26%),
+            linear-gradient(180deg, #eef3ff 0%, #f5f7fa 100%);
         color: #1a1a1a;
     }
 
@@ -61,20 +64,22 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 10px 20px;
+        padding: 10px 22px;
         margin: 0;
-        border-radius: 16px;
+        border-radius: 18px;
         position: static;
-        height: 58px;
-        background: rgba(255,255,255,0.92);
-        box-shadow: 0 8px 20px rgba(11, 33, 139, 0.07);
+        height: 60px;
+        background: rgba(255,255,255,0.88);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
         border: 1px solid rgba(11, 33, 139, 0.06);
+        backdrop-filter: blur(12px);
     }
 
     .md-toolbar-brand img { height: 34px; }
     .md-toolbar-brand .brand-text {
         font-size: 24px;
         letter-spacing: 0.5px;
+        color: #0B218B;
     }
 
     .md-toolbar-actions {
@@ -86,13 +91,18 @@
         padding: 7px 12px;
         font-size: 13px;
         border-radius: 999px;
-        background: #f1f5f9;
+        background: #f3f6ff;
+        border: 1px solid rgba(11,33,139,0.06);
+        color: #1f2937;
     }
 
     .realtime-indicator {
         font-size: 12px;
         padding: 5px 12px;
         border-radius: 999px;
+        background: #edfff5;
+        color: #15803d;
+        border-color: #bbf7d0;
     }
 
     .realtime-indicator::before {
@@ -101,17 +111,17 @@
     }
 
     .empleados-section {
-        flex: 0 0 200px;
+        flex: 0 0 206px;
         padding: 14px 18px 12px;
         margin: 0;
-        border-radius: 16px;
+        border-radius: 18px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
-        background: rgba(255,255,255,0.95);
+        background: rgba(255,255,255,0.94);
         border: 1px solid rgba(11,33,139,0.06);
-        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
     }
 
     .empleados-header {
@@ -126,12 +136,15 @@
         font-size: 20px;
         gap: 10px;
         letter-spacing: -0.3px;
+        color: #111827;
     }
 
     .total-badge {
         padding: 2px 10px;
         font-size: 12px;
         border-radius: 999px;
+        background: linear-gradient(135deg, #e0e7ff, #dbeafe);
+        color: #1d4ed8;
     }
 
     .empleados-stats {
@@ -162,19 +175,28 @@
         gap: 4px;
         border-radius: 12px;
         min-height: 112px;
-        background: #ffffff;
-        border: 1px solid rgba(148, 163, 184, 0.18);
+        background: linear-gradient(180deg, #ffffff 0%, #f9fbff 100%);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 6px 16px rgba(148, 163, 184, 0.08);
+    }
+
+    .empleado-avatar-card.active {
+        border-color: rgba(99, 102, 241, 0.28);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.12), 0 10px 22px rgba(99, 102, 241, 0.14);
     }
 
     .avatar-circle {
         width: 58px;
         height: 58px;
         font-size: 20px;
+        background: linear-gradient(135deg, #0B218B, #4f46e5, #8B5CF6);
+        box-shadow: 0 6px 14px rgba(79, 70, 229, 0.25);
     }
 
     .avatar-name {
         font-size: 12px;
         font-weight: 700;
+        color: #111827;
     }
 
     .empleado-cargo {
@@ -207,14 +229,19 @@
     .md-card {
         min-height: 0;
         padding: 16px 18px;
-        border-radius: 14px;
+        border-radius: 16px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         box-sizing: border-box;
         background: rgba(255,255,255,0.95);
-        border: 1px solid rgba(11,33,139,0.04);
-        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.04);
+        border: 1px solid rgba(11,33,139,0.05);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.05);
+    }
+
+    .md-card::before {
+        height: 4px;
+        border-radius: 16px 16px 0 0;
     }
 
     .card-icon {
@@ -230,6 +257,7 @@
         font-weight: 700;
         letter-spacing: 0.4px;
         margin-bottom: 5px;
+        color: #475569;
     }
 
     .card-value {
@@ -237,6 +265,8 @@
         font-weight: 900;
         line-height: 1;
         margin-bottom: 6px;
+        color: #0f172a;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.8);
     }
 
     .card-change {
@@ -248,17 +278,17 @@
     .urgentes-section {
         position: fixed !important;
         bottom: 10px;
-        height: calc(100vh - 58px - 200px - 170px - 50px);
+        height: calc(100vh - 60px - 206px - 170px - 50px);
         max-height: none;
         padding: 12px 16px;
         margin: 0;
-        border-radius: 16px;
+        border-radius: 18px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         box-sizing: border-box;
         background: rgba(255,255,255,0.96);
-        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.08);
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.08);
         border: 1px solid rgba(15, 23, 42, 0.04);
         z-index: 5;
     }
@@ -285,6 +315,7 @@
     .empleados-tabla-title {
         font-size: 18px;
         gap: 10px;
+        color: #111827;
     }
 
     .empleados-tabla-tools {
@@ -295,6 +326,8 @@
         min-width: 170px;
         padding: 5px 10px;
         border-radius: 10px;
+        background: #f8fafc;
+        border: 1px solid rgba(148,163,184,0.2);
     }
 
     .empleados-tabla-search input {
@@ -309,7 +342,7 @@
         flex: 1 1 auto;
         min-height: 0;
         overflow: hidden;
-        border-radius: 10px;
+        border-radius: 12px;
         border: 1px solid rgba(148,163,184,0.25);
         background: #fff;
     }
@@ -324,7 +357,7 @@
         padding: 9px 8px;
         font-size: 9.5px;
         letter-spacing: 0.4px;
-        background: linear-gradient(135deg, #0B218B, #091A6E);
+        background: linear-gradient(135deg, #0B218B, #1d4ed8);
     }
 
     .empleados-tabla td {
@@ -363,6 +396,7 @@
         align-items: center;
         gap: 10px;
         flex: 0 0 auto;
+        color: #111827;
     }
 
     .urgentes-section .d-flex.justify-content-between {
@@ -378,14 +412,16 @@
     #urgentes-count-badge {
         font-size: 12px;
         padding: 2px 10px;
+        border-radius: 999px;
     }
 
     .urgentes-section .table-responsive {
         flex: 1 1 auto;
         min-height: 0;
         overflow: hidden;
-        border-radius: 10px;
+        border-radius: 12px;
         max-height: none;
+        background: #fff;
     }
 
     .urgentes-section .table {
@@ -396,6 +432,7 @@
         padding: 9px 8px;
         font-size: 9.5px;
         letter-spacing: 0.4px;
+        color: #0f172a;
     }
 
     .urgentes-section .table td {
@@ -439,7 +476,7 @@
 
     .empleados-tabla-section,
     .urgentes-section {
-        height: calc(100vh - 58px - 210px - 190px - 56px);
+        height: calc(100vh - 60px - 210px - 190px - 56px);
         left: 20px;
         right: 20px;
         width: calc(50% - 26px);
@@ -458,7 +495,7 @@
 
     .empleados-tabla-section,
     .urgentes-section {
-        height: calc(100vh - 62px - 230px - 200px - 60px);
+        height: calc(100vh - 64px - 230px - 200px - 60px);
         left: 24px;
         right: 24px;
         width: calc(50% - 30px);
