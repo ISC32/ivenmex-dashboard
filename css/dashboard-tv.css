@@ -1,7 +1,20 @@
 /* ==========================================
    DASHBOARD TV - Layout fijo para control remoto
-   v16.0 - Grid real en lugar de position:fixed con cálculos de altura rotos
+   v17.0 - Grid real en lugar de position:fixed con cálculos de altura rotos
 ========================================== */
+
+/* Clases base (fallback): garantizan que las secciones sean bloquees
+   normales en cualquier viewport, evitando solapamientos si el CSS
+   principal fallo o el JS no aplico la clase tv-*. */
+.md-toolbar,
+.empleados-section,
+.empleados-tabla-section,
+.urgentes-section,
+.eficiencia-section,
+.charts-section {
+    position: relative;
+    display: block;
+}
 
 .panel-highlight {
     animation: panelPulse 2s ease;
@@ -22,7 +35,9 @@
 ========================================== */
 @media (min-width: 1400px) {
 
-    html, body {
+    /* Sin scroll SOLO en modo TV activo; en desktop normal se permite scroll */
+    html:has(body.tv-display),
+    body.tv-display {
         height: 100vh !important;
         max-height: 100vh !important;
         overflow: hidden !important;
@@ -30,8 +45,10 @@
         padding: 0;
     }
 
-    /* El contenido vive en <main>, no en <body>: aquí se ancla el grid */
-    main#dashboard {
+    /* El contenido vive en <main>: grid TV SOLO cuando el modo TV está activo
+       (body.tv-display lo aplica dashboardTV.js). Así desktop normal y tablets
+       conservan el layout de flujo del CSS base sin solapamientos. */
+    body.tv-display main#dashboard {
         display: grid !important;
         grid-template-columns: minmax(0, 42fr) minmax(0, 58fr);
         grid-template-rows: auto minmax(0, 1fr) minmax(0, 1.15fr);
@@ -42,20 +59,20 @@
         background: var(--md-gray);
     }
 
-    .md-toolbar { grid-column: 1 / -1; grid-row: 1; }
-    .empleados-section { grid-column: 1; grid-row: 2; }
-    .md-grid { grid-column: 1; grid-row: 3; align-content: start; }
-    .empleados-tabla-section { grid-column: 2; grid-row: 2; }
-    .urgentes-section { grid-column: 2; grid-row: 3; }
+    body.tv-display .md-toolbar { grid-column: 1 / -1; grid-row: 1; }
+    body.tv-display .empleados-section { grid-column: 1; grid-row: 2; }
+    body.tv-display .md-grid { grid-column: 1; grid-row: 3; align-content: start; }
+    body.tv-display .empleados-tabla-section { grid-column: 2; grid-row: 2; }
+    body.tv-display .urgentes-section { grid-column: 2; grid-row: 3; }
 
     /* Ocultar secciones no indispensables en TV */
-    .eficiencia-section,
-    .charts-section {
+    body.tv-display .eficiencia-section,
+    body.tv-display .charts-section {
         display: none !important;
     }
 
     /* Ocultar botones de acciones rápidas en TV */
-    main#dashboard > div[style*="display:flex"][style*="justify-content:center"] {
+    body.tv-display main#dashboard > div[style*="display:flex"][style*="justify-content:center"] {
         display: none !important;
     }
 

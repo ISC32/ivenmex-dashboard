@@ -1,0 +1,10 @@
+127.0.0.1 - - [05/Oct/2026 17:47:32] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:34] "GET /css/dashboardInvemex.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:34] "GET /css/dashboard-tv.css HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:34] "GET /js/dashboardTV.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:34] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:38] "GET /js/vendor/bootstrap.bundle.min.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:38] "GET /js/vendor/supabase-js@2.js HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:49] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:47:52] "GET /index.html HTTP/1.1" 200 -
+127.0.0.1 - - [05/Oct/2026 17:48:28] "GET /css/dashboard-tv.css?v=17 HTTP/1.1" 200 -

@@ -172,7 +172,7 @@
 
     const link = document.createElement('link');
     link.rel = 'stylesheet';
-    link.href = 'css/dashboard-tv.css?v=16';
+    link.href = 'css/dashboard-tv.css?v=17';
     document.head.appendChild(link);
 
     const tamano = detectarTamanoPantalla();
