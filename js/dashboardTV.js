@@ -189,15 +189,13 @@
     }
   }
 
-  function initTV() {
+function initTV() {
     document.body.classList.add('tv-display');
     const clock = document.getElementById('fecha-texto');
     if (clock) clock.classList.add('tv-clock');
 
-    const link = document.createElement('link');
-    link.rel = 'stylesheet';
-    link.href = 'css/dashboard-tv.css?v=16';
-    document.head.appendChild(link);
+    // ⚠️ ELIMINADO: carga dinámica del CSS
+    // El CSS de TV ahora se carga directamente en index.html
 
     const tamano = detectarTamanoPantalla();
     aplicarClaseTamano(tamano);
@@ -206,13 +204,13 @@
     observarCambiosTamano();
 
     window.TVDisplay = {
-      detectar: detectarTamanoPantalla,
-      aplicar: aplicarClaseTamano,
-      ajustarGrid: ajustarGridEmpleados,
-      iniciarRotacion: iniciarRotacionAutomatica,
-      detenerRotacion: detenerRotacionAutomatica
+        detectar: detectarTamanoPantalla,
+        aplicar: aplicarClaseTamano,
+        ajustarGrid: ajustarGridEmpleados,
+        iniciarRotacion: iniciarRotacionAutomatica,
+        detenerRotacion: detenerRotacionAutomatica
     };
-  }
+}
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initTV, { once: true });
