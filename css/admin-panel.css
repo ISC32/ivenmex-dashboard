@@ -18,9 +18,7 @@
     animation: fadeIn 0.3s ease;
 }
 
-.admin-login-overlay.active {
-    display: flex;
-}
+.admin-login-overlay.active { display: flex; }
 
 @keyframes fadeIn {
     from { opacity: 0; }
@@ -120,7 +118,7 @@
 
 /* ==========================================
    PANEL ADMIN COMPLETO
-   ========================================== */
+========================================== */
 .admin-panel {
     position: fixed;
     inset: 0;
@@ -131,11 +129,9 @@
     overflow: hidden;
 }
 
-.admin-panel.active {
-    display: flex;
-}
+.admin-panel.active { display: flex; }
 
-/* Header del panel */
+/* Header */
 .admin-header {
     flex: 0 0 auto;
     background: var(--md-white);
@@ -153,9 +149,7 @@
     gap: 12px;
 }
 
-.admin-header-brand img {
-    height: 36px;
-}
+.admin-header-brand img { height: 36px; }
 
 .admin-header-title {
     font-family: var(--md-font-display);
@@ -198,14 +192,13 @@
     font-size: 10px;
 }
 
-/* Layout principal: sidebar + contenido */
+/* Layout */
 .admin-body {
     flex: 1;
     display: flex;
     overflow: hidden;
 }
 
-/* Sidebar de navegación */
 .admin-sidebar {
     flex: 0 0 220px;
     background: var(--md-white);
@@ -252,10 +245,6 @@
     box-shadow: var(--md-elevation-2);
 }
 
-.admin-nav-item.active i {
-    color: white;
-}
-
 .admin-nav-divider {
     height: 1px;
     background: var(--md-gray-dark);
@@ -277,7 +266,7 @@
     color: white;
 }
 
-/* Contenido principal */
+/* Content */
 .admin-content {
     flex: 1;
     overflow-y: auto;
@@ -287,15 +276,9 @@
     gap: 16px;
 }
 
-.admin-view {
-    display: none;
-}
+.admin-view { display: none; }
+.admin-view.active { display: block; }
 
-.admin-view.active {
-    display: block;
-}
-
-/* Encabezado de cada vista */
 .admin-view-header {
     display: flex;
     align-items: center;
@@ -312,19 +295,14 @@
     display: flex;
     align-items: center;
     gap: 10px;
+    margin: 0;
 }
 
-.admin-view-title i {
-    color: var(--md-primary);
-}
+.admin-view-title i { color: var(--md-primary); }
 
-.admin-view-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-}
+.admin-view-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
-/* Tarjetas de estadísticas */
+/* Stats cards */
 .admin-stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -388,13 +366,7 @@
     line-height: 1;
 }
 
-.admin-stat-change {
-    font-size: 11px;
-    color: var(--md-text-secondary);
-    margin-top: 4px;
-}
-
-/* Tabla admin */
+/* Tablas */
 .admin-table-container {
     background: var(--md-white);
     border-radius: var(--md-radius-lg);
@@ -422,29 +394,6 @@
 }
 
 .admin-table-title i { color: var(--md-primary); }
-
-.admin-table-search {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 7px 12px;
-    background: var(--md-gray-light);
-    border-radius: var(--md-radius-md);
-    border: 1px solid var(--md-gray-dark);
-    min-width: 220px;
-}
-
-.admin-table-search i { color: var(--md-text-muted); font-size: 12px; }
-
-.admin-table-search input {
-    border: none;
-    background: transparent;
-    outline: none;
-    font-size: 13px;
-    font-family: inherit;
-    flex: 1;
-    color: var(--md-text);
-}
 
 .admin-table-scroll {
     max-height: 500px;
@@ -479,9 +428,7 @@
     vertical-align: middle;
 }
 
-.admin-table tbody tr:hover {
-    background: var(--md-gray-light);
-}
+.admin-table tbody tr:hover { background: var(--md-gray-light); }
 
 .admin-table-empty {
     text-align: center;
@@ -529,6 +476,7 @@
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    flex-shrink: 0;
 }
 
 .admin-ia-header-title {
@@ -610,25 +558,9 @@
 .ia-message-content p { margin: 0 0 6px 0; }
 .ia-message-content p:last-child { margin-bottom: 0; }
 
-.ia-message-content table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12px;
-    margin: 8px 0;
-}
-
-.ia-message-content th,
-.ia-message-content td {
-    padding: 4px 8px;
-    border-bottom: 1px solid var(--md-gray-dark);
-    text-align: left;
-}
-
-.ia-message-content th {
-    background: var(--md-gray);
-    font-weight: 700;
-    font-size: 10px;
-    text-transform: uppercase;
+.ia-message-content ul {
+    margin: 6px 0;
+    padding-left: 20px;
 }
 
 .ia-message-content code {
@@ -722,7 +654,7 @@
     transform: none;
 }
 
-/* Sugerencias rápidas */
+/* Sugerencias */
 .admin-ia-suggestions {
     display: flex;
     flex-wrap: wrap;
@@ -751,9 +683,7 @@
     border-color: var(--md-primary);
 }
 
-/* ==========================================
-   TOASTS ADMIN
-   ========================================== */
+/* Toast admin */
 .admin-toast {
     position: fixed;
     top: 80px;
@@ -779,7 +709,7 @@
 }
 
 /* ==========================================
-   RESPONSIVE ADMIN (TV pequeña)
+   RESPONSIVE TV
    ========================================== */
 @media (max-height: 800px) and (min-width: 1024px) {
     .admin-header { padding: 6px 12px; }
@@ -802,17 +732,12 @@
     .admin-stat-icon { width: 28px; height: 28px; font-size: 12px; margin-bottom: 6px; }
     .admin-stat-label { font-size: 9px; margin-bottom: 2px; }
     .admin-stat-value { font-size: 20px; }
-    .admin-stat-change { font-size: 9px; }
 
     .admin-table-header { padding: 8px 12px; gap: 8px; }
     .admin-table-title { font-size: 12px; }
-    .admin-table-search { min-width: 160px; padding: 5px 9px; }
-    .admin-table-search input { font-size: 11px; }
-
     .admin-table { font-size: 11px; }
     .admin-table thead th { padding: 6px 8px; font-size: 9px; }
     .admin-table td { padding: 6px 8px; }
-
     .admin-table-scroll { max-height: 400px; }
 
     .admin-ia-container { height: calc(100vh - 90px); }
