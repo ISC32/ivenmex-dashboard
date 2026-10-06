@@ -857,6 +857,64 @@
                 <div class="admin-table-container">
                     <div class="admin-table-header">
                         <div class="admin-table-title"><i class="fas fa-list"></i> Materiales</div>
-                    </div
+                    </div>
+                    <div class="admin-table-scroll">
+                        <table class="admin-table">
+                            <thead>
+                                <tr>
+                                    <th>ID</th><th>Nombre</th><th>Tipo</th>
+                                    <th>Stock Actual</th><th>Stock Mínimo</th><th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminTablaInventario">
+                                <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VISTA: ASISTENTE IA -->
+            <div class="admin-view" id="adminView-ia">
+                <div class="admin-ia-container">
+                    <div class="admin-ia-header">
+                        <div class="admin-ia-header-icon">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div>
+                            <h3 class="admin-ia-header-title">Asistente IA IVENMEX</h3>
+                            <p class="admin-ia-header-subtitle">Powered by OpenRouter + Supabase</p>
+                        </div>
+                    </div>
+
+                    <div class="admin-ia-messages" id="adminIaMessages"></div>
+
+                    <div class="admin-ia-suggestions">
+                        <button class="admin-ia-suggestion" data-query="Dame un resumen general">📊 Resumen general</button>
+                        <button class="admin-ia-suggestion" data-query="¿Cuántos clientes tengo?">👥 Total clientes</button>
+                        <button class="admin-ia-suggestion" data-query="Muéstrame los pedidos urgentes">🚨 Pedidos urgentes</button>
+                        <button class="admin-ia-suggestion" data-query="¿Cuáles son las ventas totales?">💰 Ventas totales</button>
+                        <button class="admin-ia-suggestion" data-query="¿Qué materiales tienen stock bajo?">⚠️ Stock bajo</button>
+                        <button class="admin-ia-suggestion" data-query="Lista los productos activos">📦 Productos</button>
+                    </div>
+
+                    <div class="admin-ia-input-area">
+                        <textarea
+                            id="adminIaInput"
+                            class="admin-ia-input"
+                            placeholder="Escribe tu pregunta..."
+                            rows="1"
+                        ></textarea>
+                        <button class="admin-ia-send" id="adminIaSend" title="Enviar">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
 </body>
 </html>
