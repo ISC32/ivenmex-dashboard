@@ -1,6 +1,6 @@
 /* ==========================================
    IVENMEX - PANEL ADMIN OCULTO
-   v2.0 - Conectado a Supabase + Asistente IA
+   v2.1 - Saneamiento + Lógica inventario
    ========================================== */
 
 (function () {
@@ -16,9 +16,9 @@
         SESSION_DURATION: 2 * 60 * 60 * 1000, // 2 horas
 
         // 🤖 URL DEL WEBHOOK DE N8N
-        N8N_WEBHOOK_URL: 'https://n8n.aguasdguanipa.com/webhook/admin-chat',
+        // ⚠️ Verifica que el dominio esté bien escrito (sin espacios)
+        N8N_WEBHOOK_URL: 'https://n8n.aguasdgu anipa.com/webhook/admin-chat',
 
-        // Si el webhook falla, usar motor local
         FALLBACK_TO_LOCAL: true
     };
 
@@ -32,6 +32,56 @@
         clickTimer: null,
         conversationHistory: []
     };
+
+    // ==========================================
+    // UTILIDADES GLOBALES
+    // ==========================================
+    function escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    }
+
+    function formatCurrency(amount) {
+        const num = sanitizeNumber(amount);
+        return '$' + num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+
+    function formatDate(dateStr) {
+        if (!dateStr) return '-';
+        try {
+            return new Date(dateStr).toLocaleDateString('es-ES', {
+                year: 'numeric', month: 'short', day: 'numeric'
+            });
+        } catch {
+            return '-';
+        }
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value;
+    }
+
+    // ==========================================
+    // SANEAMIENTO: nunca valores negativos
+    // ==========================================
+    function sanitizeNumber(valor, defecto = 0) {
+        const num = parseFloat(valor);
+        if (isNaN(num) || num < 0) return defecto;
+        return num;
+    }
+
+    function sanitizeMoney(valor) {
+        return sanitizeNumber(valor, 0);
+    }
+
+    function sanitizeInt(valor) {
+        const num = parseInt(valor, 10);
+        if (isNaN(num) || num < 0) return 0;
+        return num;
+    }
 
     // ==========================================
     // TOASTS ADMIN
@@ -112,7 +162,7 @@
             }
         });
 
-        // Atajo de teclado: Ctrl+Shift+A
+        // Atajo: Ctrl+Shift+A
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'A') {
                 e.preventDefault();
@@ -238,7 +288,7 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS - DASHBOARD STATS
+    // DASHBOARD STATS
     // ==========================================
     async function loadDashboardStats() {
         try {
@@ -255,7 +305,7 @@
             const totalClientes = clientesRes.count || 0;
             const totalPedidos = pedidosRes.count || 0;
             const totalProductos = productosRes.count || 0;
-            const totalVentas = (ventasRes.data || []).reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+            const totalVentas = (ventasRes.data || []).reduce((sum, p) => sum + sanitizeMoney(p.monto), 0);
 
             setText('adminStatClientes', totalClientes);
             setText('adminStatPedidos', totalPedidos);
@@ -281,7 +331,7 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS - CLIENTES
+    // CLIENTES
     // ==========================================
     async function loadClientes() {
         try {
@@ -299,10 +349,7 @@
             console.log(`✅ ${data?.length || 0} clientes cargados`);
 
             const tbody = document.getElementById('adminTablaClientes');
-            if (!tbody) {
-                console.warn('⚠️ No se encontró #adminTablaClientes');
-                return;
-            }
+            if (!tbody) return;
 
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-users"></i>No hay clientes registrados</td></tr>';
@@ -332,7 +379,7 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS - PEDIDOS
+    // PEDIDOS
     // ==========================================
     async function loadPedidos() {
         try {
@@ -369,8 +416,8 @@
                         <td><strong>#${p.id}</strong></td>
                         <td>${escapeHtml(p.clientes?.nombre || 'Sin cliente')}</td>
                         <td>${escapeHtml(producto)}</td>
-                        <td>${formatCurrency(p.total || 0)}</td>
-                        <td>${formatCurrency(p.anticipo || 0)}</td>
+                        <td>${formatCurrency(p.total)}</td>
+                        <td>${formatCurrency(p.anticipo)}</td>
                         <td><span class="md-badge ${getEstadoClass(p.estado)}">${getEstadoLabel(p.estado)}</span></td>
                         <td><span class="md-badge ${p.prioridad === 'urgente' ? 'danger' : 'default'}">${escapeHtml(p.prioridad || 'normal')}</span></td>
                         <td>${formatDate(p.fecha_entrega_prometida)}</td>
@@ -390,7 +437,7 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS - VENTAS
+    // VENTAS
     // ==========================================
     async function loadVentas() {
         try {
@@ -430,7 +477,7 @@
                 </tr>
             `).join('');
 
-            const total = data.reduce((sum, v) => sum + (parseFloat(v.monto) || 0), 0);
+            const total = data.reduce((sum, v) => sum + sanitizeMoney(v.monto), 0);
             setText('adminVentasTotal', formatCurrency(total));
         } catch (error) {
             console.error('❌ Error cargando ventas:', error);
@@ -445,7 +492,7 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS - PRODUCTOS
+    // PRODUCTOS
     // ==========================================
     async function loadProductos() {
         try {
@@ -470,16 +517,21 @@
                 return;
             }
 
-            tbody.innerHTML = data.map(p => `
-                <tr>
-                    <td><strong>#${p.id}</strong></td>
-                    <td>${escapeHtml(p.nombre || '-')}</td>
-                    <td>${escapeHtml(p.categoria || '-')}</td>
-                    <td>${escapeHtml(p.material || '-')}</td>
-                    <td>${p.precio_por_m2 ? formatCurrency(p.precio_por_m2) + '/m²' : formatCurrency(p.precio_unitario || 0)}</td>
-                    <td>${p.activo ? '<span class="md-badge success">Activo</span>' : '<span class="md-badge default">Inactivo</span>'}</td>
-                </tr>
-            `).join('');
+            tbody.innerHTML = data.map(p => {
+                const precio = p.precio_por_m2
+                    ? formatCurrency(p.precio_por_m2) + '/m²'
+                    : formatCurrency(p.precio_unitario);
+                return `
+                    <tr>
+                        <td><strong>#${p.id}</strong></td>
+                        <td>${escapeHtml(p.nombre || '-')}</td>
+                        <td>${escapeHtml(p.categoria || '-')}</td>
+                        <td>${escapeHtml(p.material || '-')}</td>
+                        <td>${precio}</td>
+                        <td>${p.activo ? '<span class="md-badge success">Activo</span>' : '<span class="md-badge default">Inactivo</span>'}</td>
+                    </tr>
+                `;
+            }).join('');
         } catch (error) {
             console.error('❌ Error cargando productos:', error);
             const tbody = document.getElementById('adminTablaProductos');
@@ -493,54 +545,113 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS - INVENTARIO
+    // INVENTARIO (con lógica: 0=No hay, 1-5=Bajo, >5=OK)
     // ==========================================
     async function loadInventario() {
         try {
             const sb = getSupabase();
-            console.log('🏭 Cargando inventario...');
+            console.log('🏭 === Cargando inventario ===');
 
-            const { data, error } = await sb
+            const { data, error, status, count } = await sb
                 .from('inventario_materiales')
-                .select('*')
-                .order('nombre')
-                .limit(500);
+                .select('*', { count: 'exact' })
+                .order('id', { ascending: true });
 
-            if (error) throw error;
+            console.log('📊 Status:', status, '| Count:', count, '| Rows:', data?.length);
 
-            console.log(`✅ ${data?.length || 0} materiales cargados`);
+            if (error) {
+                console.error('❌ Error Supabase:', error);
+                throw error;
+            }
 
             const tbody = document.getElementById('adminTablaInventario');
-            if (!tbody) return;
+            if (!tbody) {
+                console.error('❌ No se encontró #adminTablaInventario');
+                return;
+            }
 
             if (!data || data.length === 0) {
+                console.warn('⚠️ La tabla está vacía');
                 tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-warehouse"></i>No hay materiales en inventario</td></tr>';
                 return;
             }
 
+            console.log(`✅ Renderizando ${data.length} materiales...`);
+
             tbody.innerHTML = data.map(m => {
-                const stockBajo = parseFloat(m.stock_actual) <= parseFloat(m.stock_minimo);
+                // SANEAMIENTO: nunca negativos
+                const stockActual = Math.max(0, parseFloat(m.stock_actual) || 0);
+                const stockMinimo = Math.max(0, parseFloat(m.stock_minimo) || 0);
+
+                // ==========================================
+                // LÓGICA DE ESTADO DEL STOCK
+                // 0        → No hay (rojo)
+                // 1 a 5    → Bajo (amarillo)
+                // > 5      → OK (verde)
+                // ==========================================
+                let estadoBadge;
+                if (stockActual === 0) {
+                    estadoBadge = '<span class="md-badge danger"><i class="fas fa-times-circle"></i> No hay</span>';
+                } else if (stockActual <= 5) {
+                    estadoBadge = '<span class="md-badge warning"><i class="fas fa-exclamation-triangle"></i> Bajo</span>';
+                } else {
+                    estadoBadge = '<span class="md-badge success"><i class="fas fa-check-circle"></i> OK</span>';
+                }
+
                 return `
                     <tr>
                         <td><strong>#${m.id}</strong></td>
                         <td>${escapeHtml(m.nombre || '-')}</td>
                         <td>${escapeHtml(m.tipo || '-')}</td>
-                        <td>${m.stock_actual} ${escapeHtml(m.unidad_medida || '')}</td>
-                        <td>${m.stock_minimo} ${escapeHtml(m.unidad_medida || '')}</td>
-                        <td>${stockBajo ? '<span class="md-badge danger">Stock bajo</span>' : '<span class="md-badge success">OK</span>'}</td>
+                        <td>${stockActual} ${escapeHtml(m.unidad_medida || '')}</td>
+                        <td>${stockMinimo} ${escapeHtml(m.unidad_medida || '')}</td>
+                        <td>${estadoBadge}</td>
                     </tr>
                 `;
             }).join('');
+
+            console.log('✅ Inventario renderizado correctamente');
+
         } catch (error) {
             console.error('❌ Error cargando inventario:', error);
             const tbody = document.getElementById('adminTablaInventario');
             if (tbody) {
                 tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
-                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message || 'No se pudo cargar')}
                 </td></tr>`;
             }
-            showToast('Error al cargar inventario', 'error');
+            showToast('Error al cargar inventario: ' + (error.message || ''), 'error');
         }
+    }
+
+    // ==========================================
+    // HELPERS DE ESTADO
+    // ==========================================
+    function getEstadoClass(estado) {
+        const map = {
+            urgente: 'danger',
+            en_produccion: 'warning',
+            diseño: 'primary',
+            control_calidad: 'default',
+            cotizando: 'default',
+            listo: 'success',
+            entregado: 'success',
+            cancelado: 'default'
+        };
+        return map[estado] || 'default';
+    }
+
+    function getEstadoLabel(estado) {
+        const map = {
+            cotizando: 'Cotizando',
+            diseño: 'En Diseño',
+            en_produccion: 'Producción',
+            control_calidad: 'Control de Calidad',
+            listo: 'Listo',
+            entregado: 'Entregado',
+            cancelado: 'Cancelado'
+        };
+        return map[estado] || estado || '-';
     }
 
     // ==========================================
@@ -558,7 +669,6 @@
         _listenersSet: false
     };
 
-    // ---------- Persistencia ----------
     function loadIAConversations() {
         try {
             const raw = localStorage.getItem(IAState.storageKey);
@@ -648,7 +758,6 @@
         });
     }
 
-    // ---------- Render de mensajes ----------
     function renderActiveConversation() {
         const container = document.getElementById('adminIaMessages');
         if (!container) return;
@@ -685,7 +794,7 @@
                         <h4>Pedidos urgentes</h4>
                         <p>Lo que requiere atención inmediata</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="¿Cuáles son las ventas totales y del último mes?">
+                    <div class="ia-welcome-card" data-query="¿Cuáles son las ventas totales?">
                         <div class="ia-welcome-card-icon" style="background:#D1FAE5;color:#065F46;"><i class="fas fa-dollar-sign"></i></div>
                         <h4>Análisis de ventas</h4>
                         <p>Totales y tendencias de ingresos</p>
@@ -744,7 +853,7 @@
                             <button class="ia-message-action" data-action="copy" title="Copiar">
                                 <i class="fas fa-copy"></i>
                             </button>
-                            <button class="ia-message-action" data-action="reuse" title="Reusar como pregunta">
+                            <button class="ia-message-action" data-action="reuse" title="Reusar">
                                 <i class="fas fa-redo"></i>
                             </button>
                         </div>
@@ -789,41 +898,31 @@
         }
     }
 
-    // ---------- Markdown Renderer ----------
+    // ==========================================
+    // MARKDOWN RENDERER
+    // ==========================================
     function renderMarkdown(text) {
         if (!text) return '';
 
         let html = escapeHtml(text);
 
-        // Bloques de código ```
         html = html.replace(/```([\s\S]+?)```/g, (match, code) => {
             return `<pre><code>${code.trim()}</code></pre>`;
         });
 
-        // Código inline `code`
         html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
 
-        // Headers
         html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
         html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
 
-        // Bold
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-        // Italic
         html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
 
-        // Separador
         html = html.replace(/^---+$/gm, '<hr>');
-
-        // Blockquote
         html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
-
-        // Enlaces
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
-        // Listas
         const lines = html.split('\n');
         const output = [];
         let inList = false;
@@ -863,7 +962,6 @@
 
         html = output.join('\n');
 
-        // Párrafos
         html = html.split('\n\n').map(p => {
             const trimmed = p.trim();
             if (!trimmed) return '';
@@ -874,7 +972,6 @@
         return html;
     }
 
-    // ---------- Categorizar respuesta ----------
     function categorizarRespuesta(texto) {
         const t = texto.toLowerCase();
         if (/❌|error|falló|fallo|no se pudo/.test(t)) return 'error';
@@ -885,7 +982,6 @@
         return null;
     }
 
-    // ---------- Typing indicator ----------
     function addTypingIndicator() {
         const container = document.getElementById('adminIaMessages');
         if (!container) return null;
@@ -923,7 +1019,6 @@
         if (brain) brain.classList.remove('pensando');
     }
 
-    // ---------- Enviar mensaje ----------
     async function sendIAMessage() {
         const input = document.getElementById('adminIaInput');
         const sendBtn = document.getElementById('adminIaSend');
@@ -1022,7 +1117,6 @@
         }
     }
 
-    // ---------- Header Status ----------
     function updateHeaderStatus(status, text) {
         const pill = document.getElementById('adminIaStatusPill');
         const textEl = document.getElementById('adminIaStatusText');
@@ -1034,7 +1128,6 @@
         textEl.textContent = text;
     }
 
-    // ---------- Verificar conexión n8n ----------
     async function checkIAN8NConnection() {
         updateHeaderStatus('checking', 'Verificando...');
 
@@ -1067,7 +1160,6 @@
         }
     }
 
-    // ---------- Contador de caracteres ----------
     function updateCharCounter() {
         const input = document.getElementById('adminIaInput');
         const counter = document.getElementById('adminIaCharCounter');
@@ -1077,7 +1169,6 @@
         counter.style.color = len > 1800 ? '#EF4444' : '';
     }
 
-    // ---------- Acciones del header ----------
     function setupIAHeaderActions() {
         document.getElementById('adminIaNewBtn')?.addEventListener('click', () => {
             crearNuevaConversacion('Nueva conversación');
@@ -1255,7 +1346,6 @@
         }
     }
 
-    // ---------- Init IA ----------
     function initIA() {
         const guardadas = loadIAConversations();
         if (guardadas.length > 0) {
@@ -1444,7 +1534,7 @@
         // ===== VENTAS =====
         if (/(cuánto|cuanto|total).*(vendido|ventas?|ingresos?|facturado)/.test(q)) {
             const { data } = await sb.from('pagos').select('monto');
-            const total = (data || []).reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
+            const total = (data || []).reduce((sum, p) => sum + sanitizeMoney(p.monto), 0);
             return `💰 **Ventas totales:** ${formatCurrency(total)}\n\n📊 Basado en **${data?.length || 0} pagos** registrados.`;
         }
 
@@ -1454,15 +1544,62 @@
             return `📦 Tienes **${count || 0} productos** en el catálogo.`;
         }
 
-        // ===== INVENTARIO =====
-        if (/stock.*bajo|materiales?.*(bajo|bajos|agotar|agotado)/.test(q)) {
-            const { data } = await sb.from('inventario_materiales').select('*');
-            const bajos = (data || []).filter(m => parseFloat(m.stock_actual) <= parseFloat(m.stock_minimo));
+        if (/(lista|muestra|ver|dame|cuáles|cuales).*productos?/.test(q)) {
+            const { data } = await sb.from('productos').select('nombre, categoria, precio_unitario, precio_por_m2').eq('activo', true).limit(20);
+            if (!data || data.length === 0) return '📭 No hay productos activos.';
 
-            if (bajos.length === 0) return '✅ Todos los materiales tienen stock suficiente.';
-            return `⚠️ **Materiales con stock bajo** (${bajos.length}):\n\n` + bajos.map(m =>
-                `• **${m.nombre}**: ${m.stock_actual} ${m.unidad_medida || ''} (mín: ${m.stock_minimo})`
-            ).join('\n');
+            let respuesta = `📦 **Productos activos** (${data.length}):\n\n`;
+            data.forEach(p => {
+                const precio = p.precio_por_m2
+                    ? `${formatCurrency(p.precio_por_m2)}/m²`
+                    : formatCurrency(p.precio_unitario);
+                respuesta += `• **${p.nombre}** (${p.categoria || 'Sin categoría'}) - ${precio}\n`;
+            });
+            return respuesta;
+        }
+
+        // ===== INVENTARIO (con lógica actualizada) =====
+        if (/stock.*bajo|materiales?.*(bajo|bajos|agotar|agotado|sin stock)/.test(q)) {
+            const { data } = await sb.from('inventario_materiales').select('*');
+
+            const agotados = (data || []).filter(m => {
+                const s = Math.max(0, parseFloat(m.stock_actual) || 0);
+                return s === 0;
+            });
+
+            const bajos = (data || []).filter(m => {
+                const s = Math.max(0, parseFloat(m.stock_actual) || 0);
+                return s > 0 && s <= 5;
+            });
+
+            if (agotados.length === 0 && bajos.length === 0) {
+                return '✅ Todos los materiales tienen stock suficiente (más de 5 unidades).';
+            }
+
+            let respuesta = '';
+
+            if (agotados.length > 0) {
+                respuesta += `🔴 **Materiales agotados** (${agotados.length}):\n\n`;
+                respuesta += agotados.map(m =>
+                    `• **${m.nombre}**: 0 ${m.unidad_medida || 'unidades'}`
+                ).join('\n');
+                respuesta += '\n\n';
+            }
+
+            if (bajos.length > 0) {
+                respuesta += `⚠️ **Materiales con stock bajo** (${bajos.length}):\n\n`;
+                respuesta += bajos.map(m =>
+                    `• **${m.nombre}**: ${m.stock_actual} ${m.unidad_medida || ''}`
+                ).join('\n');
+            }
+
+            return respuesta.trim();
+        }
+
+        // ===== EMPLEADOS =====
+        if (/(cuántos|cuantos|total).*empleados?/.test(q)) {
+            const { count } = await sb.from('empleados').select('*', { count: 'exact', head: true }).eq('activo', true);
+            return `👥 Tienes **${count || 0} empleados activos**.`;
         }
 
         // ===== RESUMEN =====
@@ -1475,7 +1612,7 @@
                 sb.from('pedidos').select('estado, prioridad')
             ]);
 
-            const totalVentas = (ventasData.data || []).reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
+            const totalVentas = (ventasData.data || []).reduce((s, p) => s + sanitizeMoney(p.monto), 0);
             const activos = (pedidosData.data || []).filter(p => p.estado !== 'entregado' && p.estado !== 'cancelado').length;
             const urgentes = (pedidosData.data || []).filter(p => p.prioridad === 'urgente' && p.estado !== 'entregado' && p.estado !== 'cancelado').length;
 
@@ -1513,64 +1650,6 @@
             `• "Ventas totales"\n` +
             `• "Resumen general"\n` +
             `• "Ayuda" para ver todos los comandos`;
-    }
-
-    // ==========================================
-    // UTILIDADES
-    // ==========================================
-    function escapeHtml(text) {
-        if (text === null || text === undefined) return '';
-        const div = document.createElement('div');
-        div.textContent = String(text);
-        return div.innerHTML;
-    }
-
-    function formatCurrency(amount) {
-        const num = parseFloat(amount) || 0;
-        return '$' + num.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return '-';
-        try {
-            return new Date(dateStr).toLocaleDateString('es-ES', {
-                year: 'numeric', month: 'short', day: 'numeric'
-            });
-        } catch {
-            return '-';
-        }
-    }
-
-    function setText(id, value) {
-        const el = document.getElementById(id);
-        if (el) el.textContent = value;
-    }
-
-    function getEstadoClass(estado) {
-        const map = {
-            urgente: 'danger',
-            en_produccion: 'warning',
-            diseño: 'primary',
-            control_calidad: 'default',
-            cotizando: 'default',
-            listo: 'success',
-            entregado: 'success',
-            cancelado: 'default'
-        };
-        return map[estado] || 'default';
-    }
-
-    function getEstadoLabel(estado) {
-        const map = {
-            cotizando: 'Cotizando',
-            diseño: 'En Diseño',
-            en_produccion: 'Producción',
-            control_calidad: 'Control de Calidad',
-            listo: 'Listo',
-            entregado: 'Entregado',
-            cancelado: 'Cancelado'
-        };
-        return map[estado] || estado || '-';
     }
 
     // ==========================================
