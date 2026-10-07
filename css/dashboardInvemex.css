@@ -1,6 +1,6 @@
 /* ==========================================
    IVENMEX DASHBOARD - BASE GLOBAL
-   v17.0 - Arquitectura limpia
+   v18.0 - Arquitectura limpia + Modal TV
    ========================================== */
 
 /* ==========================================
@@ -83,7 +83,6 @@ body {
     overflow-x: hidden;
 }
 
-/* Skip link accesibilidad */
 .sr-only {
     position: absolute;
     width: 1px;
@@ -347,7 +346,6 @@ body {
     gap: 12px;
 }
 
-/* Chips */
 .md-chip {
     display: inline-flex;
     align-items: center;
@@ -366,7 +364,6 @@ body {
     font-size: 12px;
 }
 
-/* Realtime indicator */
 .realtime-indicator {
     display: inline-flex;
     align-items: center;
@@ -432,9 +429,7 @@ body {
     box-shadow: var(--md-elevation-2);
 }
 
-.md-btn:active {
-    transform: translateY(0);
-}
+.md-btn:active { transform: translateY(0); }
 
 .md-btn-primary {
     background: var(--md-primary);
@@ -734,13 +729,8 @@ body {
     z-index: 2;
 }
 
-.avatar-badge.listo {
-    background: var(--md-success);
-}
-
-.avatar-badge.pendiente {
-    background: var(--md-warning);
-}
+.avatar-badge.listo { background: var(--md-success); }
+.avatar-badge.pendiente { background: var(--md-warning); }
 
 .empleado-progress {
     width: 100%;
@@ -1066,7 +1056,6 @@ body {
     border-color: var(--md-primary);
 }
 
-/* Estados de tabla vacíos/loading */
 .tabla-loading,
 .tabla-empty {
     text-align: center;
@@ -1222,7 +1211,7 @@ body {
     font-weight: 600;
 }
 
-/* Modal empleado */
+/* Avatar grande en modales */
 .avatar-lg {
     display: inline-flex;
     align-items: center;
@@ -1233,9 +1222,9 @@ body {
     color: white;
     font-size: 16px;
     font-weight: 800;
-    margin-right: 10px;
 }
 
+/* Modal empleado antiguo (por compatibilidad) */
 .profile-summary {
     display: flex;
     flex-wrap: wrap;
@@ -1274,7 +1263,7 @@ body {
 .stat.proceso { background: #DBEAFE; color: #1E40AF; }
 .stat.pendientes { background: #FEF3C7; color: #92400E; }
 
-/* Tabla tareas empleado modal */
+/* Tabla tareas empleado (antigua) */
 .tareas-empleado-modal {
     width: 100%;
     border-collapse: collapse;
@@ -1417,7 +1406,6 @@ body {
     flex-shrink: 0;
 }
 
-/* Bar chart */
 .bar-item {
     display: flex;
     align-items: center;
@@ -1456,7 +1444,6 @@ body {
     white-space: nowrap;
 }
 
-/* Eficiencia section */
 .eficiencia-section {
     background: var(--md-white);
     border-radius: var(--md-radius-lg);
@@ -1485,3 +1472,332 @@ body {
 .p-3 { padding: 12px; }
 .w-100 { width: 100%; }
 .text-center { text-align: center; }
+
+/* ==========================================
+   18. MODAL DE EMPLEADO - TABLA ALARGADA PARA TV
+   ========================================== */
+.modal-dialog.modal-empleado-tv {
+    max-width: 95vw;
+    width: 95vw;
+    margin: 1.75rem auto;
+}
+
+.modal-dialog.modal-empleado-tv .modal-content {
+    max-height: 92vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.empleado-modal-header {
+    padding: 10px 16px;
+    background: linear-gradient(135deg, var(--md-primary), var(--md-primary-light));
+    color: white;
+    border-bottom: none;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.empleado-modal-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.empleado-modal-header .avatar-lg {
+    width: 42px;
+    height: 42px;
+    font-size: 16px;
+    margin-right: 0;
+    flex-shrink: 0;
+}
+
+.empleado-modal-title-info {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.empleado-modal-header .modal-title {
+    font-size: 16px;
+    font-weight: 800;
+    color: white;
+    margin: 0;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.empleado-modal-subtitle {
+    font-size: 12px;
+    opacity: 0.85;
+    font-weight: 500;
+}
+
+.empleado-modal-stats {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.empleado-modal-stat-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+    white-space: nowrap;
+}
+
+.empleado-modal-stat-pill.success { background: rgba(39, 174, 96, 0.9); }
+.empleado-modal-stat-pill.info { background: rgba(52, 152, 219, 0.9); }
+.empleado-modal-stat-pill.warning { background: rgba(243, 156, 18, 0.9); }
+.empleado-modal-stat-pill.danger { background: rgba(239, 68, 68, 0.9); }
+
+.empleado-modal-stat-pill i { font-size: 10px; }
+
+.empleado-modal-header .btn-close {
+    filter: invert(1) brightness(200%);
+    opacity: 0.85;
+    margin: 0;
+}
+.empleado-modal-header .btn-close:hover { opacity: 1; }
+
+.empleado-modal-body {
+    padding: 0;
+    overflow-y: auto;
+    flex: 1;
+    background: var(--md-gray-light);
+}
+
+.tabla-tareas-empleado {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+    background: var(--md-white);
+}
+
+.tabla-tareas-empleado thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--md-primary);
+    color: white;
+    padding: 10px 12px;
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 2px solid var(--md-primary-dark);
+}
+
+.tabla-tareas-empleado tbody tr {
+    border-bottom: 1px solid var(--md-gray-dark);
+    transition: background 0.15s ease;
+}
+
+.tabla-tareas-empleado tbody tr:hover { background: #F5F7FF; }
+.tabla-tareas-empleado tbody tr:last-child { border-bottom: none; }
+
+.tabla-tareas-empleado td {
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--md-text);
+    vertical-align: middle;
+    line-height: 1.35;
+}
+
+.tabla-tareas-empleado td.col-id {
+    font-weight: 800;
+    color: var(--md-primary);
+    white-space: nowrap;
+    width: 60px;
+}
+
+.tabla-tareas-empleado td.col-fecha {
+    white-space: nowrap;
+    font-size: 11px;
+    color: var(--md-text-secondary);
+    width: 90px;
+}
+
+.tabla-tareas-empleado td.col-tipo {
+    font-weight: 700;
+    color: var(--md-text);
+    white-space: nowrap;
+    width: 130px;
+}
+
+.tabla-tareas-empleado td.col-tarea {
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.tabla-tareas-empleado td.col-cliente {
+    font-weight: 600;
+    color: var(--md-text);
+    white-space: nowrap;
+    width: 150px;
+}
+
+.tabla-tareas-empleado td.col-estado { width: 140px; }
+
+.tabla-tareas-empleado td.col-acciones {
+    width: 60px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.tabla-tareas-empleado .status-select {
+    padding: 5px 8px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 6px;
+    border: 1px solid var(--md-gray-dark);
+    background: var(--md-white);
+    cursor: pointer;
+    font-family: inherit;
+    width: 100%;
+    max-width: 130px;
+}
+
+.tabla-tareas-empleado .status-select.status-pendiente {
+    background: #FEF3C7; color: #92400E; border-color: #FCD34D;
+}
+.tabla-tareas-empleado .status-select.status-notificado {
+    background: #E0E7FF; color: #3730A3; border-color: #A5B4FC;
+}
+.tabla-tareas-empleado .status-select.status-en_progreso {
+    background: #DBEAFE; color: #1E40AF; border-color: #93C5FD;
+}
+.tabla-tareas-empleado .status-select.status-completado {
+    background: #D1FAE5; color: #065F46; border-color: #6EE7B7;
+}
+
+.tabla-tareas-empleado .badge-prioridad {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.tabla-tareas-empleado .badge-prioridad.urgente {
+    background: #FEE2E2; color: #991B1B;
+}
+.tabla-tareas-empleado .badge-prioridad.normal {
+    background: var(--md-gray); color: var(--md-text-secondary);
+}
+.tabla-tareas-empleado .badge-prioridad.baja {
+    background: #F0F9FF; color: #075985;
+}
+
+.tabla-tareas-empleado .btn-tabla-accion {
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    border: 1px solid var(--md-gray-dark);
+    background: var(--md-white);
+    color: var(--md-primary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    transition: all 0.15s ease;
+}
+
+.tabla-tareas-empleado .btn-tabla-accion:hover {
+    background: var(--md-primary);
+    color: white;
+    border-color: var(--md-primary);
+}
+
+.empleado-modal-empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--md-text-secondary);
+}
+
+.empleado-modal-empty i {
+    font-size: 48px;
+    color: var(--md-text-muted);
+    margin-bottom: 12px;
+    display: block;
+}
+
+.empleado-modal-empty h4 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--md-text);
+    margin: 0 0 6px;
+}
+
+.empleado-modal-empty p {
+    font-size: 12px;
+    margin: 0;
+}
+
+.empleado-modal-footer {
+    padding: 10px 16px;
+    background: var(--md-white);
+    border-top: 1px solid var(--md-gray-dark);
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* ==========================================
+   19. RESPONSIVE MODAL EMPLEADO EN TV
+   ========================================== */
+@media (max-height: 800px) {
+    .modal-dialog.modal-empleado-tv {
+        max-width: 98vw;
+        width: 98vw;
+        margin: 0.5rem auto;
+    }
+    .modal-dialog.modal-empleado-tv .modal-content { max-height: 95vh; }
+    .empleado-modal-header { padding: 6px 12px; gap: 10px; }
+    .empleado-modal-header .avatar-lg { width: 34px; height: 34px; font-size: 13px; }
+    .empleado-modal-header .modal-title { font-size: 13px; }
+    .empleado-modal-subtitle { font-size: 10px; }
+    .empleado-modal-stat-pill { padding: 3px 8px; font-size: 9.5px; }
+
+    .tabla-tareas-empleado { font-size: 10.5px; }
+    .tabla-tareas-empleado thead th { padding: 6px 8px; font-size: 8.5px; }
+    .tabla-tareas-empleado td { padding: 6px 8px; font-size: 10.5px; }
+    .tabla-tareas-empleado td.col-id { width: 45px; font-size: 10px; }
+    .tabla-tareas-empleado td.col-fecha { width: 70px; font-size: 9.5px; }
+    .tabla-tareas-empleado td.col-tipo { width: 100px; font-size: 10px; }
+    .tabla-tareas-empleado td.col-tarea { max-width: 200px; font-size: 10px; }
+    .tabla-tareas-empleado td.col-cliente { width: 110px; font-size: 10px; }
+    .tabla-tareas-empleado .status-select { padding: 3px 6px; font-size: 9.5px; max-width: 110px; }
+    .tabla-tareas-empleado .btn-tabla-accion { width: 24px; height: 24px; font-size: 9px; }
+
+    .empleado-modal-footer { padding: 6px 12px; }
+}
+
+@media (max-height: 700px) {
+    .empleado-modal-header { padding: 5px 10px; }
+    .empleado-modal-stat-pill { padding: 2px 6px; font-size: 9px; }
+    .tabla-tareas-empleado { font-size: 10px; }
+    .tabla-tareas-empleado thead th { padding: 5px 6px; font-size: 8px; }
+    .tabla-tareas-empleado td { padding: 5px 6px; font-size: 10px; }
+}
