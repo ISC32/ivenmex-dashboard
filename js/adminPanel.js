@@ -15,7 +15,7 @@
         SESSION_DURATION: 2 * 60 * 60 * 1000,
 
         // 🤖 URL DEL WEBHOOK DE N8N
-        N8N_WEBHOOK_URL: 'https://n8n.aguasdguanipa.com/webhook/admin-chat',
+        N8N_WEBHOOK_URL: 'https://n8n.aguasdguanipa.com/admin-chat',
 
         // Timeout de respuesta (ms)
         IA_TIMEOUT: 90000
