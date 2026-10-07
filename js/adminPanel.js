@@ -1,6 +1,6 @@
 /* ==========================================
    IVENMEX - PANEL ADMIN OCULTO
-   v1.0 - Protegido por contraseña + IA
+   v2.0 - Conectado a Supabase + Asistente IA
    ========================================== */
 
 (function () {
@@ -11,20 +11,19 @@
     // ==========================================
     const ADMIN_CONFIG = {
         // 🔒 CAMBIA ESTA CONTRASEÑA
-        PASSWORD_HASH: 'ivenmex2024', // Simple por ahora, se puede hashear después
+        PASSWORD_HASH: 'ivenmex2024',
         SESSION_KEY: 'ivx_admin_session',
         SESSION_DURATION: 2 * 60 * 60 * 1000, // 2 horas
 
-        // 🤖 ENDPOINT DEL WEBHOOK DE N8N (cámbialo por el tuyo)
-        // Ejemplo: 'https://tu-n8n.com/webhook/chatbot-ivenmex'
-        N8N_WEBHOOK_URL: '', // Si está vacío, usa el motor de IA local
+        // 🤖 URL DEL WEBHOOK DE N8N
+        N8N_WEBHOOK_URL: 'https://n8n.aguasdguanipa.com/webhook/admin-chat',
 
-        // 🔑 API KEY de OpenAI (opcional, para IA local)
-        OPENAI_API_KEY: '' // Si está vacío, usa consultas SQL directas
+        // Si el webhook falla, usar motor local
+        FALLBACK_TO_LOCAL: true
     };
 
     // ==========================================
-    // ESTADO
+    // ESTADO GLOBAL
     // ==========================================
     const AdminState = {
         isAuthenticated: false,
@@ -45,6 +44,7 @@
         setTimeout(() => {
             toast.style.opacity = '0';
             toast.style.transform = 'translateX(40px)';
+            toast.style.transition = 'all 0.3s ease';
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
@@ -91,7 +91,10 @@
     // ==========================================
     function setupSecretTrigger() {
         const logo = document.querySelector('.md-toolbar-brand');
-        if (!logo) return;
+        if (!logo) {
+            console.warn('⚠️ adminPanel: No se encontró .md-toolbar-brand');
+            return;
+        }
 
         logo.style.cursor = 'pointer';
         logo.addEventListener('click', (e) => {
@@ -109,7 +112,7 @@
             }
         });
 
-        // También con teclado: Ctrl+Shift+A
+        // Atajo de teclado: Ctrl+Shift+A
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'A') {
                 e.preventDefault();
@@ -184,9 +187,7 @@
         panel.classList.add('active');
         document.body.style.overflow = 'hidden';
 
-        // Cargar vista por defecto
         switchView('dashboard');
-        loadDashboardStats();
     }
 
     function closeAdminPanel() {
@@ -207,54 +208,48 @@
     function switchView(viewName) {
         AdminState.currentView = viewName;
 
-        // Actualizar nav items
         document.querySelectorAll('.admin-nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.view === viewName);
         });
 
-        // Actualizar vistas
         document.querySelectorAll('.admin-view').forEach(view => {
             view.classList.toggle('active', view.id === `adminView-${viewName}`);
         });
 
-        // Cargar datos según vista
         switch (viewName) {
-            case 'dashboard':
-                loadDashboardStats();
-                break;
-            case 'clientes':
-                loadClientes();
-                break;
-            case 'pedidos':
-                loadPedidos();
-                break;
-            case 'ventas':
-                loadVentas();
-                break;
-            case 'productos':
-                loadProductos();
-                break;
-            case 'inventario':
-                loadInventario();
-                break;
-            case 'ia':
-                initIA();
-                break;
+            case 'dashboard':  loadDashboardStats(); break;
+            case 'clientes':   loadClientes();       break;
+            case 'pedidos':    loadPedidos();        break;
+            case 'ventas':     loadVentas();         break;
+            case 'productos':  loadProductos();      break;
+            case 'inventario': loadInventario();     break;
+            case 'ia':         initIA();             break;
         }
     }
 
     // ==========================================
-    // CARGA DE DATOS
+    // OBTENER CLIENTE SUPABASE DINÁMICAMENTE
     // ==========================================
-    const supabase = window.supabaseClient;
+    function getSupabase() {
+        if (!window.supabaseClient) {
+            throw new Error('Cliente Supabase no inicializado. Recarga la página.');
+        }
+        return window.supabaseClient;
+    }
 
+    // ==========================================
+    // CARGA DE DATOS - DASHBOARD STATS
+    // ==========================================
     async function loadDashboardStats() {
         try {
+            const sb = getSupabase();
+            console.log('📊 Cargando estadísticas del dashboard...');
+
             const [clientesRes, pedidosRes, ventasRes, productosRes] = await Promise.all([
-                supabase.from('clientes').select('*', { count: 'exact', head: true }),
-                supabase.from('pedidos').select('*', { count: 'exact', head: true }),
-                supabase.from('pagos').select('monto'),
-                supabase.from('productos').select('*', { count: 'exact', head: true })
+                sb.from('clientes').select('*', { count: 'exact', head: true }),
+                sb.from('pedidos').select('*', { count: 'exact', head: true }),
+                sb.from('pagos').select('monto'),
+                sb.from('productos').select('*', { count: 'exact', head: true })
             ]);
 
             const totalClientes = clientesRes.count || 0;
@@ -267,30 +262,47 @@
             setText('adminStatProductos', totalProductos);
             setText('adminStatVentas', formatCurrency(totalVentas));
 
-            // Estadísticas adicionales
-            const { data: pedidosData } = await supabase.from('pedidos').select('estado, prioridad');
-            const activos = (pedidosData || []).filter(p => p.estado !== 'entregado' && p.estado !== 'cancelado').length;
-            const urgentes = (pedidosData || []).filter(p => p.prioridad === 'urgente' && p.estado !== 'entregado' && p.estado !== 'cancelado').length;
+            const { data: pedidosData } = await sb.from('pedidos').select('estado, prioridad');
+            const activos = (pedidosData || []).filter(p =>
+                p.estado !== 'entregado' && p.estado !== 'cancelado'
+            ).length;
+            const urgentes = (pedidosData || []).filter(p =>
+                p.prioridad === 'urgente' && p.estado !== 'entregado' && p.estado !== 'cancelado'
+            ).length;
 
             setText('adminStatActivos', activos);
             setText('adminStatUrgentes', urgentes);
+
+            console.log(`✅ Stats: ${totalClientes} clientes, ${totalPedidos} pedidos, ${activos} activos, ${urgentes} urgentes`);
         } catch (error) {
-            console.error('Error cargando stats:', error);
-            showToast('Error al cargar estadísticas', 'error');
+            console.error('❌ Error cargando stats:', error);
+            showToast('Error al cargar estadísticas: ' + error.message, 'error');
         }
     }
 
+    // ==========================================
+    // CARGA DE DATOS - CLIENTES
+    // ==========================================
     async function loadClientes() {
         try {
-            const { data, error } = await supabase
+            const sb = getSupabase();
+            console.log('👥 Cargando clientes...');
+
+            const { data, error } = await sb
                 .from('clientes')
                 .select('*')
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .limit(500);
 
             if (error) throw error;
 
+            console.log(`✅ ${data?.length || 0} clientes cargados`);
+
             const tbody = document.getElementById('adminTablaClientes');
-            if (!tbody) return;
+            if (!tbody) {
+                console.warn('⚠️ No se encontró #adminTablaClientes');
+                return;
+            }
 
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-users"></i>No hay clientes registrados</td></tr>';
@@ -308,14 +320,26 @@
                 </tr>
             `).join('');
         } catch (error) {
-            console.error('Error cargando clientes:', error);
+            console.error('❌ Error cargando clientes:', error);
+            const tbody = document.getElementById('adminTablaClientes');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
             showToast('Error al cargar clientes', 'error');
         }
     }
 
+    // ==========================================
+    // CARGA DE DATOS - PEDIDOS
+    // ==========================================
     async function loadPedidos() {
         try {
-            const { data, error } = await supabase
+            const sb = getSupabase();
+            console.log('📋 Cargando pedidos...');
+
+            const { data, error } = await sb
                 .from('pedidos')
                 .select(`
                     id, estado, prioridad, total, anticipo, fecha_solicitud,
@@ -324,9 +348,11 @@
                     detalles_pedido (cantidad, productos (nombre))
                 `)
                 .order('fecha_solicitud', { ascending: false })
-                .limit(100);
+                .limit(200);
 
             if (error) throw error;
+
+            console.log(`✅ ${data?.length || 0} pedidos cargados`);
 
             const tbody = document.getElementById('adminTablaPedidos');
             if (!tbody) return;
@@ -346,35 +372,50 @@
                         <td>${formatCurrency(p.total || 0)}</td>
                         <td>${formatCurrency(p.anticipo || 0)}</td>
                         <td><span class="md-badge ${getEstadoClass(p.estado)}">${getEstadoLabel(p.estado)}</span></td>
-                        <td><span class="md-badge ${p.prioridad === 'urgente' ? 'danger' : 'default'}">${p.prioridad || 'normal'}</span></td>
+                        <td><span class="md-badge ${p.prioridad === 'urgente' ? 'danger' : 'default'}">${escapeHtml(p.prioridad || 'normal')}</span></td>
                         <td>${formatDate(p.fecha_entrega_prometida)}</td>
                     </tr>
                 `;
             }).join('');
         } catch (error) {
-            console.error('Error cargando pedidos:', error);
+            console.error('❌ Error cargando pedidos:', error);
+            const tbody = document.getElementById('adminTablaPedidos');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
             showToast('Error al cargar pedidos', 'error');
         }
     }
 
+    // ==========================================
+    // CARGA DE DATOS - VENTAS
+    // ==========================================
     async function loadVentas() {
         try {
-            const { data, error } = await supabase
+            const sb = getSupabase();
+            console.log('💰 Cargando ventas...');
+
+            const { data, error } = await sb
                 .from('pagos')
                 .select(`
                     id, monto, metodo_pago, fecha_pago, referencia, observaciones,
                     pedidos (id, clientes (nombre))
                 `)
                 .order('fecha_pago', { ascending: false })
-                .limit(100);
+                .limit(200);
 
             if (error) throw error;
+
+            console.log(`✅ ${data?.length || 0} pagos cargados`);
 
             const tbody = document.getElementById('adminTablaVentas');
             if (!tbody) return;
 
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-dollar-sign"></i>No hay ventas registradas</td></tr>';
+                setText('adminVentasTotal', formatCurrency(0));
                 return;
             }
 
@@ -389,23 +430,37 @@
                 </tr>
             `).join('');
 
-            // Total
             const total = data.reduce((sum, v) => sum + (parseFloat(v.monto) || 0), 0);
             setText('adminVentasTotal', formatCurrency(total));
         } catch (error) {
-            console.error('Error cargando ventas:', error);
+            console.error('❌ Error cargando ventas:', error);
+            const tbody = document.getElementById('adminTablaVentas');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
             showToast('Error al cargar ventas', 'error');
         }
     }
 
+    // ==========================================
+    // CARGA DE DATOS - PRODUCTOS
+    // ==========================================
     async function loadProductos() {
         try {
-            const { data, error } = await supabase
+            const sb = getSupabase();
+            console.log('📦 Cargando productos...');
+
+            const { data, error } = await sb
                 .from('productos')
                 .select('*')
-                .order('nombre');
+                .order('nombre')
+                .limit(500);
 
             if (error) throw error;
+
+            console.log(`✅ ${data?.length || 0} productos cargados`);
 
             const tbody = document.getElementById('adminTablaProductos');
             if (!tbody) return;
@@ -426,25 +481,40 @@
                 </tr>
             `).join('');
         } catch (error) {
-            console.error('Error cargando productos:', error);
+            console.error('❌ Error cargando productos:', error);
+            const tbody = document.getElementById('adminTablaProductos');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
             showToast('Error al cargar productos', 'error');
         }
     }
 
+    // ==========================================
+    // CARGA DE DATOS - INVENTARIO
+    // ==========================================
     async function loadInventario() {
         try {
-            const { data, error } = await supabase
+            const sb = getSupabase();
+            console.log('🏭 Cargando inventario...');
+
+            const { data, error } = await sb
                 .from('inventario_materiales')
                 .select('*')
-                .order('nombre');
+                .order('nombre')
+                .limit(500);
 
             if (error) throw error;
+
+            console.log(`✅ ${data?.length || 0} materiales cargados`);
 
             const tbody = document.getElementById('adminTablaInventario');
             if (!tbody) return;
 
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-warehouse"></i>No hay materiales</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-warehouse"></i>No hay materiales en inventario</td></tr>';
                 return;
             }
 
@@ -455,65 +525,367 @@
                         <td><strong>#${m.id}</strong></td>
                         <td>${escapeHtml(m.nombre || '-')}</td>
                         <td>${escapeHtml(m.tipo || '-')}</td>
-                        <td>${m.stock_actual} ${m.unidad_medida || ''}</td>
-                        <td>${m.stock_minimo} ${m.unidad_medida || ''}</td>
+                        <td>${m.stock_actual} ${escapeHtml(m.unidad_medida || '')}</td>
+                        <td>${m.stock_minimo} ${escapeHtml(m.unidad_medida || '')}</td>
                         <td>${stockBajo ? '<span class="md-badge danger">Stock bajo</span>' : '<span class="md-badge success">OK</span>'}</td>
                     </tr>
                 `;
             }).join('');
         } catch (error) {
-            console.error('Error cargando inventario:', error);
+            console.error('❌ Error cargando inventario:', error);
+            const tbody = document.getElementById('adminTablaInventario');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
             showToast('Error al cargar inventario', 'error');
         }
     }
 
     // ==========================================
-    // ASISTENTE IA
+    // ASISTENTE IA - ESTADO
     // ==========================================
-    function initIA() {
-        const messagesEl = document.getElementById('adminIaMessages');
-        if (!messagesEl) return;
+    const IAState = {
+        conversations: [],
+        activeConvId: null,
+        isSearchOpen: false,
+        isCompact: false,
+        isConvsOpen: false,
+        isSending: false,
+        startTime: null,
+        storageKey: 'ivx_ia_conversations',
+        _listenersSet: false
+    };
 
-        // Mensaje de bienvenida si está vacío
-        if (messagesEl.children.length === 0) {
-            addIAMessage('bot', `¡Hola! 👋 Soy tu asistente de IA para el dashboard de IVENMEX.
-
-Puedo ayudarte con:
-• 📊 Consultar clientes, pedidos, ventas y productos
-• 📈 Generar reportes y estadísticas
-• 🔍 Buscar información específica
-• 💡 Responder preguntas sobre tus datos
-
-Prueba preguntarme cosas como:
-• "¿Cuántos clientes tengo?"
-• "Muéstrame los pedidos urgentes"
-• "¿Cuáles son las ventas totales?"
-• "¿Qué productos tengo?"`);
+    // ---------- Persistencia ----------
+    function loadIAConversations() {
+        try {
+            const raw = localStorage.getItem(IAState.storageKey);
+            if (!raw) return [];
+            const data = JSON.parse(raw);
+            return Array.isArray(data) ? data : [];
+        } catch (e) {
+            return [];
         }
     }
 
-    function addIAMessage(role, content) {
+    function saveIAConversations() {
+        try {
+            const toSave = IAState.conversations.slice(-20);
+            localStorage.setItem(IAState.storageKey, JSON.stringify(toSave));
+        } catch (e) {
+            console.warn('No se pudo guardar conversaciones:', e);
+        }
+    }
+
+    function getActiveConversation() {
+        return IAState.conversations.find(c => c.id === IAState.activeConvId) || null;
+    }
+
+    function crearNuevaConversacion(titulo = 'Nueva conversación') {
+        const conv = {
+            id: 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+            titulo: titulo,
+            mensajes: [],
+            createdAt: Date.now()
+        };
+        IAState.conversations.push(conv);
+        IAState.activeConvId = conv.id;
+        saveIAConversations();
+        renderConversationTabs();
+        return conv;
+    }
+
+    function eliminarConversacion(convId) {
+        const idx = IAState.conversations.findIndex(c => c.id === convId);
+        if (idx === -1) return;
+        IAState.conversations.splice(idx, 1);
+        if (IAState.activeConvId === convId) {
+            IAState.activeConvId = IAState.conversations.length > 0
+                ? IAState.conversations[IAState.conversations.length - 1].id
+                : null;
+        }
+        saveIAConversations();
+        renderConversationTabs();
+        renderActiveConversation();
+    }
+
+    function renderConversationTabs() {
+        const container = document.getElementById('adminIaConvs');
+        if (!container) return;
+
+        if (IAState.conversations.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+
+        container.innerHTML = IAState.conversations.map(conv => `
+            <button class="admin-ia-conv-tab ${conv.id === IAState.activeConvId ? 'active' : ''}"
+                    data-conv-id="${conv.id}">
+                <i class="fas fa-comment"></i>
+                <span>${escapeHtml(conv.titulo.slice(0, 25))}</span>
+                <button class="admin-ia-conv-tab-close" data-close-id="${conv.id}" title="Eliminar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </button>
+        `).join('');
+
+        container.querySelectorAll('.admin-ia-conv-tab').forEach(tab => {
+            tab.addEventListener('click', (e) => {
+                if (e.target.closest('.admin-ia-conv-tab-close')) return;
+                IAState.activeConvId = tab.dataset.convId;
+                renderConversationTabs();
+                renderActiveConversation();
+            });
+        });
+
+        container.querySelectorAll('.admin-ia-conv-tab-close').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                eliminarConversacion(btn.dataset.closeId);
+            });
+        });
+    }
+
+    // ---------- Render de mensajes ----------
+    function renderActiveConversation() {
         const container = document.getElementById('adminIaMessages');
         if (!container) return;
 
-        const messageEl = document.createElement('div');
-        messageEl.className = `ia-message ${role}`;
+        const conv = getActiveConversation();
+        if (!conv || conv.mensajes.length === 0) {
+            renderWelcome(container);
+            return;
+        }
 
-        const icon = role === 'user' ? 'fa-user' : 'fa-robot';
-        const formattedContent = role === 'bot' ? formatBotResponse(content) : escapeHtml(content);
-
-        messageEl.innerHTML = `
-            <div class="ia-message-avatar"><i class="fas ${icon}"></i></div>
-            <div class="ia-message-content">${formattedContent}</div>
-        `;
-
-        container.appendChild(messageEl);
-        container.scrollTop = container.scrollHeight;
-
-        // Guardar en historial
-        AdminState.conversationHistory.push({ role, content, timestamp: Date.now() });
+        container.innerHTML = '';
+        conv.mensajes.forEach(msg => {
+            renderMessage(container, msg, false);
+        });
+        scrollToBottom();
     }
 
+    function renderWelcome(container) {
+        container.innerHTML = `
+            <div class="ia-welcome">
+                <div class="ia-welcome-icon">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <h3>¡Hola! Soy tu asistente IA</h3>
+                <p>Puedo consultar tu base de datos en lenguaje natural. Pregúntame lo que necesites sobre clientes, pedidos, ventas, productos, inventario y más.</p>
+                <div class="ia-welcome-grid">
+                    <div class="ia-welcome-card" data-query="Dame un resumen general del negocio">
+                        <div class="ia-welcome-card-icon"><i class="fas fa-chart-pie"></i></div>
+                        <h4>Resumen general</h4>
+                        <p>Vista completa del estado de IVENMEX</p>
+                    </div>
+                    <div class="ia-welcome-card" data-query="Muéstrame los pedidos urgentes activos">
+                        <div class="ia-welcome-card-icon" style="background:#FEE2E2;color:#991B1B;"><i class="fas fa-fire"></i></div>
+                        <h4>Pedidos urgentes</h4>
+                        <p>Lo que requiere atención inmediata</p>
+                    </div>
+                    <div class="ia-welcome-card" data-query="¿Cuáles son las ventas totales y del último mes?">
+                        <div class="ia-welcome-card-icon" style="background:#D1FAE5;color:#065F46;"><i class="fas fa-dollar-sign"></i></div>
+                        <h4>Análisis de ventas</h4>
+                        <p>Totales y tendencias de ingresos</p>
+                    </div>
+                    <div class="ia-welcome-card" data-query="¿Qué materiales tienen stock bajo o agotado?">
+                        <div class="ia-welcome-card-icon" style="background:#FEF3C7;color:#92400E;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h4>Alertas de stock</h4>
+                        <p>Materiales que necesitan reabastecerse</p>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        container.querySelectorAll('.ia-welcome-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const input = document.getElementById('adminIaInput');
+                if (input) {
+                    input.value = card.dataset.query;
+                    sendIAMessage();
+                }
+            });
+        });
+    }
+
+    function renderMessage(container, msg, animate = true) {
+        const el = document.createElement('div');
+        el.className = `ia-message ${msg.role}`;
+        if (msg.role === 'bot' && msg.categoria) {
+            el.classList.add(msg.categoria);
+        }
+
+        const icon = msg.role === 'user' ? 'fa-user' : 'fa-robot';
+        const formattedContent = msg.role === 'bot'
+            ? renderMarkdown(msg.content)
+            : escapeHtml(msg.content).replace(/\n/g, '<br>');
+
+        const hora = new Date(msg.timestamp || Date.now()).toLocaleTimeString('es-ES', {
+            hour: '2-digit', minute: '2-digit'
+        });
+
+        const latencyHtml = msg.latency
+            ? `<span class="ia-message-latency">${(msg.latency / 1000).toFixed(1)}s</span>`
+            : '';
+
+        el.innerHTML = `
+            <div class="ia-message-avatar ${msg.role === 'bot' ? 'online' : ''}">
+                <i class="fas ${icon}"></i>
+            </div>
+            <div class="ia-message-wrapper">
+                <div class="ia-message-content">${formattedContent}</div>
+                <div class="ia-message-meta">
+                    <span>${hora}</span>
+                    ${latencyHtml}
+                    ${msg.role === 'bot' ? `
+                        <div class="ia-message-actions">
+                            <button class="ia-message-action" data-action="copy" title="Copiar">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                            <button class="ia-message-action" data-action="reuse" title="Reusar como pregunta">
+                                <i class="fas fa-redo"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        el.querySelectorAll('.ia-message-action').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const action = btn.dataset.action;
+                if (action === 'copy') {
+                    navigator.clipboard.writeText(msg.content).then(() => {
+                        btn.classList.add('copied');
+                        btn.innerHTML = '<i class="fas fa-check"></i>';
+                        setTimeout(() => {
+                            btn.classList.remove('copied');
+                            btn.innerHTML = '<i class="fas fa-copy"></i>';
+                        }, 1500);
+                    });
+                } else if (action === 'reuse') {
+                    const input = document.getElementById('adminIaInput');
+                    if (input) {
+                        input.value = msg.content;
+                        input.focus();
+                    }
+                }
+            });
+        });
+
+        container.appendChild(el);
+
+        if (animate) scrollToBottom();
+    }
+
+    function scrollToBottom() {
+        const container = document.getElementById('adminIaMessages');
+        if (container) {
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+    }
+
+    // ---------- Markdown Renderer ----------
+    function renderMarkdown(text) {
+        if (!text) return '';
+
+        let html = escapeHtml(text);
+
+        // Bloques de código ```
+        html = html.replace(/```([\s\S]+?)```/g, (match, code) => {
+            return `<pre><code>${code.trim()}</code></pre>`;
+        });
+
+        // Código inline `code`
+        html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+        // Headers
+        html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+        html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+        html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+        // Bold
+        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+
+        // Italic
+        html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
+
+        // Separador
+        html = html.replace(/^---+$/gm, '<hr>');
+
+        // Blockquote
+        html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+        // Enlaces
+        html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+        // Listas
+        const lines = html.split('\n');
+        const output = [];
+        let inList = false;
+        let listType = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i];
+            const bulletMatch = line.match(/^\s*[•\-]\s+(.+)$/);
+            const numMatch = line.match(/^\s*(\d+)\.\s+(.+)$/);
+
+            if (bulletMatch) {
+                if (!inList || listType !== 'ul') {
+                    if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
+                    output.push('<ul>');
+                    inList = true;
+                    listType = 'ul';
+                }
+                output.push(`<li>${bulletMatch[1]}</li>`);
+            } else if (numMatch) {
+                if (!inList || listType !== 'ol') {
+                    if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
+                    output.push('<ol>');
+                    inList = true;
+                    listType = 'ol';
+                }
+                output.push(`<li>${numMatch[2]}</li>`);
+            } else {
+                if (inList) {
+                    output.push(listType === 'ul' ? '</ul>' : '</ol>');
+                    inList = false;
+                    listType = null;
+                }
+                output.push(line);
+            }
+        }
+        if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
+
+        html = output.join('\n');
+
+        // Párrafos
+        html = html.split('\n\n').map(p => {
+            const trimmed = p.trim();
+            if (!trimmed) return '';
+            if (/^<(h[1-6]|ul|ol|pre|blockquote|hr|table)/.test(trimmed)) return trimmed;
+            return `<p>${trimmed.replace(/\n/g, '<br>')}</p>`;
+        }).join('');
+
+        return html;
+    }
+
+    // ---------- Categorizar respuesta ----------
+    function categorizarRespuesta(texto) {
+        const t = texto.toLowerCase();
+        if (/❌|error|falló|fallo|no se pudo/.test(t)) return 'error';
+        if (/⚠️|advertencia|cuidado|atención/.test(t)) return 'warning';
+        if (/✅|éxito|listo|completado|correcto/.test(t)) return 'success';
+        if (/📊|resumen|totales|estadísticas|reporte/.test(t)) return 'data';
+        if (/ℹ️|info|ayuda/.test(t)) return 'info';
+        return null;
+    }
+
+    // ---------- Typing indicator ----------
     function addTypingIndicator() {
         const container = document.getElementById('adminIaMessages');
         if (!container) return null;
@@ -522,98 +894,510 @@ Prueba preguntarme cosas como:
         el.className = 'ia-message bot';
         el.id = 'iaTypingIndicator';
         el.innerHTML = `
-            <div class="ia-message-avatar"><i class="fas fa-robot"></i></div>
-            <div class="ia-message-content">
-                <div class="ia-typing"><span></span><span></span><span></span></div>
+            <div class="ia-message-avatar online">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="ia-message-wrapper">
+                <div class="ia-message-content">
+                    <div class="ia-typing">
+                        <span></span><span></span><span></span>
+                        <span class="ia-typing-text">Procesando con IA...</span>
+                    </div>
+                </div>
             </div>
         `;
         container.appendChild(el);
-        container.scrollTop = container.scrollHeight;
+        scrollToBottom();
+
+        const brain = document.getElementById('adminIaBrain');
+        if (brain) brain.classList.add('pensando');
+
         return el;
     }
 
     function removeTypingIndicator() {
         const el = document.getElementById('iaTypingIndicator');
         if (el) el.remove();
+
+        const brain = document.getElementById('adminIaBrain');
+        if (brain) brain.classList.remove('pensando');
     }
 
-    function formatBotResponse(text) {
-        // Convertir markdown simple a HTML
-        let html = escapeHtml(text);
-
-        // Negrita **texto**
-        html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-
-        // Código `texto`
-        html = html.replace(/`(.+?)`/g, '<code>$1</code>');
-
-        // Saltos de línea
-        html = html.replace(/\n/g, '<br>');
-
-        // Listas con viñetas
-        html = html.replace(/^• (.+)$/gm, '<li>$1</li>');
-        if (html.includes('<li>')) {
-            html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
-        }
-
-        return html;
-    }
-
+    // ---------- Enviar mensaje ----------
     async function sendIAMessage() {
         const input = document.getElementById('adminIaInput');
         const sendBtn = document.getElementById('adminIaSend');
-        if (!input || !sendBtn) return;
+        if (!input || !sendBtn || IAState.isSending) return;
 
         const message = input.value.trim();
         if (!message) return;
 
-        // Agregar mensaje del usuario
-        addIAMessage('user', message);
+        let conv = getActiveConversation();
+        if (!conv) {
+            const titulo = message.slice(0, 30) + (message.length > 30 ? '...' : '');
+            conv = crearNuevaConversacion(titulo);
+        }
+
+        const userMsg = {
+            role: 'user',
+            content: message,
+            timestamp: Date.now()
+        };
+        conv.mensajes.push(userMsg);
+
+        if (conv.mensajes.length === 1) {
+            conv.titulo = message.slice(0, 30) + (message.length > 30 ? '...' : '');
+            renderConversationTabs();
+        }
+
+        const container = document.getElementById('adminIaMessages');
+        renderMessage(container, userMsg);
+
         input.value = '';
         input.style.height = 'auto';
+        updateCharCounter();
 
-        // Deshabilitar botón mientras procesa
+        saveIAConversations();
+
+        IAState.isSending = true;
+        IAState.startTime = Date.now();
         sendBtn.disabled = true;
+        sendBtn.classList.add('sending');
         addTypingIndicator();
+
+        updateHeaderStatus('pensando', 'Pensando...');
 
         try {
             let response;
 
-            // Si hay webhook de n8n configurado, usarlo
             if (ADMIN_CONFIG.N8N_WEBHOOK_URL) {
                 response = await queryN8N(message);
-            } else {
-                // Motor de IA local basado en SQL
+            }
+
+            if (!response && ADMIN_CONFIG.FALLBACK_TO_LOCAL) {
                 response = await queryLocalAI(message);
             }
 
+            if (!response) {
+                response = '⚠️ No pude procesar tu consulta. Intenta de nuevo.';
+            }
+
+            const latency = Date.now() - IAState.startTime;
+
+            const botMsg = {
+                role: 'bot',
+                content: response,
+                timestamp: Date.now(),
+                latency: latency,
+                categoria: categorizarRespuesta(response)
+            };
+            conv.mensajes.push(botMsg);
+
             removeTypingIndicator();
-            addIAMessage('bot', response);
+            renderMessage(container, botMsg);
+
+            saveIAConversations();
+            updateHeaderStatus('online', 'Online');
+
         } catch (error) {
             console.error('Error en IA:', error);
             removeTypingIndicator();
-            addIAMessage('bot', '❌ Lo siento, hubo un error al procesar tu consulta. Intenta de nuevo.');
+
+            const errorMsg = {
+                role: 'bot',
+                content: `❌ **Error al procesar tu consulta**\n\n${error.message || 'Error desconocido'}\n\n_Intenta de nuevo o verifica la conexión con n8n._`,
+                timestamp: Date.now(),
+                categoria: 'error'
+            };
+            conv.mensajes.push(errorMsg);
+            renderMessage(container, errorMsg);
+            saveIAConversations();
+            updateHeaderStatus('offline', 'Error');
+
         } finally {
+            IAState.isSending = false;
             sendBtn.disabled = false;
+            sendBtn.classList.remove('sending');
             input.focus();
         }
     }
 
+    // ---------- Header Status ----------
+    function updateHeaderStatus(status, text) {
+        const pill = document.getElementById('adminIaStatusPill');
+        const textEl = document.getElementById('adminIaStatusText');
+        if (!pill || !textEl) return;
+
+        pill.classList.remove('offline', 'checking');
+        if (status === 'offline') pill.classList.add('offline');
+        if (status === 'checking') pill.classList.add('checking');
+        textEl.textContent = text;
+    }
+
+    // ---------- Verificar conexión n8n ----------
+    async function checkIAN8NConnection() {
+        updateHeaderStatus('checking', 'Verificando...');
+
+        if (!ADMIN_CONFIG.N8N_WEBHOOK_URL) {
+            updateHeaderStatus('offline', 'Motor local');
+            return;
+        }
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000);
+
+            const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: '__ping__', ping: true }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+                updateHeaderStatus('online', 'Conectado');
+            } else {
+                throw new Error('HTTP ' + response.status);
+            }
+        } catch (error) {
+            console.warn('n8n no responde al ping:', error);
+            updateHeaderStatus('offline', 'Sin conexión');
+        }
+    }
+
+    // ---------- Contador de caracteres ----------
+    function updateCharCounter() {
+        const input = document.getElementById('adminIaInput');
+        const counter = document.getElementById('adminIaCharCounter');
+        if (!input || !counter) return;
+        const len = input.value.length;
+        counter.textContent = len > 0 ? `${len}/2000` : '';
+        counter.style.color = len > 1800 ? '#EF4444' : '';
+    }
+
+    // ---------- Acciones del header ----------
+    function setupIAHeaderActions() {
+        document.getElementById('adminIaNewBtn')?.addEventListener('click', () => {
+            crearNuevaConversacion('Nueva conversación');
+            renderActiveConversation();
+            document.getElementById('adminIaInput')?.focus();
+        });
+
+        document.getElementById('adminIaConvsBtn')?.addEventListener('click', () => {
+            const convs = document.getElementById('adminIaConvs');
+            const btn = document.getElementById('adminIaConvsBtn');
+            if (!convs || !btn) return;
+            IAState.isConvsOpen = !IAState.isConvsOpen;
+            convs.classList.toggle('active', IAState.isConvsOpen);
+            btn.classList.toggle('active', IAState.isConvsOpen);
+            renderConversationTabs();
+        });
+
+        document.getElementById('adminIaSearchBtn')?.addEventListener('click', () => {
+            const search = document.getElementById('adminIaSearch');
+            const btn = document.getElementById('adminIaSearchBtn');
+            const input = document.getElementById('adminIaSearchInput');
+            if (!search || !btn) return;
+            IAState.isSearchOpen = !IAState.isSearchOpen;
+            search.classList.toggle('active', IAState.isSearchOpen);
+            btn.classList.toggle('active', IAState.isSearchOpen);
+            if (IAState.isSearchOpen) input?.focus();
+            else if (input) { input.value = ''; buscarEnConversacion(''); }
+        });
+
+        document.getElementById('adminIaSearchInput')?.addEventListener('input', (e) => {
+            buscarEnConversacion(e.target.value.toLowerCase());
+        });
+
+        document.getElementById('adminIaCompactBtn')?.addEventListener('click', () => {
+            const container = document.getElementById('adminIaContainer');
+            const btn = document.getElementById('adminIaCompactBtn');
+            if (!container || !btn) return;
+            IAState.isCompact = !IAState.isCompact;
+            container.classList.toggle('compacto', IAState.isCompact);
+            btn.classList.toggle('active', IAState.isCompact);
+        });
+
+        document.getElementById('adminIaExportBtn')?.addEventListener('click', exportarConversacion);
+
+        document.getElementById('adminIaClearBtn')?.addEventListener('click', () => {
+            const conv = getActiveConversation();
+            if (!conv || conv.mensajes.length === 0) return;
+            if (!confirm('¿Limpiar esta conversación? No se puede deshacer.')) return;
+            conv.mensajes = [];
+            saveIAConversations();
+            renderActiveConversation();
+            showToast('🗑️ Conversación limpiada', 'success');
+        });
+
+        document.getElementById('adminIaVoiceBtn')?.addEventListener('click', iniciarDictadoVoz);
+    }
+
+    function buscarEnConversacion(query) {
+        const container = document.getElementById('adminIaMessages');
+        if (!container) return;
+
+        container.querySelectorAll('.ia-message-content mark').forEach(mark => {
+            const parent = mark.parentNode;
+            parent.replaceChild(document.createTextNode(mark.textContent), mark);
+            parent.normalize();
+        });
+
+        if (!query || query.length < 2) return;
+
+        container.querySelectorAll('.ia-message-content').forEach(content => {
+            const walker = document.createTreeWalker(content, NodeFilter.SHOW_TEXT);
+            const matches = [];
+            let node;
+            while (node = walker.nextNode()) {
+                if (node.textContent.toLowerCase().includes(query)) {
+                    matches.push(node);
+                }
+            }
+            matches.forEach(textNode => {
+                const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+                const parts = textNode.textContent.split(regex);
+                const fragment = document.createDocumentFragment();
+                parts.forEach(part => {
+                    if (part.toLowerCase() === query) {
+                        const mark = document.createElement('mark');
+                        mark.style.background = '#FEF3C7';
+                        mark.style.padding = '1px 2px';
+                        mark.style.borderRadius = '2px';
+                        mark.textContent = part;
+                        fragment.appendChild(mark);
+                    } else {
+                        fragment.appendChild(document.createTextNode(part));
+                    }
+                });
+                textNode.parentNode.replaceChild(fragment, textNode);
+            });
+        });
+    }
+
+    function exportarConversacion() {
+        const conv = getActiveConversation();
+        if (!conv || conv.mensajes.length === 0) {
+            showToast('No hay conversación para exportar', 'error');
+            return;
+        }
+
+        const contenido = conv.mensajes.map(m => {
+            const fecha = new Date(m.timestamp).toLocaleString('es-ES');
+            const quien = m.role === 'user' ? 'TÚ' : 'IA';
+            return `[${fecha}] ${quien}:\n${m.content}\n`;
+        }).join('\n---\n\n');
+
+        const header = `Conversación IVENMEX - ${conv.titulo}\nFecha: ${new Date().toLocaleString('es-ES')}\n${'='.repeat(60)}\n\n`;
+
+        const blob = new Blob([header + contenido], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `ivenmex-conversacion-${Date.now()}.txt`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showToast('📥 Conversación exportada', 'success');
+    }
+
+    function iniciarDictadoVoz() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            showToast('Dictado por voz no soportado en este navegador', 'error');
+            return;
+        }
+
+        const btn = document.getElementById('adminIaVoiceBtn');
+        const input = document.getElementById('adminIaInput');
+        if (!btn || !input) return;
+
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'es-ES';
+        recognition.continuous = false;
+        recognition.interimResults = true;
+
+        btn.style.background = '#EF4444';
+        btn.style.color = 'white';
+
+        recognition.onresult = (event) => {
+            let transcript = '';
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            input.value = transcript;
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+            updateCharCounter();
+        };
+
+        recognition.onerror = (e) => {
+            console.warn('Error de reconocimiento:', e);
+            showToast('Error en dictado por voz', 'error');
+        };
+
+        recognition.onend = () => {
+            btn.style.background = '';
+            btn.style.color = '';
+            input.focus();
+        };
+
+        try {
+            recognition.start();
+            showToast('🎤 Escuchando...', 'success');
+        } catch (e) {
+            btn.style.background = '';
+            btn.style.color = '';
+        }
+    }
+
+    // ---------- Init IA ----------
+    function initIA() {
+        const guardadas = loadIAConversations();
+        if (guardadas.length > 0) {
+            IAState.conversations = guardadas;
+            IAState.activeConvId = guardadas[guardadas.length - 1].id;
+        } else {
+            crearNuevaConversacion('Conversación inicial');
+        }
+
+        renderConversationTabs();
+        renderActiveConversation();
+
+        if (!IAState._listenersSet) {
+            IAState._listenersSet = true;
+            setupIAHeaderActions();
+            setupIAInputListeners();
+            setupIASuggestionListeners();
+        }
+
+        checkIAN8NConnection();
+    }
+
+    function setupIAInputListeners() {
+        const input = document.getElementById('adminIaInput');
+        const sendBtn = document.getElementById('adminIaSend');
+        if (!input) return;
+
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendIAMessage();
+            }
+        });
+
+        input.addEventListener('input', () => {
+            input.style.height = 'auto';
+            input.style.height = Math.min(input.scrollHeight, 140) + 'px';
+            updateCharCounter();
+        });
+
+        sendBtn?.addEventListener('click', sendIAMessage);
+    }
+
+    function setupIASuggestionListeners() {
+        document.querySelectorAll('.admin-ia-suggestion').forEach(btn => {
+            if (btn._listenerSet) return;
+            btn._listenerSet = true;
+            btn.addEventListener('click', () => {
+                const input = document.getElementById('adminIaInput');
+                if (input) {
+                    input.value = btn.dataset.query || btn.textContent.trim();
+                    sendIAMessage();
+                }
+            });
+        });
+    }
+
     // ==========================================
-    // MOTOR DE IA LOCAL (sin n8n)
-    // Analiza la pregunta y consulta Supabase
+    // CONSULTA A N8N
+    // ==========================================
+    async function queryN8N(question) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+        try {
+            const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: question,
+                    history: AdminState.conversationHistory.slice(-5),
+                    timestamp: new Date().toISOString(),
+                    source: 'dashboard-admin'
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+            }
+
+            const data = await response.json();
+
+            let respuesta =
+                data.response ||
+                data.output ||
+                data.message ||
+                data.text ||
+                data.answer ||
+                (Array.isArray(data) && data[0]?.response) ||
+                (Array.isArray(data) && data[0]?.output) ||
+                (Array.isArray(data) && data[0]?.mensaje);
+
+            if (respuesta && typeof respuesta === 'object') {
+                respuesta = respuesta.text || respuesta.content || JSON.stringify(respuesta);
+            }
+
+            if (!respuesta) {
+                console.warn('Respuesta n8n sin formato esperado:', data);
+                respuesta = '⚠️ El webhook respondió pero sin contenido reconocible.';
+            }
+
+            return respuesta;
+        } catch (error) {
+            clearTimeout(timeoutId);
+
+            if (error.name === 'AbortError') {
+                console.error('Timeout consultando n8n (60s)');
+                throw new Error('El asistente tardó demasiado en responder. Intenta de nuevo.');
+            }
+
+            console.error('Error consultando n8n:', error);
+
+            if (ADMIN_CONFIG.FALLBACK_TO_LOCAL) {
+                console.warn('⚠️ Fallback al motor local');
+                return await queryLocalAI(question);
+            }
+
+            throw error;
+        }
+    }
+
+    // ==========================================
+    // MOTOR DE IA LOCAL (fallback)
     // ==========================================
     async function queryLocalAI(question) {
         const q = question.toLowerCase();
+        const sb = getSupabase();
 
         // ===== CLIENTES =====
         if (/(cuántos|cuantos|numero|número|total).*clientes?/.test(q) || /clientes.*total/.test(q)) {
-            const { count } = await supabase.from('clientes').select('*', { count: 'exact', head: true });
+            const { count } = await sb.from('clientes').select('*', { count: 'exact', head: true });
             return `📊 Actualmente tienes **${count || 0} clientes** registrados en el sistema.`;
         }
 
         if (/(lista|muestra|ver|dame|cuáles|cuales).*clientes?/.test(q)) {
-            const { data } = await supabase.from('clientes').select('id, nombre, telefono, email').limit(20).order('nombre');
+            const { data } = await sb.from('clientes').select('id, nombre, telefono, email').limit(20).order('nombre');
             if (!data || data.length === 0) return '📭 No hay clientes registrados.';
 
             let respuesta = `📋 **Clientes registrados** (mostrando ${data.length}):\n\n`;
@@ -626,26 +1410,14 @@ Prueba preguntarme cosas como:
             return respuesta;
         }
 
-        if (/buscar.*cliente|cliente.*llamado|cliente.*nombre/.test(q)) {
-            const match = question.match(/(?:llamado|nombre|cliente)\s+["']?([A-Za-záéíóúñÁÉÍÓÚÑ\s]+)["']?/i);
-            if (match) {
-                const termino = match[1].trim();
-                const { data } = await supabase.from('clientes').select('*').ilike('nombre', `%${termino}%`).limit(10);
-                if (!data || data.length === 0) return `🔍 No encontré clientes que coincidan con "${termino}".`;
-                return `🔍 **Encontré ${data.length} cliente(s):**\n\n` + data.map(c =>
-                    `• **${c.nombre}** - 📞 ${c.telefono || 'N/A'} - 📧 ${c.email || 'N/A'}`
-                ).join('\n');
-            }
-        }
-
         // ===== PEDIDOS =====
         if (/(cuántos|cuantos|total).*pedidos?/.test(q)) {
-            const { count } = await supabase.from('pedidos').select('*', { count: 'exact', head: true });
+            const { count } = await sb.from('pedidos').select('*', { count: 'exact', head: true });
             return `📊 Hay **${count || 0} pedidos** en total en el sistema.`;
         }
 
         if (/pedidos?.*urgentes?|urgentes?/.test(q)) {
-            const { data } = await supabase.from('pedidos')
+            const { data } = await sb.from('pedidos')
                 .select('id, estado, clientes(nombre), fecha_entrega_prometida, observaciones')
                 .eq('prioridad', 'urgente')
                 .not('estado', 'in', '(entregado,cancelado)')
@@ -658,7 +1430,7 @@ Prueba preguntarme cosas como:
         }
 
         if (/pedidos?.*(activos?|pendientes?)/.test(q)) {
-            const { data } = await supabase.from('pedidos')
+            const { data } = await sb.from('pedidos')
                 .select('id, estado, clientes(nombre)')
                 .not('estado', 'in', '(entregado,cancelado)')
                 .limit(20);
@@ -669,81 +1441,22 @@ Prueba preguntarme cosas como:
             ).join('\n');
         }
 
-        if (/pedidos?.*(hoy|día|dia)/.test(q)) {
-            const hoy = new Date().toISOString().split('T')[0];
-            const { data } = await supabase.from('pedidos')
-                .select('id, estado, clientes(nombre), fecha_solicitud')
-                .gte('fecha_solicitud', hoy)
-                .limit(20);
-
-            if (!data || data.length === 0) return '📭 No hay pedidos registrados hoy.';
-            return `📅 **Pedidos de hoy** (${data.length}):\n\n` + data.map(p =>
-                `• **#${p.id}** - ${p.clientes?.nombre || 'Sin cliente'} - ${p.estado}`
-            ).join('\n');
-        }
-
         // ===== VENTAS =====
         if (/(cuánto|cuanto|total).*(vendido|ventas?|ingresos?|facturado)/.test(q)) {
-            const { data } = await supabase.from('pagos').select('monto');
+            const { data } = await sb.from('pagos').select('monto');
             const total = (data || []).reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
             return `💰 **Ventas totales:** ${formatCurrency(total)}\n\n📊 Basado en **${data?.length || 0} pagos** registrados.`;
         }
 
-        if (/ventas?.*(mes|meses|último mes)/.test(q)) {
-            const hace30 = new Date();
-            hace30.setDate(hace30.getDate() - 30);
-            const { data } = await supabase.from('pagos')
-                .select('monto, fecha_pago')
-                .gte('fecha_pago', hace30.toISOString());
-
-            const total = (data || []).reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
-            return `📅 **Ventas últimos 30 días:** ${formatCurrency(total)}\n\n📊 **${data?.length || 0}** pagos registrados en este período.`;
-        }
-
-        if (/ventas?.*(hoy|día|dia)/.test(q)) {
-            const hoy = new Date().toISOString().split('T')[0];
-            const { data } = await supabase.from('pagos')
-                .select('monto')
-                .gte('fecha_pago', hoy);
-
-            const total = (data || []).reduce((sum, p) => sum + (parseFloat(p.monto) || 0), 0);
-            return `💵 **Ventas de hoy:** ${formatCurrency(total)}\n\n📊 **${data?.length || 0}** pagos registrados.`;
-        }
-
         // ===== PRODUCTOS =====
         if (/(cuántos|cuantos|total).*productos?/.test(q)) {
-            const { count } = await supabase.from('productos').select('*', { count: 'exact', head: true });
+            const { count } = await sb.from('productos').select('*', { count: 'exact', head: true });
             return `📦 Tienes **${count || 0} productos** en el catálogo.`;
         }
 
-        if (/(lista|muestra|ver|dame|cuáles|cuales).*productos?/.test(q)) {
-            const { data } = await supabase.from('productos').select('id, nombre, categoria, precio_unitario, precio_por_m2').eq('activo', true).limit(20);
-            if (!data || data.length === 0) return '📭 No hay productos activos.';
-
-            let respuesta = `📦 **Productos activos** (${data.length}):\n\n`;
-            data.forEach(p => {
-                const precio = p.precio_por_m2 ? `${formatCurrency(p.precio_por_m2)}/m²` : formatCurrency(p.precio_unitario || 0);
-                respuesta += `• **${p.nombre}** (${p.categoria || 'Sin categoría'}) - ${precio}\n`;
-            });
-            return respuesta;
-        }
-
         // ===== INVENTARIO =====
-        if (/(inventario|materiales?|stock)/.test(q)) {
-            const { data } = await supabase.from('inventario_materiales').select('*').order('nombre');
-            if (!data || data.length === 0) return '📭 No hay materiales en inventario.';
-
-            let respuesta = `📦 **Inventario de materiales** (${data.length}):\n\n`;
-            data.slice(0, 15).forEach(m => {
-                const alerta = parseFloat(m.stock_actual) <= parseFloat(m.stock_minimo) ? ' ⚠️' : '';
-                respuesta += `• **${m.nombre}**: ${m.stock_actual} ${m.unidad_medida || ''}${alerta}\n`;
-            });
-            if (data.length > 15) respuesta += `\n_... y ${data.length - 15} materiales más._`;
-            return respuesta;
-        }
-
         if (/stock.*bajo|materiales?.*(bajo|bajos|agotar|agotado)/.test(q)) {
-            const { data } = await supabase.from('inventario_materiales').select('*');
+            const { data } = await sb.from('inventario_materiales').select('*');
             const bajos = (data || []).filter(m => parseFloat(m.stock_actual) <= parseFloat(m.stock_minimo));
 
             if (bajos.length === 0) return '✅ Todos los materiales tienen stock suficiente.';
@@ -752,28 +1465,14 @@ Prueba preguntarme cosas como:
             ).join('\n');
         }
 
-        // ===== EMPLEADOS =====
-        if (/(cuántos|cuantos|total).*empleados?/.test(q)) {
-            const { count } = await supabase.from('empleados').select('*', { count: 'exact', head: true }).eq('activo', true);
-            return `👥 Tienes **${count || 0} empleados activos**.`;
-        }
-
-        if (/(lista|muestra|ver|dame).*empleados?/.test(q)) {
-            const { data } = await supabase.from('empleados').select('nombre, apellido, cargo, email').eq('activo', true);
-            if (!data || data.length === 0) return '📭 No hay empleados activos.';
-            return `👥 **Empleados activos** (${data.length}):\n\n` + data.map(e =>
-                `• **${e.nombre} ${e.apellido || ''}** - ${e.cargo || 'Sin cargo'}`
-            ).join('\n');
-        }
-
-        // ===== REPORTES =====
+        // ===== RESUMEN =====
         if (/(resumen|reporte|estadísticas?|estadisticas?|dashboard)/.test(q)) {
             const [clientes, pedidos, productos, ventasData, pedidosData] = await Promise.all([
-                supabase.from('clientes').select('*', { count: 'exact', head: true }),
-                supabase.from('pedidos').select('*', { count: 'exact', head: true }),
-                supabase.from('productos').select('*', { count: 'exact', head: true }),
-                supabase.from('pagos').select('monto'),
-                supabase.from('pedidos').select('estado, prioridad')
+                sb.from('clientes').select('*', { count: 'exact', head: true }),
+                sb.from('pedidos').select('*', { count: 'exact', head: true }),
+                sb.from('productos').select('*', { count: 'exact', head: true }),
+                sb.from('pagos').select('monto'),
+                sb.from('pedidos').select('estado, prioridad')
             ]);
 
             const totalVentas = (ventasData.data || []).reduce((s, p) => s + (parseFloat(p.monto) || 0), 0);
@@ -799,7 +1498,7 @@ Prueba preguntarme cosas como:
                 `• "Lista los productos activos"\n` +
                 `• "¿Qué materiales tienen stock bajo?"\n` +
                 `• "Dame un resumen general"\n\n` +
-                `💡 **Tip:** Puedes hacer preguntas más específicas como "buscar cliente Juan" o "ventas del último mes".`;
+                `💡 **Tip:** También puedes conectar n8n para IA avanzada.`;
         }
 
         // ===== SALUDO =====
@@ -807,7 +1506,7 @@ Prueba preguntarme cosas como:
             return `¡Hola! 👋 ¿En qué puedo ayudarte hoy?\n\nPrueba preguntarme sobre clientes, pedidos, ventas, productos o inventario.`;
         }
 
-        // ===== RESPUESTA POR DEFECTO =====
+        // ===== DEFAULT =====
         return `🤔 No estoy seguro de cómo responder a eso.\n\nIntenta con:\n` +
             `• "¿Cuántos clientes tengo?"\n` +
             `• "Muéstrame los pedidos urgentes"\n` +
@@ -817,40 +1516,10 @@ Prueba preguntarme cosas como:
     }
 
     // ==========================================
-    // CONSULTA A N8N (si está configurado)
-    // ==========================================
-    async function queryN8N(question) {
-        try {
-            const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: question,
-                    history: AdminState.conversationHistory.slice(-5),
-                    timestamp: new Date().toISOString()
-                })
-            });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-            const data = await response.json();
-
-            // Soportar múltiples formatos de respuesta
-            return data.response || data.message || data.output || data.text || JSON.stringify(data);
-        } catch (error) {
-            console.error('Error consultando n8n:', error);
-            // Fallback al motor local
-            return await queryLocalAI(question);
-        }
-    }
-
-    // ==========================================
     // UTILIDADES
     // ==========================================
     function escapeHtml(text) {
-        if (!text) return '';
+        if (text === null || text === undefined) return '';
         const div = document.createElement('div');
         div.textContent = String(text);
         return div.innerHTML;
@@ -879,17 +1548,27 @@ Prueba preguntarme cosas como:
 
     function getEstadoClass(estado) {
         const map = {
-            urgente: 'danger', en_produccion: 'warning', diseño: 'primary',
-            control_calidad: 'default', cotizando: 'default', listo: 'success',
-            entregado: 'success', cancelado: 'default'
+            urgente: 'danger',
+            en_produccion: 'warning',
+            diseño: 'primary',
+            control_calidad: 'default',
+            cotizando: 'default',
+            listo: 'success',
+            entregado: 'success',
+            cancelado: 'default'
         };
         return map[estado] || 'default';
     }
 
     function getEstadoLabel(estado) {
         const map = {
-            cotizando: 'Cotizando', diseño: 'En Diseño', en_produccion: 'Producción',
-            control_calidad: 'Control de Calidad', listo: 'Listo', entregado: 'Entregado', cancelado: 'Cancelado'
+            cotizando: 'Cotizando',
+            diseño: 'En Diseño',
+            en_produccion: 'Producción',
+            control_calidad: 'Control de Calidad',
+            listo: 'Listo',
+            entregado: 'Entregado',
+            cancelado: 'Cancelado'
         };
         return map[estado] || estado || '-';
     }
@@ -915,36 +1594,12 @@ Prueba preguntarme cosas como:
             item.addEventListener('click', () => switchView(item.dataset.view));
         });
 
-        // IA
-        document.getElementById('adminIaSend')?.addEventListener('click', sendIAMessage);
-        document.getElementById('adminIaInput')?.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendIAMessage();
-            }
-        });
-        document.getElementById('adminIaInput')?.addEventListener('input', (e) => {
-            e.target.style.height = 'auto';
-            e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-        });
-
-        // Sugerencias IA
-        document.querySelectorAll('.admin-ia-suggestion').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const input = document.getElementById('adminIaInput');
-                if (input) {
-                    input.value = btn.dataset.query || btn.textContent;
-                    sendIAMessage();
-                }
-            });
-        });
-
-        // Escape para cerrar
+        // Esc para cerrar login
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape' && AdminState.isAuthenticated) {
-                const loginOverlay = document.getElementById('adminLoginOverlay');
-                if (!loginOverlay?.classList.contains('active')) {
-                    // Solo cerrar si no está en login
+            if (e.key === 'Escape') {
+                const overlay = document.getElementById('adminLoginOverlay');
+                if (overlay?.classList.contains('active')) {
+                    closeLogin();
                 }
             }
         });
@@ -954,16 +1609,25 @@ Prueba preguntarme cosas como:
     // INICIALIZACIÓN
     // ==========================================
     function init() {
-        if (!window.supabaseClient) {
-            console.warn('⚠️ adminPanel: supabaseClient no disponible, reintentando...');
-            setTimeout(init, 500);
-            return;
-        }
+        let intentos = 0;
+        const maxIntentos = 20;
 
-        setupSecretTrigger();
-        setupEventListeners();
-
-        console.log('🔐 Panel Admin inicializado. Click 5 veces en el logo o Ctrl+Shift+A para acceder.');
+        const esperar = () => {
+            intentos++;
+            if (window.supabaseClient) {
+                console.log('✅ adminPanel: Supabase detectado, inicializando...');
+                setupSecretTrigger();
+                setupEventListeners();
+                console.log('🔐 Panel Admin listo. Click 5 veces en el logo o Ctrl+Shift+A.');
+                return;
+            }
+            if (intentos >= maxIntentos) {
+                console.error('❌ adminPanel: Supabase nunca se inicializó');
+                return;
+            }
+            setTimeout(esperar, 500);
+        };
+        esperar();
     }
 
     if (document.readyState === 'loading') {
@@ -972,11 +1636,15 @@ Prueba preguntarme cosas como:
         init();
     }
 
-    // Exponer API pública
+    // ==========================================
+    // API PÚBLICA
+    // ==========================================
     window.AdminPanel = {
         open: openLogin,
         close: closeAdminPanel,
         logout,
-        switchView
+        switchView,
+        reload: () => switchView(AdminState.currentView)
     };
+
 }());
