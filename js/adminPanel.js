@@ -1,6 +1,6 @@
 /* ==========================================
    IVENMEX - PANEL ADMIN OCULTO
-   v2.1 - Saneamiento + Lógica inventario
+   v3.0 - IA conversacional real (todo en n8n)
    ========================================== */
 
 (function () {
@@ -10,31 +10,41 @@
     // CONFIGURACIÓN
     // ==========================================
     const ADMIN_CONFIG = {
-        // 🔒 CAMBIA ESTA CONTRASEÑA
         PASSWORD_HASH: 'ivenmex2024',
         SESSION_KEY: 'ivx_admin_session',
-        SESSION_DURATION: 2 * 60 * 60 * 1000, // 2 horas
+        SESSION_DURATION: 2 * 60 * 60 * 1000,
 
         // 🤖 URL DEL WEBHOOK DE N8N
-        // ⚠️ Verifica que el dominio esté bien escrito (sin espacios)
         N8N_WEBHOOK_URL: 'https://n8n.aguasdgu anipa.com/webhook/admin-chat',
 
-        FALLBACK_TO_LOCAL: true
+        // Timeout de respuesta (ms)
+        IA_TIMEOUT: 90000
     };
 
     // ==========================================
-    // ESTADO GLOBAL
+    // ESTADO
     // ==========================================
     const AdminState = {
         isAuthenticated: false,
         currentView: 'dashboard',
         clickCount: 0,
-        clickTimer: null,
-        conversationHistory: []
+        clickTimer: null
+    };
+
+    const IAState = {
+        conversations: [],
+        activeConvId: null,
+        isSearchOpen: false,
+        isCompact: false,
+        isConvsOpen: false,
+        isSending: false,
+        startTime: null,
+        storageKey: 'ivx_ia_conversations',
+        _listenersSet: false
     };
 
     // ==========================================
-    // UTILIDADES GLOBALES
+    // HELPERS
     // ==========================================
     function escapeHtml(text) {
         if (text === null || text === undefined) return '';
@@ -54,9 +64,7 @@
             return new Date(dateStr).toLocaleDateString('es-ES', {
                 year: 'numeric', month: 'short', day: 'numeric'
             });
-        } catch {
-            return '-';
-        }
+        } catch { return '-'; }
     }
 
     function setText(id, value) {
@@ -64,28 +72,12 @@
         if (el) el.textContent = value;
     }
 
-    // ==========================================
-    // SANEAMIENTO: nunca valores negativos
-    // ==========================================
     function sanitizeNumber(valor, defecto = 0) {
         const num = parseFloat(valor);
         if (isNaN(num) || num < 0) return defecto;
         return num;
     }
 
-    function sanitizeMoney(valor) {
-        return sanitizeNumber(valor, 0);
-    }
-
-    function sanitizeInt(valor) {
-        const num = parseInt(valor, 10);
-        if (isNaN(num) || num < 0) return 0;
-        return num;
-    }
-
-    // ==========================================
-    // TOASTS ADMIN
-    // ==========================================
     function showToast(message, type = 'success') {
         const toast = document.createElement('div');
         toast.className = `admin-toast ${type}`;
@@ -100,18 +92,15 @@
     }
 
     // ==========================================
-    // GESTIÓN DE SESIÓN
+    // SESIÓN
     // ==========================================
     function saveSession() {
-        const session = {
-            timestamp: Date.now(),
-            expires: Date.now() + ADMIN_CONFIG.SESSION_DURATION
-        };
         try {
-            sessionStorage.setItem(ADMIN_CONFIG.SESSION_KEY, JSON.stringify(session));
-        } catch (e) {
-            console.warn('No se pudo guardar la sesión:', e);
-        }
+            sessionStorage.setItem(ADMIN_CONFIG.SESSION_KEY, JSON.stringify({
+                timestamp: Date.now(),
+                expires: Date.now() + ADMIN_CONFIG.SESSION_DURATION
+            }));
+        } catch (e) {}
     }
 
     function checkSession() {
@@ -124,45 +113,33 @@
                 return false;
             }
             return true;
-        } catch (e) {
-            return false;
-        }
+        } catch { return false; }
     }
 
     function clearSession() {
-        try {
-            sessionStorage.removeItem(ADMIN_CONFIG.SESSION_KEY);
-        } catch (e) {}
+        try { sessionStorage.removeItem(ADMIN_CONFIG.SESSION_KEY); } catch (e) {}
         AdminState.isAuthenticated = false;
     }
 
     // ==========================================
-    // DETECCIÓN DE CLICK SECRETO EN EL LOGO
+    // TRIGGER SECRETO
     // ==========================================
     function setupSecretTrigger() {
         const logo = document.querySelector('.md-toolbar-brand');
-        if (!logo) {
-            console.warn('⚠️ adminPanel: No se encontró .md-toolbar-brand');
-            return;
-        }
+        if (!logo) return;
 
         logo.style.cursor = 'pointer';
         logo.addEventListener('click', (e) => {
             e.preventDefault();
             AdminState.clickCount++;
-
             clearTimeout(AdminState.clickTimer);
-            AdminState.clickTimer = setTimeout(() => {
-                AdminState.clickCount = 0;
-            }, 1500);
-
+            AdminState.clickTimer = setTimeout(() => { AdminState.clickCount = 0; }, 1500);
             if (AdminState.clickCount >= 5) {
                 AdminState.clickCount = 0;
                 openLogin();
             }
         });
 
-        // Atajo: Ctrl+Shift+A
         document.addEventListener('keydown', (e) => {
             if (e.ctrlKey && e.shiftKey && e.key === 'A') {
                 e.preventDefault();
@@ -180,14 +157,10 @@
             openAdminPanel();
             return;
         }
-
         const overlay = document.getElementById('adminLoginOverlay');
         if (overlay) {
             overlay.classList.add('active');
-            setTimeout(() => {
-                const input = document.getElementById('adminPasswordInput');
-                if (input) input.focus();
-            }, 100);
+            setTimeout(() => document.getElementById('adminPasswordInput')?.focus(), 100);
         }
     }
 
@@ -207,9 +180,7 @@
         const error = document.getElementById('adminLoginError');
         if (!input || !error) return;
 
-        const password = input.value.trim();
-
-        if (password === ADMIN_CONFIG.PASSWORD_HASH) {
+        if (input.value.trim() === ADMIN_CONFIG.PASSWORD_HASH) {
             AdminState.isAuthenticated = true;
             saveSession();
             error.textContent = '';
@@ -221,22 +192,18 @@
             input.value = '';
             input.focus();
             input.style.borderColor = '#EF4444';
-            setTimeout(() => {
-                input.style.borderColor = '';
-            }, 1000);
+            setTimeout(() => { input.style.borderColor = ''; }, 1000);
         }
     }
 
     // ==========================================
-    // PANEL ADMIN
+    // PANEL
     // ==========================================
     function openAdminPanel() {
         const panel = document.getElementById('adminPanel');
         if (!panel) return;
-
         panel.classList.add('active');
         document.body.style.overflow = 'hidden';
-
         switchView('dashboard');
     }
 
@@ -252,16 +219,11 @@
         showToast('👋 Sesión cerrada', 'success');
     }
 
-    // ==========================================
-    // NAVEGACIÓN ENTRE VISTAS
-    // ==========================================
     function switchView(viewName) {
         AdminState.currentView = viewName;
-
         document.querySelectorAll('.admin-nav-item').forEach(item => {
             item.classList.toggle('active', item.dataset.view === viewName);
         });
-
         document.querySelectorAll('.admin-view').forEach(view => {
             view.classList.toggle('active', view.id === `adminView-${viewName}`);
         });
@@ -278,7 +240,7 @@
     }
 
     // ==========================================
-    // OBTENER CLIENTE SUPABASE DINÁMICAMENTE
+    // SUPABASE
     // ==========================================
     function getSupabase() {
         if (!window.supabaseClient) {
@@ -288,13 +250,11 @@
     }
 
     // ==========================================
-    // DASHBOARD STATS
+    // CARGA DE DATOS
     // ==========================================
     async function loadDashboardStats() {
         try {
             const sb = getSupabase();
-            console.log('📊 Cargando estadísticas del dashboard...');
-
             const [clientesRes, pedidosRes, ventasRes, productosRes] = await Promise.all([
                 sb.from('clientes').select('*', { count: 'exact', head: true }),
                 sb.from('pedidos').select('*', { count: 'exact', head: true }),
@@ -302,14 +262,11 @@
                 sb.from('productos').select('*', { count: 'exact', head: true })
             ]);
 
-            const totalClientes = clientesRes.count || 0;
-            const totalPedidos = pedidosRes.count || 0;
-            const totalProductos = productosRes.count || 0;
-            const totalVentas = (ventasRes.data || []).reduce((sum, p) => sum + sanitizeMoney(p.monto), 0);
+            const totalVentas = (ventasRes.data || []).reduce((sum, p) => sum + sanitizeNumber(p.monto), 0);
 
-            setText('adminStatClientes', totalClientes);
-            setText('adminStatPedidos', totalPedidos);
-            setText('adminStatProductos', totalProductos);
+            setText('adminStatClientes', clientesRes.count || 0);
+            setText('adminStatPedidos', pedidosRes.count || 0);
+            setText('adminStatProductos', productosRes.count || 0);
             setText('adminStatVentas', formatCurrency(totalVentas));
 
             const { data: pedidosData } = await sb.from('pedidos').select('estado, prioridad');
@@ -322,40 +279,25 @@
 
             setText('adminStatActivos', activos);
             setText('adminStatUrgentes', urgentes);
-
-            console.log(`✅ Stats: ${totalClientes} clientes, ${totalPedidos} pedidos, ${activos} activos, ${urgentes} urgentes`);
         } catch (error) {
-            console.error('❌ Error cargando stats:', error);
-            showToast('Error al cargar estadísticas: ' + error.message, 'error');
+            console.error('Error stats:', error);
+            showToast('Error al cargar estadísticas', 'error');
         }
     }
 
-    // ==========================================
-    // CLIENTES
-    // ==========================================
     async function loadClientes() {
         try {
-            const sb = getSupabase();
-            console.log('👥 Cargando clientes...');
-
-            const { data, error } = await sb
-                .from('clientes')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .limit(500);
-
+            const { data, error } = await getSupabase()
+                .from('clientes').select('*')
+                .order('created_at', { ascending: false }).limit(500);
             if (error) throw error;
-
-            console.log(`✅ ${data?.length || 0} clientes cargados`);
 
             const tbody = document.getElementById('adminTablaClientes');
             if (!tbody) return;
-
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-users"></i>No hay clientes registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-users"></i>No hay clientes</td></tr>';
                 return;
             }
-
             tbody.innerHTML = data.map(c => `
                 <tr>
                     <td><strong>#${c.id}</strong></td>
@@ -367,48 +309,27 @@
                 </tr>
             `).join('');
         } catch (error) {
-            console.error('❌ Error cargando clientes:', error);
-            const tbody = document.getElementById('adminTablaClientes');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
-                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
-                </td></tr>`;
-            }
+            console.error('Error clientes:', error);
             showToast('Error al cargar clientes', 'error');
         }
     }
 
-    // ==========================================
-    // PEDIDOS
-    // ==========================================
     async function loadPedidos() {
         try {
-            const sb = getSupabase();
-            console.log('📋 Cargando pedidos...');
-
-            const { data, error } = await sb
+            const { data, error } = await getSupabase()
                 .from('pedidos')
-                .select(`
-                    id, estado, prioridad, total, anticipo, fecha_solicitud,
-                    fecha_entrega_prometida, observaciones,
-                    clientes (nombre),
-                    detalles_pedido (cantidad, productos (nombre))
-                `)
-                .order('fecha_solicitud', { ascending: false })
-                .limit(200);
-
+                .select(`id, estado, prioridad, total, anticipo, fecha_solicitud,
+                         fecha_entrega_prometida, clientes (nombre),
+                         detalles_pedido (cantidad, productos (nombre))`)
+                .order('fecha_solicitud', { ascending: false }).limit(200);
             if (error) throw error;
-
-            console.log(`✅ ${data?.length || 0} pedidos cargados`);
 
             const tbody = document.getElementById('adminTablaPedidos');
             if (!tbody) return;
-
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="8" class="admin-table-empty"><i class="fas fa-clipboard-list"></i>No hay pedidos</td></tr>';
                 return;
             }
-
             tbody.innerHTML = data.map(p => {
                 const producto = p.detalles_pedido?.[0]?.productos?.nombre || '-';
                 return `
@@ -425,47 +346,27 @@
                 `;
             }).join('');
         } catch (error) {
-            console.error('❌ Error cargando pedidos:', error);
-            const tbody = document.getElementById('adminTablaPedidos');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="8" class="admin-table-empty" style="color:#EF4444;">
-                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
-                </td></tr>`;
-            }
+            console.error('Error pedidos:', error);
             showToast('Error al cargar pedidos', 'error');
         }
     }
 
-    // ==========================================
-    // VENTAS
-    // ==========================================
     async function loadVentas() {
         try {
-            const sb = getSupabase();
-            console.log('💰 Cargando ventas...');
-
-            const { data, error } = await sb
+            const { data, error } = await getSupabase()
                 .from('pagos')
-                .select(`
-                    id, monto, metodo_pago, fecha_pago, referencia, observaciones,
-                    pedidos (id, clientes (nombre))
-                `)
-                .order('fecha_pago', { ascending: false })
-                .limit(200);
-
+                .select(`id, monto, metodo_pago, fecha_pago, referencia, observaciones,
+                         pedidos (id, clientes (nombre))`)
+                .order('fecha_pago', { ascending: false }).limit(200);
             if (error) throw error;
-
-            console.log(`✅ ${data?.length || 0} pagos cargados`);
 
             const tbody = document.getElementById('adminTablaVentas');
             if (!tbody) return;
-
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-dollar-sign"></i>No hay ventas registradas</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-dollar-sign"></i>No hay ventas</td></tr>';
                 setText('adminVentasTotal', formatCurrency(0));
                 return;
             }
-
             tbody.innerHTML = data.map(v => `
                 <tr>
                     <td><strong>#${v.id}</strong></td>
@@ -476,47 +377,27 @@
                     <td>${formatDate(v.fecha_pago)}</td>
                 </tr>
             `).join('');
-
-            const total = data.reduce((sum, v) => sum + sanitizeMoney(v.monto), 0);
+            const total = data.reduce((sum, v) => sum + sanitizeNumber(v.monto), 0);
             setText('adminVentasTotal', formatCurrency(total));
         } catch (error) {
-            console.error('❌ Error cargando ventas:', error);
-            const tbody = document.getElementById('adminTablaVentas');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
-                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
-                </td></tr>`;
-            }
+            console.error('Error ventas:', error);
             showToast('Error al cargar ventas', 'error');
         }
     }
 
-    // ==========================================
-    // PRODUCTOS
-    // ==========================================
     async function loadProductos() {
         try {
-            const sb = getSupabase();
-            console.log('📦 Cargando productos...');
-
-            const { data, error } = await sb
-                .from('productos')
-                .select('*')
-                .order('nombre')
-                .limit(500);
-
+            const { data, error } = await getSupabase()
+                .from('productos').select('*')
+                .order('nombre').limit(500);
             if (error) throw error;
-
-            console.log(`✅ ${data?.length || 0} productos cargados`);
 
             const tbody = document.getElementById('adminTablaProductos');
             if (!tbody) return;
-
             if (!data || data.length === 0) {
                 tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-box"></i>No hay productos</td></tr>';
                 return;
             }
-
             tbody.innerHTML = data.map(p => {
                 const precio = p.precio_por_m2
                     ? formatCurrency(p.precio_por_m2) + '/m²'
@@ -533,62 +414,27 @@
                 `;
             }).join('');
         } catch (error) {
-            console.error('❌ Error cargando productos:', error);
-            const tbody = document.getElementById('adminTablaProductos');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
-                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
-                </td></tr>`;
-            }
+            console.error('Error productos:', error);
             showToast('Error al cargar productos', 'error');
         }
     }
 
-    // ==========================================
-    // INVENTARIO (con lógica: 0=No hay, 1-5=Bajo, >5=OK)
-    // ==========================================
     async function loadInventario() {
         try {
-            const sb = getSupabase();
-            console.log('🏭 === Cargando inventario ===');
-
-            const { data, error, status, count } = await sb
-                .from('inventario_materiales')
-                .select('*', { count: 'exact' })
-                .order('id', { ascending: true });
-
-            console.log('📊 Status:', status, '| Count:', count, '| Rows:', data?.length);
-
-            if (error) {
-                console.error('❌ Error Supabase:', error);
-                throw error;
-            }
+            const { data, error } = await getSupabase()
+                .from('inventario_materiales').select('*')
+                .order('nombre').limit(500);
+            if (error) throw error;
 
             const tbody = document.getElementById('adminTablaInventario');
-            if (!tbody) {
-                console.error('❌ No se encontró #adminTablaInventario');
-                return;
-            }
-
+            if (!tbody) return;
             if (!data || data.length === 0) {
-                console.warn('⚠️ La tabla está vacía');
-                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-warehouse"></i>No hay materiales en inventario</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="admin-table-empty"><i class="fas fa-warehouse"></i>No hay materiales</td></tr>';
                 return;
             }
-
-            console.log(`✅ Renderizando ${data.length} materiales...`);
-
             tbody.innerHTML = data.map(m => {
-                // SANEAMIENTO: nunca negativos
                 const stockActual = Math.max(0, parseFloat(m.stock_actual) || 0);
                 const stockMinimo = Math.max(0, parseFloat(m.stock_minimo) || 0);
-
-                // ==========================================
-                // LÓGICA DE ESTADO DEL STOCK
-                // 0        → No hay (rojo)
-                // 1 a 5    → Bajo (amarillo)
-                // > 5      → OK (verde)
-                // ==========================================
                 let estadoBadge;
                 if (stockActual === 0) {
                     estadoBadge = '<span class="md-badge danger"><i class="fas fa-times-circle"></i> No hay</span>';
@@ -597,7 +443,6 @@
                 } else {
                     estadoBadge = '<span class="md-badge success"><i class="fas fa-check-circle"></i> OK</span>';
                 }
-
                 return `
                     <tr>
                         <td><strong>#${m.id}</strong></td>
@@ -609,84 +454,48 @@
                     </tr>
                 `;
             }).join('');
-
-            console.log('✅ Inventario renderizado correctamente');
-
         } catch (error) {
-            console.error('❌ Error cargando inventario:', error);
-            const tbody = document.getElementById('adminTablaInventario');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="6" class="admin-table-empty" style="color:#EF4444;">
-                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message || 'No se pudo cargar')}
-                </td></tr>`;
-            }
-            showToast('Error al cargar inventario: ' + (error.message || ''), 'error');
+            console.error('Error inventario:', error);
+            showToast('Error al cargar inventario', 'error');
         }
     }
 
-    // ==========================================
-    // HELPERS DE ESTADO
-    // ==========================================
     function getEstadoClass(estado) {
         const map = {
-            urgente: 'danger',
-            en_produccion: 'warning',
-            diseño: 'primary',
-            control_calidad: 'default',
-            cotizando: 'default',
-            listo: 'success',
-            entregado: 'success',
-            cancelado: 'default'
+            urgente: 'danger', en_produccion: 'warning', diseño: 'primary',
+            control_calidad: 'default', cotizando: 'default', listo: 'success',
+            entregado: 'success', cancelado: 'default'
         };
         return map[estado] || 'default';
     }
 
     function getEstadoLabel(estado) {
         const map = {
-            cotizando: 'Cotizando',
-            diseño: 'En Diseño',
-            en_produccion: 'Producción',
-            control_calidad: 'Control de Calidad',
-            listo: 'Listo',
-            entregado: 'Entregado',
-            cancelado: 'Cancelado'
+            cotizando: 'Cotizando', diseño: 'En Diseño', en_produccion: 'Producción',
+            control_calidad: 'Control de Calidad', listo: 'Listo',
+            entregado: 'Entregado', cancelado: 'Cancelado'
         };
         return map[estado] || estado || '-';
     }
 
     // ==========================================
-    // ASISTENTE IA - ESTADO
+    // ASISTENTE IA - CONVERSACIÓN NATURAL
     // ==========================================
-    const IAState = {
-        conversations: [],
-        activeConvId: null,
-        isSearchOpen: false,
-        isCompact: false,
-        isConvsOpen: false,
-        isSending: false,
-        startTime: null,
-        storageKey: 'ivx_ia_conversations',
-        _listenersSet: false
-    };
 
+    // Persistencia
     function loadIAConversations() {
         try {
             const raw = localStorage.getItem(IAState.storageKey);
             if (!raw) return [];
             const data = JSON.parse(raw);
             return Array.isArray(data) ? data : [];
-        } catch (e) {
-            return [];
-        }
+        } catch { return []; }
     }
 
     function saveIAConversations() {
         try {
-            const toSave = IAState.conversations.slice(-20);
-            localStorage.setItem(IAState.storageKey, JSON.stringify(toSave));
-        } catch (e) {
-            console.warn('No se pudo guardar conversaciones:', e);
-        }
+            localStorage.setItem(IAState.storageKey, JSON.stringify(IAState.conversations.slice(-20)));
+        } catch (e) {}
     }
 
     function getActiveConversation() {
@@ -713,8 +522,7 @@
         IAState.conversations.splice(idx, 1);
         if (IAState.activeConvId === convId) {
             IAState.activeConvId = IAState.conversations.length > 0
-                ? IAState.conversations[IAState.conversations.length - 1].id
-                : null;
+                ? IAState.conversations[IAState.conversations.length - 1].id : null;
         }
         saveIAConversations();
         renderConversationTabs();
@@ -724,11 +532,7 @@
     function renderConversationTabs() {
         const container = document.getElementById('adminIaConvs');
         if (!container) return;
-
-        if (IAState.conversations.length === 0) {
-            container.innerHTML = '';
-            return;
-        }
+        if (IAState.conversations.length === 0) { container.innerHTML = ''; return; }
 
         container.innerHTML = IAState.conversations.map(conv => `
             <button class="admin-ia-conv-tab ${conv.id === IAState.activeConvId ? 'active' : ''}"
@@ -749,7 +553,6 @@
                 renderActiveConversation();
             });
         });
-
         container.querySelectorAll('.admin-ia-conv-tab-close').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -761,17 +564,13 @@
     function renderActiveConversation() {
         const container = document.getElementById('adminIaMessages');
         if (!container) return;
-
         const conv = getActiveConversation();
         if (!conv || conv.mensajes.length === 0) {
             renderWelcome(container);
             return;
         }
-
         container.innerHTML = '';
-        conv.mensajes.forEach(msg => {
-            renderMessage(container, msg, false);
-        });
+        conv.mensajes.forEach(msg => renderMessage(container, msg, false));
         scrollToBottom();
     }
 
@@ -781,28 +580,38 @@
                 <div class="ia-welcome-icon">
                     <i class="fas fa-robot"></i>
                 </div>
-                <h3>¡Hola! Soy tu asistente IA</h3>
-                <p>Puedo consultar tu base de datos en lenguaje natural. Pregúntame lo que necesites sobre clientes, pedidos, ventas, productos, inventario y más.</p>
+                <h3>Hola, soy tu copiloto de IVENMEX 🤖</h3>
+                <p>Tengo acceso completo a la base de datos. Puedo consultar, analizar y modificar cualquier información del negocio. Pregúntame lo que necesites en lenguaje natural.</p>
                 <div class="ia-welcome-grid">
-                    <div class="ia-welcome-card" data-query="Dame un resumen general del negocio">
+                    <div class="ia-welcome-card" data-query="Dame un resumen completo del estado actual del negocio">
                         <div class="ia-welcome-card-icon"><i class="fas fa-chart-pie"></i></div>
-                        <h4>Resumen general</h4>
-                        <p>Vista completa del estado de IVENMEX</p>
+                        <h4>Visión general</h4>
+                        <p>Estado actual de todo el negocio</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="Muéstrame los pedidos urgentes activos">
-                        <div class="ia-welcome-card-icon" style="background:#FEE2E2;color:#991B1B;"><i class="fas fa-fire"></i></div>
-                        <h4>Pedidos urgentes</h4>
-                        <p>Lo que requiere atención inmediata</p>
+                    <div class="ia-welcome-card" data-query="¿Qué clientes han hecho más pedidos este mes?">
+                        <div class="ia-welcome-card-icon" style="background:#DBEAFE;color:#1E40AF;"><i class="fas fa-star"></i></div>
+                        <h4>Top clientes</h4>
+                        <p>Los que más compran</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="¿Cuáles son las ventas totales?">
-                        <div class="ia-welcome-card-icon" style="background:#D1FAE5;color:#065F46;"><i class="fas fa-dollar-sign"></i></div>
+                    <div class="ia-welcome-card" data-query="Análiza las ventas del último mes y dame conclusiones">
+                        <div class="ia-welcome-card-icon" style="background:#D1FAE5;color:#065F46;"><i class="fas fa-chart-line"></i></div>
                         <h4>Análisis de ventas</h4>
-                        <p>Totales y tendencias de ingresos</p>
+                        <p>Tendencias e insights</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="¿Qué materiales tienen stock bajo o agotado?">
-                        <div class="ia-welcome-card-icon" style="background:#FEF3C7;color:#92400E;"><i class="fas fa-exclamation-triangle"></i></div>
-                        <h4>Alertas de stock</h4>
-                        <p>Materiales que necesitan reabastecerse</p>
+                    <div class="ia-welcome-card" data-query="¿Qué tareas están atrasadas y quién las tiene asignadas?">
+                        <div class="ia-welcome-card-icon" style="background:#FEF3C7;color:#92400E;"><i class="fas fa-clock"></i></div>
+                        <h4>Tareas atrasadas</h4>
+                        <p>Qué está deteniendo la producción</p>
+                    </div>
+                    <div class="ia-welcome-card" data-query="¿Qué materiales necesito comprar urgentemente?">
+                        <div class="ia-welcome-card-icon" style="background:#FEE2E2;color:#991B1B;"><i class="fas fa-shopping-cart"></i></div>
+                        <h4>Compras urgentes</h4>
+                        <p>Materiales por reabastecer</p>
+                    </div>
+                    <div class="ia-welcome-card" data-query="¿Cuál es la eficiencia de cada empleado?">
+                        <div class="ia-welcome-card-icon" style="background:#E0E7FF;color:#3730A3;"><i class="fas fa-users-cog"></i></div>
+                        <h4>Rendimiento equipo</h4>
+                        <p>Métricas por empleado</p>
                     </div>
                 </div>
             </div>
@@ -822,9 +631,7 @@
     function renderMessage(container, msg, animate = true) {
         const el = document.createElement('div');
         el.className = `ia-message ${msg.role}`;
-        if (msg.role === 'bot' && msg.categoria) {
-            el.classList.add(msg.categoria);
-        }
+        if (msg.role === 'bot' && msg.categoria) el.classList.add(msg.categoria);
 
         const icon = msg.role === 'user' ? 'fa-user' : 'fa-robot';
         const formattedContent = msg.role === 'bot'
@@ -836,7 +643,7 @@
         });
 
         const latencyHtml = msg.latency
-            ? `<span class="ia-message-latency">${(msg.latency / 1000).toFixed(1)}s</span>`
+            ? `<span class="ia-message-latency"><i class="fas fa-bolt"></i> ${(msg.latency / 1000).toFixed(1)}s</span>`
             : '';
 
         el.innerHTML = `
@@ -876,90 +683,66 @@
                     });
                 } else if (action === 'reuse') {
                     const input = document.getElementById('adminIaInput');
-                    if (input) {
-                        input.value = msg.content;
-                        input.focus();
-                    }
+                    if (input) { input.value = msg.content; input.focus(); }
                 }
             });
         });
 
         container.appendChild(el);
-
         if (animate) scrollToBottom();
     }
 
     function scrollToBottom() {
         const container = document.getElementById('adminIaMessages');
         if (container) {
-            requestAnimationFrame(() => {
-                container.scrollTop = container.scrollHeight;
-            });
+            requestAnimationFrame(() => { container.scrollTop = container.scrollHeight; });
         }
     }
 
-    // ==========================================
-    // MARKDOWN RENDERER
-    // ==========================================
+    // Markdown renderer
     function renderMarkdown(text) {
         if (!text) return '';
-
         let html = escapeHtml(text);
 
-        html = html.replace(/```([\s\S]+?)```/g, (match, code) => {
-            return `<pre><code>${code.trim()}</code></pre>`;
-        });
-
+        html = html.replace(/```([\s\S]+?)```/g, (m, c) => `<pre><code>${c.trim()}</code></pre>`);
         html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
-
         html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
         html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
         html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
-
         html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
         html = html.replace(/(?<!\*)\*([^*\n]+)\*(?!\*)/g, '<em>$1</em>');
-
         html = html.replace(/^---+$/gm, '<hr>');
         html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
         html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
 
         const lines = html.split('\n');
         const output = [];
-        let inList = false;
-        let listType = null;
-
+        let inList = false, listType = null;
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i];
             const bulletMatch = line.match(/^\s*[•\-]\s+(.+)$/);
             const numMatch = line.match(/^\s*(\d+)\.\s+(.+)$/);
-
             if (bulletMatch) {
                 if (!inList || listType !== 'ul') {
                     if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
-                    output.push('<ul>');
-                    inList = true;
-                    listType = 'ul';
+                    output.push('<ul>'); inList = true; listType = 'ul';
                 }
                 output.push(`<li>${bulletMatch[1]}</li>`);
             } else if (numMatch) {
                 if (!inList || listType !== 'ol') {
                     if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
-                    output.push('<ol>');
-                    inList = true;
-                    listType = 'ol';
+                    output.push('<ol>'); inList = true; listType = 'ol';
                 }
                 output.push(`<li>${numMatch[2]}</li>`);
             } else {
                 if (inList) {
                     output.push(listType === 'ul' ? '</ul>' : '</ol>');
-                    inList = false;
-                    listType = null;
+                    inList = false; listType = null;
                 }
                 output.push(line);
             }
         }
         if (inList) output.push(listType === 'ul' ? '</ul>' : '</ol>');
-
         html = output.join('\n');
 
         html = html.split('\n\n').map(p => {
@@ -986,6 +769,16 @@
         const container = document.getElementById('adminIaMessages');
         if (!container) return null;
 
+        // Frases contextuales rotativas para que se sienta como IA real
+        const frases = [
+            'Consultando la base de datos...',
+            'Analizando información...',
+            'Procesando tu pregunta...',
+            'Buscando en los registros...',
+            'Preparando respuesta...'
+        ];
+        const frase = frases[Math.floor(Math.random() * frases.length)];
+
         const el = document.createElement('div');
         el.className = 'ia-message bot';
         el.id = 'iaTypingIndicator';
@@ -997,7 +790,7 @@
                 <div class="ia-message-content">
                     <div class="ia-typing">
                         <span></span><span></span><span></span>
-                        <span class="ia-typing-text">Procesando con IA...</span>
+                        <span class="ia-typing-text">${frase}</span>
                     </div>
                 </div>
             </div>
@@ -1007,14 +800,12 @@
 
         const brain = document.getElementById('adminIaBrain');
         if (brain) brain.classList.add('pensando');
-
         return el;
     }
 
     function removeTypingIndicator() {
         const el = document.getElementById('iaTypingIndicator');
         if (el) el.remove();
-
         const brain = document.getElementById('adminIaBrain');
         if (brain) brain.classList.remove('pensando');
     }
@@ -1029,15 +820,10 @@
 
         let conv = getActiveConversation();
         if (!conv) {
-            const titulo = message.slice(0, 30) + (message.length > 30 ? '...' : '');
-            conv = crearNuevaConversacion(titulo);
+            conv = crearNuevaConversacion(message.slice(0, 30) + (message.length > 30 ? '...' : ''));
         }
 
-        const userMsg = {
-            role: 'user',
-            content: message,
-            timestamp: Date.now()
-        };
+        const userMsg = { role: 'user', content: message, timestamp: Date.now() };
         conv.mensajes.push(userMsg);
 
         if (conv.mensajes.length === 1) {
@@ -1047,11 +833,9 @@
 
         const container = document.getElementById('adminIaMessages');
         renderMessage(container, userMsg);
-
         input.value = '';
         input.style.height = 'auto';
         updateCharCounter();
-
         saveIAConversations();
 
         IAState.isSending = true;
@@ -1059,26 +843,18 @@
         sendBtn.disabled = true;
         sendBtn.classList.add('sending');
         addTypingIndicator();
-
         updateHeaderStatus('pensando', 'Pensando...');
 
         try {
-            let response;
+            // Enviar contexto conversacional (últimos 10 mensajes)
+            const historial = conv.mensajes.slice(-10).map(m => ({
+                role: m.role === 'user' ? 'user' : 'assistant',
+                content: m.content
+            }));
 
-            if (ADMIN_CONFIG.N8N_WEBHOOK_URL) {
-                response = await queryN8N(message);
-            }
-
-            if (!response && ADMIN_CONFIG.FALLBACK_TO_LOCAL) {
-                response = await queryLocalAI(message);
-            }
-
-            if (!response) {
-                response = '⚠️ No pude procesar tu consulta. Intenta de nuevo.';
-            }
+            const response = await queryN8N(message, historial);
 
             const latency = Date.now() - IAState.startTime;
-
             const botMsg = {
                 role: 'bot',
                 content: response,
@@ -1087,20 +863,16 @@
                 categoria: categorizarRespuesta(response)
             };
             conv.mensajes.push(botMsg);
-
             removeTypingIndicator();
             renderMessage(container, botMsg);
-
             saveIAConversations();
             updateHeaderStatus('online', 'Online');
-
         } catch (error) {
-            console.error('Error en IA:', error);
+            console.error('Error IA:', error);
             removeTypingIndicator();
-
             const errorMsg = {
                 role: 'bot',
-                content: `❌ **Error al procesar tu consulta**\n\n${error.message || 'Error desconocido'}\n\n_Intenta de nuevo o verifica la conexión con n8n._`,
+                content: `❌ **No pude procesar tu consulta**\n\n${error.message || 'Error desconocido'}\n\n_Verifica que el flujo n8n esté activo._`,
                 timestamp: Date.now(),
                 categoria: 'error'
             };
@@ -1108,7 +880,6 @@
             renderMessage(container, errorMsg);
             saveIAConversations();
             updateHeaderStatus('offline', 'Error');
-
         } finally {
             IAState.isSending = false;
             sendBtn.disabled = false;
@@ -1121,7 +892,6 @@
         const pill = document.getElementById('adminIaStatusPill');
         const textEl = document.getElementById('adminIaStatusText');
         if (!pill || !textEl) return;
-
         pill.classList.remove('offline', 'checking');
         if (status === 'offline') pill.classList.add('offline');
         if (status === 'checking') pill.classList.add('checking');
@@ -1129,16 +899,16 @@
     }
 
     async function checkIAN8NConnection() {
-        updateHeaderStatus('checking', 'Verificando...');
+        updateHeaderStatus('checking', 'Conectando...');
 
         if (!ADMIN_CONFIG.N8N_WEBHOOK_URL) {
-            updateHeaderStatus('offline', 'Motor local');
+            updateHeaderStatus('offline', 'Sin configurar');
             return;
         }
 
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000);
+            const timeoutId = setTimeout(() => controller.abort(), 8000);
 
             const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
                 method: 'POST',
@@ -1148,14 +918,10 @@
             });
 
             clearTimeout(timeoutId);
-
-            if (response.ok) {
-                updateHeaderStatus('online', 'Conectado');
-            } else {
-                throw new Error('HTTP ' + response.status);
-            }
+            updateHeaderStatus(response.ok ? 'online' : 'offline',
+                response.ok ? 'Conectado' : 'Error');
         } catch (error) {
-            console.warn('n8n no responde al ping:', error);
+            console.warn('n8n no responde:', error);
             updateHeaderStatus('offline', 'Sin conexión');
         }
     }
@@ -1169,6 +935,66 @@
         counter.style.color = len > 1800 ? '#EF4444' : '';
     }
 
+    // ==========================================
+    // QUERY A N8N
+    // ==========================================
+    async function queryN8N(question, history = []) {
+        if (!ADMIN_CONFIG.N8N_WEBHOOK_URL) {
+            throw new Error('No hay webhook de n8n configurado. Revisa ADMIN_CONFIG.N8N_WEBHOOK_URL.');
+        }
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), ADMIN_CONFIG.IA_TIMEOUT);
+
+        try {
+            const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: question,
+                    history: history,
+                    timestamp: new Date().toISOString(),
+                    source: 'dashboard-admin'
+                }),
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            let respuesta = data.response || data.output || data.message ||
+                            data.text || data.answer ||
+                            (Array.isArray(data) && data[0]?.response) ||
+                            (Array.isArray(data) && data[0]?.output) ||
+                            (Array.isArray(data) && data[0]?.mensaje);
+
+            if (respuesta && typeof respuesta === 'object') {
+                respuesta = respuesta.text || respuesta.content || JSON.stringify(respuesta);
+            }
+            if (!respuesta) {
+                console.warn('Respuesta n8n sin formato:', data);
+                respuesta = '⚠️ El webhook respondió pero sin contenido reconocible.';
+            }
+            return respuesta;
+        } catch (error) {
+            clearTimeout(timeoutId);
+            if (error.name === 'AbortError') {
+                throw new Error('El asistente tardó demasiado (>90s). Intenta de nuevo.');
+            }
+            throw error;
+        }
+    }
+
+    // ==========================================
+    // ACCIONES DEL HEADER IA
+    // ==========================================
     function setupIAHeaderActions() {
         document.getElementById('adminIaNewBtn')?.addEventListener('click', () => {
             crearNuevaConversacion('Nueva conversación');
@@ -1229,13 +1055,11 @@
     function buscarEnConversacion(query) {
         const container = document.getElementById('adminIaMessages');
         if (!container) return;
-
         container.querySelectorAll('.ia-message-content mark').forEach(mark => {
             const parent = mark.parentNode;
             parent.replaceChild(document.createTextNode(mark.textContent), mark);
             parent.normalize();
         });
-
         if (!query || query.length < 2) return;
 
         container.querySelectorAll('.ia-message-content').forEach(content => {
@@ -1243,9 +1067,7 @@
             const matches = [];
             let node;
             while (node = walker.nextNode()) {
-                if (node.textContent.toLowerCase().includes(query)) {
-                    matches.push(node);
-                }
+                if (node.textContent.toLowerCase().includes(query)) matches.push(node);
             }
             matches.forEach(textNode => {
                 const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
@@ -1274,7 +1096,6 @@
             showToast('No hay conversación para exportar', 'error');
             return;
         }
-
         const contenido = conv.mensajes.map(m => {
             const fecha = new Date(m.timestamp).toLocaleString('es-ES');
             const quien = m.role === 'user' ? 'TÚ' : 'IA';
@@ -1282,7 +1103,6 @@
         }).join('\n---\n\n');
 
         const header = `Conversación IVENMEX - ${conv.titulo}\nFecha: ${new Date().toLocaleString('es-ES')}\n${'='.repeat(60)}\n\n`;
-
         const blob = new Blob([header + contenido], { type: 'text/plain;charset=utf-8' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -1292,22 +1112,18 @@
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-
         showToast('📥 Conversación exportada', 'success');
     }
 
     function iniciarDictadoVoz() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            showToast('Dictado por voz no soportado en este navegador', 'error');
-            return;
-        }
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SR) { showToast('Dictado por voz no soportado', 'error'); return; }
 
         const btn = document.getElementById('adminIaVoiceBtn');
         const input = document.getElementById('adminIaInput');
         if (!btn || !input) return;
 
-        const recognition = new SpeechRecognition();
+        const recognition = new SR();
         recognition.lang = 'es-ES';
         recognition.continuous = false;
         recognition.interimResults = true;
@@ -1325,25 +1141,15 @@
             input.style.height = Math.min(input.scrollHeight, 140) + 'px';
             updateCharCounter();
         };
-
-        recognition.onerror = (e) => {
-            console.warn('Error de reconocimiento:', e);
-            showToast('Error en dictado por voz', 'error');
-        };
-
+        recognition.onerror = () => showToast('Error en dictado', 'error');
         recognition.onend = () => {
             btn.style.background = '';
             btn.style.color = '';
             input.focus();
         };
 
-        try {
-            recognition.start();
-            showToast('🎤 Escuchando...', 'success');
-        } catch (e) {
-            btn.style.background = '';
-            btn.style.color = '';
-        }
+        try { recognition.start(); showToast('🎤 Escuchando...', 'success'); }
+        catch (e) { btn.style.background = ''; btn.style.color = ''; }
     }
 
     function initIA() {
@@ -1354,7 +1160,6 @@
         } else {
             crearNuevaConversacion('Conversación inicial');
         }
-
         renderConversationTabs();
         renderActiveConversation();
 
@@ -1364,7 +1169,6 @@
             setupIAInputListeners();
             setupIASuggestionListeners();
         }
-
         checkIAN8NConnection();
     }
 
@@ -1372,20 +1176,17 @@
         const input = document.getElementById('adminIaInput');
         const sendBtn = document.getElementById('adminIaSend');
         if (!input) return;
-
         input.addEventListener('keydown', (e) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendIAMessage();
             }
         });
-
         input.addEventListener('input', () => {
             input.style.height = 'auto';
             input.style.height = Math.min(input.scrollHeight, 140) + 'px';
             updateCharCounter();
         });
-
         sendBtn?.addEventListener('click', sendIAMessage);
     }
 
@@ -1404,282 +1205,26 @@
     }
 
     // ==========================================
-    // CONSULTA A N8N
-    // ==========================================
-    async function queryN8N(question) {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-        try {
-            const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: question,
-                    history: AdminState.conversationHistory.slice(-5),
-                    timestamp: new Date().toISOString(),
-                    source: 'dashboard-admin'
-                }),
-                signal: controller.signal
-            });
-
-            clearTimeout(timeoutId);
-
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-            }
-
-            const data = await response.json();
-
-            let respuesta =
-                data.response ||
-                data.output ||
-                data.message ||
-                data.text ||
-                data.answer ||
-                (Array.isArray(data) && data[0]?.response) ||
-                (Array.isArray(data) && data[0]?.output) ||
-                (Array.isArray(data) && data[0]?.mensaje);
-
-            if (respuesta && typeof respuesta === 'object') {
-                respuesta = respuesta.text || respuesta.content || JSON.stringify(respuesta);
-            }
-
-            if (!respuesta) {
-                console.warn('Respuesta n8n sin formato esperado:', data);
-                respuesta = '⚠️ El webhook respondió pero sin contenido reconocible.';
-            }
-
-            return respuesta;
-        } catch (error) {
-            clearTimeout(timeoutId);
-
-            if (error.name === 'AbortError') {
-                console.error('Timeout consultando n8n (60s)');
-                throw new Error('El asistente tardó demasiado en responder. Intenta de nuevo.');
-            }
-
-            console.error('Error consultando n8n:', error);
-
-            if (ADMIN_CONFIG.FALLBACK_TO_LOCAL) {
-                console.warn('⚠️ Fallback al motor local');
-                return await queryLocalAI(question);
-            }
-
-            throw error;
-        }
-    }
-
-    // ==========================================
-    // MOTOR DE IA LOCAL (fallback)
-    // ==========================================
-    async function queryLocalAI(question) {
-        const q = question.toLowerCase();
-        const sb = getSupabase();
-
-        // ===== CLIENTES =====
-        if (/(cuántos|cuantos|numero|número|total).*clientes?/.test(q) || /clientes.*total/.test(q)) {
-            const { count } = await sb.from('clientes').select('*', { count: 'exact', head: true });
-            return `📊 Actualmente tienes **${count || 0} clientes** registrados en el sistema.`;
-        }
-
-        if (/(lista|muestra|ver|dame|cuáles|cuales).*clientes?/.test(q)) {
-            const { data } = await sb.from('clientes').select('id, nombre, telefono, email').limit(20).order('nombre');
-            if (!data || data.length === 0) return '📭 No hay clientes registrados.';
-
-            let respuesta = `📋 **Clientes registrados** (mostrando ${data.length}):\n\n`;
-            data.forEach(c => {
-                respuesta += `• **${c.nombre}**`;
-                if (c.telefono) respuesta += ` - 📞 ${c.telefono}`;
-                if (c.email) respuesta += ` - 📧 ${c.email}`;
-                respuesta += '\n';
-            });
-            return respuesta;
-        }
-
-        // ===== PEDIDOS =====
-        if (/(cuántos|cuantos|total).*pedidos?/.test(q)) {
-            const { count } = await sb.from('pedidos').select('*', { count: 'exact', head: true });
-            return `📊 Hay **${count || 0} pedidos** en total en el sistema.`;
-        }
-
-        if (/pedidos?.*urgentes?|urgentes?/.test(q)) {
-            const { data } = await sb.from('pedidos')
-                .select('id, estado, clientes(nombre), fecha_entrega_prometida, observaciones')
-                .eq('prioridad', 'urgente')
-                .not('estado', 'in', '(entregado,cancelado)')
-                .limit(15);
-
-            if (!data || data.length === 0) return '✅ No hay pedidos urgentes pendientes.';
-            return `🚨 **Pedidos urgentes activos** (${data.length}):\n\n` + data.map(p =>
-                `• **#${p.id}** - ${p.clientes?.nombre || 'Sin cliente'} - Estado: ${p.estado}`
-            ).join('\n');
-        }
-
-        if (/pedidos?.*(activos?|pendientes?)/.test(q)) {
-            const { data } = await sb.from('pedidos')
-                .select('id, estado, clientes(nombre)')
-                .not('estado', 'in', '(entregado,cancelado)')
-                .limit(20);
-
-            if (!data || data.length === 0) return '✅ No hay pedidos activos.';
-            return `📋 **Pedidos activos** (${data.length}):\n\n` + data.map(p =>
-                `• **#${p.id}** - ${p.clientes?.nombre || 'Sin cliente'} - ${p.estado}`
-            ).join('\n');
-        }
-
-        // ===== VENTAS =====
-        if (/(cuánto|cuanto|total).*(vendido|ventas?|ingresos?|facturado)/.test(q)) {
-            const { data } = await sb.from('pagos').select('monto');
-            const total = (data || []).reduce((sum, p) => sum + sanitizeMoney(p.monto), 0);
-            return `💰 **Ventas totales:** ${formatCurrency(total)}\n\n📊 Basado en **${data?.length || 0} pagos** registrados.`;
-        }
-
-        // ===== PRODUCTOS =====
-        if (/(cuántos|cuantos|total).*productos?/.test(q)) {
-            const { count } = await sb.from('productos').select('*', { count: 'exact', head: true });
-            return `📦 Tienes **${count || 0} productos** en el catálogo.`;
-        }
-
-        if (/(lista|muestra|ver|dame|cuáles|cuales).*productos?/.test(q)) {
-            const { data } = await sb.from('productos').select('nombre, categoria, precio_unitario, precio_por_m2').eq('activo', true).limit(20);
-            if (!data || data.length === 0) return '📭 No hay productos activos.';
-
-            let respuesta = `📦 **Productos activos** (${data.length}):\n\n`;
-            data.forEach(p => {
-                const precio = p.precio_por_m2
-                    ? `${formatCurrency(p.precio_por_m2)}/m²`
-                    : formatCurrency(p.precio_unitario);
-                respuesta += `• **${p.nombre}** (${p.categoria || 'Sin categoría'}) - ${precio}\n`;
-            });
-            return respuesta;
-        }
-
-        // ===== INVENTARIO (con lógica actualizada) =====
-        if (/stock.*bajo|materiales?.*(bajo|bajos|agotar|agotado|sin stock)/.test(q)) {
-            const { data } = await sb.from('inventario_materiales').select('*');
-
-            const agotados = (data || []).filter(m => {
-                const s = Math.max(0, parseFloat(m.stock_actual) || 0);
-                return s === 0;
-            });
-
-            const bajos = (data || []).filter(m => {
-                const s = Math.max(0, parseFloat(m.stock_actual) || 0);
-                return s > 0 && s <= 5;
-            });
-
-            if (agotados.length === 0 && bajos.length === 0) {
-                return '✅ Todos los materiales tienen stock suficiente (más de 5 unidades).';
-            }
-
-            let respuesta = '';
-
-            if (agotados.length > 0) {
-                respuesta += `🔴 **Materiales agotados** (${agotados.length}):\n\n`;
-                respuesta += agotados.map(m =>
-                    `• **${m.nombre}**: 0 ${m.unidad_medida || 'unidades'}`
-                ).join('\n');
-                respuesta += '\n\n';
-            }
-
-            if (bajos.length > 0) {
-                respuesta += `⚠️ **Materiales con stock bajo** (${bajos.length}):\n\n`;
-                respuesta += bajos.map(m =>
-                    `• **${m.nombre}**: ${m.stock_actual} ${m.unidad_medida || ''}`
-                ).join('\n');
-            }
-
-            return respuesta.trim();
-        }
-
-        // ===== EMPLEADOS =====
-        if (/(cuántos|cuantos|total).*empleados?/.test(q)) {
-            const { count } = await sb.from('empleados').select('*', { count: 'exact', head: true }).eq('activo', true);
-            return `👥 Tienes **${count || 0} empleados activos**.`;
-        }
-
-        // ===== RESUMEN =====
-        if (/(resumen|reporte|estadísticas?|estadisticas?|dashboard)/.test(q)) {
-            const [clientes, pedidos, productos, ventasData, pedidosData] = await Promise.all([
-                sb.from('clientes').select('*', { count: 'exact', head: true }),
-                sb.from('pedidos').select('*', { count: 'exact', head: true }),
-                sb.from('productos').select('*', { count: 'exact', head: true }),
-                sb.from('pagos').select('monto'),
-                sb.from('pedidos').select('estado, prioridad')
-            ]);
-
-            const totalVentas = (ventasData.data || []).reduce((s, p) => s + sanitizeMoney(p.monto), 0);
-            const activos = (pedidosData.data || []).filter(p => p.estado !== 'entregado' && p.estado !== 'cancelado').length;
-            const urgentes = (pedidosData.data || []).filter(p => p.prioridad === 'urgente' && p.estado !== 'entregado' && p.estado !== 'cancelado').length;
-
-            return `📊 **Resumen General de IVENMEX**\n\n` +
-                `👥 **Clientes:** ${clientes.count || 0}\n` +
-                `📋 **Pedidos totales:** ${pedidos.count || 0}\n` +
-                `🔥 **Pedidos activos:** ${activos}\n` +
-                `🚨 **Pedidos urgentes:** ${urgentes}\n` +
-                `📦 **Productos:** ${productos.count || 0}\n` +
-                `💰 **Ventas totales:** ${formatCurrency(totalVentas)}`;
-        }
-
-        // ===== AYUDA =====
-        if (/(ayuda|help|qué puedes|que puedes|comandos)/.test(q)) {
-            return `🤖 **Puedo ayudarte con:**\n\n` +
-                `📊 **Consultas:**\n` +
-                `• "¿Cuántos clientes tengo?"\n` +
-                `• "Muéstrame los pedidos urgentes"\n` +
-                `• "¿Cuáles son las ventas totales?"\n` +
-                `• "Lista los productos activos"\n` +
-                `• "¿Qué materiales tienen stock bajo?"\n` +
-                `• "Dame un resumen general"\n\n` +
-                `💡 **Tip:** También puedes conectar n8n para IA avanzada.`;
-        }
-
-        // ===== SALUDO =====
-        if (/^(hola|buenos|buenas|hey|hi)/.test(q)) {
-            return `¡Hola! 👋 ¿En qué puedo ayudarte hoy?\n\nPrueba preguntarme sobre clientes, pedidos, ventas, productos o inventario.`;
-        }
-
-        // ===== DEFAULT =====
-        return `🤔 No estoy seguro de cómo responder a eso.\n\nIntenta con:\n` +
-            `• "¿Cuántos clientes tengo?"\n` +
-            `• "Muéstrame los pedidos urgentes"\n` +
-            `• "Ventas totales"\n` +
-            `• "Resumen general"\n` +
-            `• "Ayuda" para ver todos los comandos`;
-    }
-
-    // ==========================================
     // EVENT LISTENERS
     // ==========================================
     function setupEventListeners() {
-        // Login
         document.getElementById('adminLoginBtn')?.addEventListener('click', attemptLogin);
         document.getElementById('adminLoginCancel')?.addEventListener('click', closeLogin);
         document.getElementById('adminPasswordInput')?.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') attemptLogin();
             if (e.key === 'Escape') closeLogin();
         });
-
-        // Logout
         document.getElementById('adminLogoutBtn')?.addEventListener('click', logout);
         document.getElementById('adminCloseBtn')?.addEventListener('click', closeAdminPanel);
 
-        // Navegación
         document.querySelectorAll('.admin-nav-item').forEach(item => {
             item.addEventListener('click', () => switchView(item.dataset.view));
         });
 
-        // Esc para cerrar login
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 const overlay = document.getElementById('adminLoginOverlay');
-                if (overlay?.classList.contains('active')) {
-                    closeLogin();
-                }
+                if (overlay?.classList.contains('active')) closeLogin();
             }
         });
     }
@@ -1690,14 +1235,13 @@
     function init() {
         let intentos = 0;
         const maxIntentos = 20;
-
         const esperar = () => {
             intentos++;
             if (window.supabaseClient) {
-                console.log('✅ adminPanel: Supabase detectado, inicializando...');
+                console.log('✅ adminPanel: Supabase detectado');
                 setupSecretTrigger();
                 setupEventListeners();
-                console.log('🔐 Panel Admin listo. Click 5 veces en el logo o Ctrl+Shift+A.');
+                console.log('🔐 Panel Admin listo. 5 clicks en el logo o Ctrl+Shift+A');
                 return;
             }
             if (intentos >= maxIntentos) {
@@ -1715,9 +1259,6 @@
         init();
     }
 
-    // ==========================================
-    // API PÚBLICA
-    // ==========================================
     window.AdminPanel = {
         open: openLogin,
         close: closeAdminPanel,
@@ -1725,5 +1266,4 @@
         switchView,
         reload: () => switchView(AdminState.currentView)
     };
-
 }());
