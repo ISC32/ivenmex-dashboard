@@ -1,6 +1,6 @@
 // ==========================================
-// DASHBOARD INVEMEX - v13.0
-// Tabla KPI por empleado + Scroll inteligente
+// DASHBOARD INVEMEX - v18.0
+// Con modal de empleado tipo tabla alargada (TV)
 // ==========================================
 
 const CONFIG = {
@@ -14,7 +14,7 @@ const CONFIG = {
     RETRY_DELAY: 2000
 };
 
-console.log('🚀 Iniciando Dashboard INVEMEX v13.0');
+console.log('🚀 Iniciando Dashboard INVEMEX v18.0');
 
 const supabaseClient = supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_ANON_KEY);
 window.supabaseClient = supabaseClient;
@@ -155,34 +155,29 @@ const App = {
     },
 
     async init() {
-        console.log('📋 Inicializando aplicación v13.0...');
+        console.log('📋 Inicializando aplicación v18.0...');
         this.updateDateDisplay(new Date());
         ToastSystem.init();
 
         await this.cargarTodosLosDatos();
         this.suscribirRealtime();
 
-        // Intervalo general
         STATE.refreshInterval = setInterval(() => this.refrescarDatosSilencioso(), CONFIG.REFRESH_INTERVAL);
 
-        // Intervalo avatares
         STATE.empleadosInterval = setInterval(() => {
             this.cargarEmpleadosYTareas().catch(err => console.error('Error refrescando empleados:', err));
         }, CONFIG.EMPLEADOS_INTERVAL);
 
-        // Intervalo tabla KPI
         STATE.tablaEmpleadosInterval = setInterval(() => {
             this.cargarTablaEmpleados().catch(err => console.error('Error refrescando tabla:', err));
         }, CONFIG.TABLA_INTERVAL);
 
-        // Listeners de la tabla
         this.setupTablaListeners();
 
         console.log('✅ Aplicación inicializada correctamente');
     },
 
     setupTablaListeners() {
-        // Buscador
         const buscador = document.getElementById('empleados-buscador');
         if (buscador && !buscador.dataset.listener) {
             buscador.dataset.listener = 'true';
@@ -196,7 +191,6 @@ const App = {
             });
         }
 
-        // Ordenamiento
         document.querySelectorAll('.empleados-tabla th.sortable').forEach(th => {
             if (th.dataset.listener) return;
             th.dataset.listener = 'true';
@@ -296,20 +290,30 @@ const App = {
             const { data, error } = await withRetry(() => supabaseClient.from('pedidos').select('estado, prioridad, fecha_solicitud'));
             if (error) throw error;
 
+            const estadosActivos = ['cotizando', 'diseño', 'en_produccion', 'control_calidad', 'listo'];
+            const estadosCerrados = ['entregado', 'cancelado'];
+
             let activos = 0, produccion = 0, entregados = 0, urgentes = 0;
             (data || []).forEach(p => {
-                const esActivo = p.estado !== 'entregado' && p.estado !== 'cancelado';
+                const estado = (p.estado || '').toLowerCase();
+                const esActivo = estadosActivos.includes(estado);
+                const esCerrado = estadosCerrados.includes(estado);
+
                 if (esActivo) activos++;
-                if (p.estado === 'en_produccion') produccion++;
-                if (p.estado === 'entregado' && p.fecha_solicitud && p.fecha_solicitud.startsWith(hoy)) entregados++;
+                if (estado === 'en_produccion') produccion++;
+                if (estado === 'entregado' && p.fecha_solicitud && p.fecha_solicitud.startsWith(hoy)) entregados++;
                 if (p.prioridad === 'urgente' && esActivo) urgentes++;
             });
 
             const elements = {
-                'kpi-activos': activos, 'kpi-activos-change': `${activos} activos`,
-                'kpi-produccion': produccion, 'kpi-produccion-change': `${produccion} en producción`,
-                'kpi-entregados': entregados, 'kpi-entregados-change': `${entregados} hoy`,
-                'kpi-urgentes': urgentes, 'kpi-urgentes-change': `${urgentes} urgentes`
+                'kpi-activos': activos,
+                'kpi-activos-change': `${activos} activos`,
+                'kpi-produccion': produccion,
+                'kpi-produccion-change': `${produccion} en producción`,
+                'kpi-entregados': entregados,
+                'kpi-entregados-change': entregados > 0 ? `${entregados} entregados hoy` : 'Sin entregas hoy',
+                'kpi-urgentes': urgentes,
+                'kpi-urgentes-change': `${urgentes} urgentes`
             };
             Object.entries(elements).forEach(([id, value]) => {
                 const el = document.getElementById(id);
@@ -321,14 +325,35 @@ const App = {
     },
 
     async cargarEstadosGrafico() {
-        const colores = { cotizando: '#0B218B', diseño: '#1A3BA8', en_produccion: '#FFF200', control_calidad: '#E84C3D', listo: '#27AE60', entregado: '#8B6914' };
-        const labels = { cotizando: 'Cotizando', diseño: 'Diseño', en_produccion: 'Producción', control_calidad: 'Control Calidad', listo: 'Listo', entregado: 'Entregado' };
+        const colores = {
+            cotizando: '#0B218B',
+            diseño: '#1A3BA8',
+            en_produccion: '#FFF200',
+            control_calidad: '#E84C3D',
+            listo: '#27AE60',
+            entregado: '#8B6914',
+            cancelado: '#6B7280'
+        };
+        const labels = {
+            cotizando: 'Cotizando',
+            diseño: 'Diseño',
+            en_produccion: 'Producción',
+            control_calidad: 'Control Calidad',
+            listo: 'Listo',
+            entregado: 'Entregado',
+            cancelado: 'Cancelado'
+        };
         try {
             const { data, error } = await withRetry(() => supabaseClient.from('pedidos').select('estado'));
             if (error) throw error;
             const conteo = {};
-            (data || []).forEach(p => { conteo[p.estado] = (conteo[p.estado] || 0) + 1; });
-            const resultados = Object.keys(labels).map(k => ({ label: labels[k], value: conteo[k] || 0, color: colores[k] }));
+            (data || []).forEach(p => {
+                const estado = (p.estado || 'sin_estado').toLowerCase();
+                conteo[estado] = (conteo[estado] || 0) + 1;
+            });
+            const resultados = Object.keys(labels)
+                .map(k => ({ label: labels[k], value: conteo[k] || 0, color: colores[k] }))
+                .filter(r => r.value > 0);
             const total = resultados.reduce((sum, r) => sum + r.value, 0);
             const chart = document.getElementById('doughnut-chart');
             if (chart) {
@@ -349,7 +374,7 @@ const App = {
                 legend.innerHTML = resultados.map(item => `
                     <div class="legend-item">
                         <span class="color-box" style="background:${item.color};"></span>
-                        ${item.label}: ${item.value}
+                        ${item.label}: <strong>${item.value}</strong>
                     </div>
                 `).join('');
             }
@@ -406,17 +431,29 @@ const App = {
         try {
             const { data, error } = await withRetry(() =>
                 supabaseClient.from('pedidos')
-                    .select(`id, cliente_id, estado, prioridad, observaciones, fecha_solicitud, fecha_entrega_prometida, clientes (nombre), detalles_pedido (material_especifico, productos (nombre)), tareas (fecha_fin, empleados (nombre, apellido))`)
+                    .select(`
+                        id, cliente_id, estado, prioridad, observaciones,
+                        fecha_solicitud, fecha_entrega_prometida, total,
+                        clientes (nombre),
+                        detalles_pedido (material_especifico, productos (nombre)),
+                        tareas (fecha_fin, empleados (nombre, apellido))
+                    `)
                     .eq('prioridad', 'urgente')
                     .not('estado', 'in', '(entregado,cancelado)')
                     .order('fecha_solicitud', { ascending: false })
-                    .limit(10)
+                    .limit(20)
             );
             if (error) throw error;
             const tbody = document.getElementById('tabla-urgentes-body');
             if (!tbody) return;
             if (!data || data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10"><div class="md-empty"><div class="empty-icon"><i class="fas fa-inbox"></i></div><div class="empty-title">No hay pedidos urgentes</div></div></td></tr>';
+                tbody.innerHTML = `
+                    <tr><td colspan="10">
+                        <div class="md-empty">
+                            <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+                            <div class="empty-title">No hay pedidos urgentes activos</div>
+                        </div>
+                    </td></tr>`;
                 return;
             }
             tbody.innerHTML = data.map(pedido => {
@@ -512,6 +549,24 @@ const App = {
         return this.getGradientEmpleado(nombre);
     },
 
+    escapeHtml(text) {
+        if (text === null || text === undefined) return '';
+        const div = document.createElement('div');
+        div.textContent = String(text);
+        return div.innerHTML;
+    },
+
+    getIconoTipoTarea(tipo) {
+        const t = (tipo || '').toLowerCase();
+        if (t.includes('diseño') || t.includes('diseno')) return 'fa-paint-brush';
+        if (t.includes('corte')) return 'fa-cut';
+        if (t.includes('sublim')) return 'fa-hotjar';
+        if (t.includes('impres')) return 'fa-print';
+        if (t.includes('calidad')) return 'fa-clipboard-check';
+        if (t.includes('administra')) return 'fa-user-tie';
+        return 'fa-tasks';
+    },
+
     // ==========================================
     // PANEL DE AVATARES
     // ==========================================
@@ -599,7 +654,7 @@ const App = {
     },
 
     // ==========================================
-    // TABLA KPI DE EMPLEADOS (nueva sección)
+    // TABLA KPI DE EMPLEADOS
     // ==========================================
     getEstadoEmpleado(tasa) {
         if (tasa >= 90) return { label: 'Excelente 🏆', class: 'success', bar: 'success' };
@@ -749,85 +804,193 @@ const App = {
     },
 
     // ==========================================
-    // MODAL DE EMPLEADO
+    // MODAL DE EMPLEADO (TABLA ALARGADA PARA TV)
     // ==========================================
     async abrirModalEmpleado(empleadoId) {
         try {
-            const { data: empleado, error: errorEmpleado } = await supabaseClient.from('empleados').select('*').eq('id', empleadoId).single();
-            if (errorEmpleado) throw errorEmpleado;
-            const { data: tareas, error: errorTareas } = await supabaseClient.from('tareas').select('*, pedidos (id, fecha_solicitud, fecha_entrega_prometida, observaciones, clientes (nombre))').eq('empleado_id', empleadoId).order('fecha_asignacion', { ascending: false });
-            if (errorTareas) throw errorTareas;
-            this.renderModalEmpleado(empleado, tareas || []);
-            new bootstrap.Modal(document.getElementById('modalEmpleadoDetalle')).show();
+            const modalEl = document.getElementById('modalEmpleadoDetalle');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+
+            const bodyEl = document.getElementById('modalEmpleadoBody');
+            if (bodyEl) {
+                bodyEl.innerHTML = `
+                    <div style="text-align:center; padding:40px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i>
+                        <p style="margin-top:12px; color: var(--md-text-secondary);">Cargando tareas...</p>
+                    </div>
+                `;
+            }
+
+            const [empleadoRes, tareasRes] = await Promise.all([
+                supabaseClient.from('empleados').select('*').eq('id', empleadoId).single(),
+                supabaseClient.from('tareas')
+                    .select(`
+                        id, tipo_tarea, estado, fecha_asignacion, fecha_fin,
+                        tiempo_estimado_minutos, tiempo_real_minutos, observaciones,
+                        pedidos (
+                            id, prioridad, estado, fecha_solicitud, fecha_entrega_prometida,
+                            observaciones, clientes (nombre)
+                        )
+                    `)
+                    .eq('empleado_id', empleadoId)
+                    .order('fecha_asignacion', { ascending: false })
+            ]);
+
+            if (empleadoRes.error) throw empleadoRes.error;
+            if (tareasRes.error) throw tareasRes.error;
+
+            this.renderModalEmpleadoTV(empleadoRes.data, tareasRes.data || []);
+
         } catch (error) {
             console.error('❌ Error cargando empleado:', error);
+            const bodyEl = document.getElementById('modalEmpleadoBody');
+            if (bodyEl) {
+                bodyEl.innerHTML = `
+                    <div class="empleado-modal-empty">
+                        <i class="fas fa-exclamation-circle" style="color:#EF4444;"></i>
+                        <h4>Error al cargar</h4>
+                        <p>${error.message || 'No se pudo cargar la información'}</p>
+                    </div>
+                `;
+            }
             ToastSystem.error('Error', 'No se pudo cargar la información del empleado');
         }
     },
 
-    renderModalEmpleado(empleado, tareas) {
+    renderModalEmpleadoTV(empleado, tareas) {
         const color = this.getColorEmpleado(empleado.nombre);
-        const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`;
-        const completadas = tareas.filter(t => t.estado === 'completado' || t.completada === true).length;
-        const enProceso = tareas.filter(t => t.estado === 'en_progreso').length;
-        const pendientes = tareas.filter(t => t.estado === 'pendiente').length;
-        const total = tareas.length;
+        const iniciales = `${empleado.nombre.charAt(0)}${empleado.apellido ? empleado.apellido.charAt(0) : ''}`.toUpperCase();
+
+        const avatarEl = document.getElementById('empleadoModalAvatar');
+        if (avatarEl) {
+            avatarEl.style.background = color;
+            avatarEl.textContent = iniciales;
+        }
+
         const titleEl = document.getElementById('modalEmpleadoTitle');
-        if (titleEl) titleEl.innerHTML = `<span class="avatar-lg" style="background:${color};">${iniciales}</span>${empleado.nombre} ${empleado.apellido || ''}<span class="ms-2 md-badge primary" style="font-size:12px;">${total} tareas</span>`;
-        const bodyEl = document.getElementById('modalEmpleadoBody');
-        if (bodyEl) {
-            bodyEl.innerHTML = `
-                <div class="profile-summary">
-                    <div class="info-item"><span class="label">📋 Cargo:</span> ${empleado.cargo || 'Sin cargo'}</div>
-                    ${empleado.email ? `<div class="info-item"><span class="label">📧 Email:</span> ${empleado.email}</div>` : ''}
-                    ${empleado.telefono ? `<div class="info-item"><span class="label">📱 Teléfono:</span> ${empleado.telefono}</div>` : ''}
-                    <div class="info-item"><span class="label">📊 Total:</span> ${total}</div>
-                </div>
-                <div class="stats-row">
-                    <span class="stat completadas">✅ ${completadas} completadas</span>
-                    <span class="stat proceso">⏳ ${enProceso} en proceso</span>
-                    <span class="stat pendientes">📋 ${pendientes} pendientes</span>
-                </div>
-                ${tareas.length > 0 ? `
-                    <div class="table-wrapper" style="max-height: 400px; overflow-y: auto;">
-                        <table class="tareas-empleado-modal">
-                            <thead><tr><th>Recepción</th><th>Tarea</th><th>Entrega</th><th>Detalle</th><th>Estado</th><th>Fin</th></tr></thead>
-                            <tbody>${this.renderTareasModal(tareas, empleado)}</tbody>
-                        </table>
-                    </div>
-                ` : '<div class="md-empty"><i class="fas fa-inbox empty-icon"></i><div class="empty-title">Sin tareas</div></div>'}
+        if (titleEl) titleEl.textContent = `${empleado.nombre} ${empleado.apellido || ''}`.trim();
+
+        const cargoEl = document.getElementById('empleadoModalCargo');
+        if (cargoEl) cargoEl.textContent = empleado.cargo || 'Sin cargo';
+
+        const completadas = tareas.filter(t => t.estado === 'completado').length;
+        const enProceso = tareas.filter(t => t.estado === 'en_progreso').length;
+        const pendientes = tareas.filter(t => t.estado === 'pendiente' || t.estado === 'notificado').length;
+        const total = tareas.length;
+
+        const statsEl = document.getElementById('empleadoModalStats');
+        if (statsEl) {
+            statsEl.innerHTML = `
+                <span class="empleado-modal-stat-pill success">
+                    <i class="fas fa-check-circle"></i> ${completadas} completadas
+                </span>
+                <span class="empleado-modal-stat-pill info">
+                    <i class="fas fa-spinner"></i> ${enProceso} en proceso
+                </span>
+                <span class="empleado-modal-stat-pill warning">
+                    <i class="fas fa-hourglass-half"></i> ${pendientes} pendientes
+                </span>
+                <span class="empleado-modal-stat-pill">
+                    <i class="fas fa-list"></i> ${total} total
+                </span>
             `;
         }
-    },
 
-    renderTareasModal(tareas, empleado) {
-        if (!tareas || tareas.length === 0) return '';
-        const statusMap = { pendiente: 'Pendiente', en_progreso: 'En Proceso', notificado: 'Notificado', completado: 'Listo' };
+        const bodyEl = document.getElementById('modalEmpleadoBody');
+
+        if (!tareas || tareas.length === 0) {
+            bodyEl.innerHTML = `
+                <div class="empleado-modal-empty">
+                    <i class="fas fa-inbox"></i>
+                    <h4>Sin tareas asignadas</h4>
+                    <p>Este empleado no tiene tareas registradas actualmente</p>
+                </div>
+            `;
+            return;
+        }
+
+        const statusMap = {
+            pendiente: 'Pendiente',
+            notificado: 'Notificado',
+            en_progreso: 'En Proceso',
+            completado: 'Completado'
+        };
         const statusOptions = ['pendiente', 'notificado', 'en_progreso', 'completado'];
-        return tareas.map(tarea => {
-            const pedido = tarea.pedidos || {};
+
+        const filas = tareas.map(t => {
+            const pedido = t.pedidos || {};
             const cliente = pedido.clientes || {};
-            const fechaRecepcion = pedido.fecha_solicitud ? new Date(pedido.fecha_solicitud).toLocaleDateString('es-ES') : '-';
-            const fechaEntrega = pedido.fecha_entrega_prometida ? new Date(pedido.fecha_entrega_prometida).toLocaleDateString('es-ES') : '-';
-            const fechaFin = tarea.fecha_fin ? new Date(tarea.fecha_fin).toLocaleDateString('es-ES') : '-';
-            const detalles = pedido.observaciones || tarea.observaciones || cliente.nombre || 'Sin detalles';
+
+            const fechaAsignacion = t.fecha_asignacion
+                ? new Date(t.fecha_asignacion).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+                : '-';
+
+            const fechaEntrega = pedido.fecha_entrega_prometida
+                ? new Date(pedido.fecha_entrega_prometida).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })
+                : '-';
+
+            const descripcion = pedido.observaciones || t.observaciones || 'Sin descripción';
+            const clienteNombre = cliente.nombre || 'Sin cliente';
+            const prioridad = pedido.prioridad || 'normal';
+            const tipoTarea = t.tipo_tarea || 'Sin tipo';
+
             return `
-                <tr data-tarea-id="${tarea.id}">
-                    <td>${fechaRecepcion}</td>
-                    <td><strong>${tarea.tipo_tarea || 'Sin tarea'}</strong></td>
-                    <td>${fechaEntrega}</td>
-                    <td style="max-width:150px; word-wrap:break-word;">${detalles}</td>
-                    <td>
-                        <select class="status-select status-${tarea.estado}" onchange="App.actualizarStatusTarea(${tarea.id}, this.value, ${empleado.id})">
-                            ${statusOptions.map(opt => `<option value="${opt}" ${tarea.estado === opt ? 'selected' : ''}>${statusMap[opt]}</option>`).join('')}
+                <tr>
+                    <td class="col-id">#${pedido.id || '-'}</td>
+                    <td class="col-fecha">${fechaAsignacion}</td>
+                    <td class="col-fecha">${fechaEntrega}</td>
+                    <td class="col-tipo">
+                        <i class="fas ${this.getIconoTipoTarea(tipoTarea)}" style="color: var(--md-primary); margin-right: 4px;"></i>
+                        ${this.escapeHtml(tipoTarea)}
+                    </td>
+                    <td class="col-cliente">${this.escapeHtml(clienteNombre)}</td>
+                    <td class="col-tarea" title="${this.escapeHtml(descripcion)}">${this.escapeHtml(descripcion)}</td>
+                    <td><span class="badge-prioridad ${prioridad}">${prioridad}</span></td>
+                    <td class="col-estado">
+                        <select class="status-select status-${t.estado}"
+                                onchange="App.actualizarStatusTarea(${t.id}, this.value, ${empleado.id})">
+                            ${statusOptions.map(opt =>
+                                `<option value="${opt}" ${t.estado === opt ? 'selected' : ''}>${statusMap[opt]}</option>`
+                            ).join('')}
                         </select>
                     </td>
-                    <td><span class="status-badge-sm ${tarea.estado}">${tarea.estado === 'completado' ? fechaFin : 'En curso'}</span></td>
+                    <td class="col-acciones">
+                        ${pedido.id ? `
+                            <button class="btn-tabla-accion"
+                                    title="Ver pedido"
+                                    onclick="App.verPedidoDetalle(${pedido.id})">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        ` : ''}
+                    </td>
                 </tr>
             `;
         }).join('');
+
+        bodyEl.innerHTML = `
+            <table class="tabla-tareas-empleado">
+                <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Asignada</th>
+                        <th>Entrega</th>
+                        <th>Tipo Tarea</th>
+                        <th>Cliente</th>
+                        <th>Descripción</th>
+                        <th>Prioridad</th>
+                        <th>Estado</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>${filas}</tbody>
+            </table>
+        `;
     },
 
+    // ==========================================
+    // ACTUALIZAR STATUS DE TAREA
+    // ==========================================
     async actualizarStatusTarea(tareaId, nuevoStatus, empleadoId) {
         try {
             const updateData = { estado: nuevoStatus };
@@ -837,15 +1000,18 @@ const App = {
             }
             const { error } = await supabaseClient.from('tareas').update(updateData).eq('id', tareaId);
             if (error) throw error;
+
             await this.calcularEficienciaEmpleado(empleadoId);
             ToastSystem.success('✅ Actualizado', `Tarea cambiada a ${nuevoStatus}`);
             Cache.invalidate('eficiencia', 'empleados', 'pedidos');
+
             await Promise.all([
                 this.cargarEmpleadosYTareas(),
                 this.cargarTablaEmpleados(),
                 this.cargarEficienciaOptimizada(),
                 this.cargarPedidosUrgentes()
             ]);
+
             await this.abrirModalEmpleado(empleadoId);
         } catch (error) {
             console.error('❌ Error actualizando tarea:', error);
@@ -1155,4 +1321,4 @@ window.actualizarStatusTarea = (tareaId, nuevoStatus, empleadoId) => App.actuali
 
 document.addEventListener('DOMContentLoaded', () => { App.init(); });
 window.addEventListener('beforeunload', () => { App.destroy(); });
-console.log('✅ Dashboard INVEMEX v13.0 cargado correctamente');
+console.log('✅ Dashboard INVEMEX v18.0 cargado correctamente');
