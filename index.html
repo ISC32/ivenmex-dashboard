@@ -15,8 +15,9 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/dashboardInvemex.css?v=14">
-    <link rel="stylesheet" href="css/admin-panel.css?v=1">
+    <link rel="stylesheet" href="css/dashboardInvemex.css?v=18">
+    <link rel="stylesheet" href="css/dashboard-tv.css?v=18">
+    <link rel="stylesheet" href="css/admin-panel.css?v=2">
 
     <style>
         .empleado-avatar-card { position: relative; }
@@ -275,22 +276,33 @@
         </section>
     </main>
 
-    <!-- MODAL: DETALLE DE EMPLEADO -->
+    <!-- MODAL: DETALLE DE EMPLEADO (TABLA ALARGADA PARA TV) -->
     <div class="modal fade" id="modalEmpleadoDetalle" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-dialog modal-empleado-tv modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content md-modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalEmpleadoTitle">Empleado</h5>
+                <div class="modal-header empleado-modal-header">
+                    <div class="empleado-modal-title-wrap">
+                        <div class="avatar-lg" id="empleadoModalAvatar">?</div>
+                        <div class="empleado-modal-title-info">
+                            <h5 class="modal-title" id="modalEmpleadoTitle">Empleado</h5>
+                            <span class="empleado-modal-subtitle" id="empleadoModalCargo">Sin cargo</span>
+                        </div>
+                    </div>
+                    <div class="empleado-modal-stats" id="empleadoModalStats"></div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
                 </div>
-                <div class="modal-body" id="modalEmpleadoBody">
+
+                <div class="modal-body empleado-modal-body" id="modalEmpleadoBody">
                     <div style="text-align:center; padding:30px;">
                         <i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i>
-                        <p style="margin-top:12px;">Cargando información...</p>
+                        <p style="margin-top:12px;">Cargando tareas...</p>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button>
+
+                <div class="modal-footer empleado-modal-footer">
+                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cerrar
+                    </button>
                 </div>
             </div>
         </div>
@@ -570,13 +582,367 @@
         </div>
     </div>
 
+    <!-- ==========================================
+         PANEL ADMIN OCULTO - LOGIN
+    ========================================== -->
+    <div class="admin-login-overlay" id="adminLoginOverlay">
+        <div class="admin-login-card">
+            <div class="admin-login-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2 class="admin-login-title">ACCESO RESTRINGIDO</h2>
+            <p class="admin-login-subtitle">Panel administrativo IVENMEX</p>
+
+            <div class="admin-login-form">
+                <input
+                    type="password"
+                    id="adminPasswordInput"
+                    class="admin-login-input"
+                    placeholder="Ingresa la contraseña"
+                    autocomplete="off"
+                >
+                <div class="admin-login-error" id="adminLoginError"></div>
+                <div class="admin-login-actions">
+                    <button class="md-btn md-btn-outline" id="adminLoginCancel">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="md-btn md-btn-primary" id="adminLoginBtn">
+                        <i class="fas fa-sign-in-alt"></i> Acceder
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==========================================
+         PANEL ADMIN OCULTO - CONTENIDO
+    ========================================== -->
+    <div class="admin-panel" id="adminPanel">
+        <div class="admin-header">
+            <div class="admin-header-brand">
+                <img src="assets/logos/logo-invemex.png" alt="IVENMEX">
+                <span class="admin-header-title">IVENMEX</span>
+                <span class="admin-header-badge">ADMIN</span>
+            </div>
+            <div class="admin-header-actions">
+                <div class="admin-user-info">
+                    <i class="fas fa-circle"></i>
+                    Sesión activa
+                </div>
+                <button class="md-btn md-btn-outline md-btn-sm" id="adminLogoutBtn">
+                    <i class="fas fa-sign-out-alt"></i> Salir
+                </button>
+                <button class="md-btn md-btn-text md-btn-sm" id="adminCloseBtn" title="Cerrar panel">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="admin-body">
+            <aside class="admin-sidebar">
+                <button class="admin-nav-item active" data-view="dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Dashboard</span>
+                </button>
+                <div class="admin-nav-divider"></div>
+                <button class="admin-nav-item" data-view="clientes">
+                    <i class="fas fa-users"></i>
+                    <span>Clientes</span>
+                </button>
+                <button class="admin-nav-item" data-view="pedidos">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Pedidos</span>
+                </button>
+                <button class="admin-nav-item" data-view="ventas">
+                    <i class="fas fa-dollar-sign"></i>
+                    <span>Ventas</span>
+                </button>
+                <button class="admin-nav-item" data-view="productos">
+                    <i class="fas fa-box"></i>
+                    <span>Productos</span>
+                </button>
+                <button class="admin-nav-item" data-view="inventario">
+                    <i class="fas fa-warehouse"></i>
+                    <span>Inventario</span>
+                </button>
+                <div class="admin-nav-divider"></div>
+                <button class="admin-nav-item" data-view="ia">
+                    <i class="fas fa-robot"></i>
+                    <span>Asistente IA</span>
+                    <span class="admin-nav-badge">IA</span>
+                </button>
+            </aside>
+
+            <main class="admin-content">
+
+                <div class="admin-view active" id="adminView-dashboard">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-chart-line"></i> Dashboard General</h2>
+                    </div>
+
+                    <div class="admin-stats-grid">
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="admin-stat-label">Clientes</div>
+                            <div class="admin-stat-value" id="adminStatClientes">0</div>
+                        </div>
+                        <div class="admin-stat-card info">
+                            <div class="admin-stat-icon"><i class="fas fa-clipboard-list"></i></div>
+                            <div class="admin-stat-label">Pedidos Totales</div>
+                            <div class="admin-stat-value" id="adminStatPedidos">0</div>
+                        </div>
+                        <div class="admin-stat-card warning">
+                            <div class="admin-stat-icon"><i class="fas fa-spinner"></i></div>
+                            <div class="admin-stat-label">Pedidos Activos</div>
+                            <div class="admin-stat-value" id="adminStatActivos">0</div>
+                        </div>
+                        <div class="admin-stat-card danger">
+                            <div class="admin-stat-icon"><i class="fas fa-fire"></i></div>
+                            <div class="admin-stat-label">Urgentes</div>
+                            <div class="admin-stat-value" id="adminStatUrgentes">0</div>
+                        </div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-icon"><i class="fas fa-box"></i></div>
+                            <div class="admin-stat-label">Productos</div>
+                            <div class="admin-stat-value" id="adminStatProductos">0</div>
+                        </div>
+                        <div class="admin-stat-card success">
+                            <div class="admin-stat-icon"><i class="fas fa-dollar-sign"></i></div>
+                            <div class="admin-stat-label">Ventas Totales</div>
+                            <div class="admin-stat-value" id="adminStatVentas">$0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-view" id="adminView-clientes">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-users"></i> Clientes</h2>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Lista de Clientes</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th><th>Nombre</th><th>Teléfono</th>
+                                        <th>Email</th><th>Dirección</th><th>Registro</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaClientes">
+                                    <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-view" id="adminView-pedidos">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-clipboard-list"></i> Pedidos</h2>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Últimos 100 pedidos</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th><th>Cliente</th><th>Producto</th>
+                                        <th>Total</th><th>Anticipo</th><th>Estado</th>
+                                        <th>Prioridad</th><th>Entrega</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaPedidos">
+                                    <tr><td colspan="8" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-view" id="adminView-ventas">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-dollar-sign"></i> Ventas</h2>
+                        <div style="font-size: 16px; font-weight: 800; color: var(--md-success);">
+                            Total: <span id="adminVentasTotal">$0</span>
+                        </div>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Últimos 100 pagos</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID Pago</th><th>ID Pedido</th><th>Cliente</th>
+                                        <th>Monto</th><th>Método</th><th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaVentas">
+                                    <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-view" id="adminView-productos">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-box"></i> Productos</h2>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Catálogo</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th><th>Nombre</th><th>Categoría</th>
+                                        <th>Material</th><th>Precio</th><th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaProductos">
+                                    <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-view" id="adminView-inventario">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-warehouse"></i> Inventario</h2>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Materiales</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>ID</th><th>Nombre</th><th>Tipo</th>
+                                        <th>Stock Actual</th><th>Stock Mínimo</th><th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaInventario">
+                                    <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="admin-view" id="adminView-ia">
+                    <div class="admin-ia-container" id="adminIaContainer">
+                        <div class="admin-ia-header">
+                            <div class="admin-ia-header-icon" id="adminIaBrain">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <div class="admin-ia-header-info">
+                                <h3 class="admin-ia-header-title">Asistente IA IVENMEX</h3>
+                                <p class="admin-ia-header-subtitle">
+                                    <span class="admin-ia-status-pill checking" id="adminIaStatusPill">
+                                        <span id="adminIaStatusText">Conectando...</span>
+                                    </span>
+                                    <span id="adminIaModelInfo">OpenRouter</span>
+                                </p>
+                            </div>
+                            <div class="admin-ia-header-actions">
+                                <button class="admin-ia-action-btn" id="adminIaNewBtn" title="Nueva conversación">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                                <button class="admin-ia-action-btn" id="adminIaConvsBtn" title="Conversaciones">
+                                    <i class="fas fa-comments"></i>
+                                </button>
+                                <button class="admin-ia-action-btn" id="adminIaSearchBtn" title="Buscar">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                                <button class="admin-ia-action-btn" id="adminIaCompactBtn" title="Modo compacto">
+                                    <i class="fas fa-compress"></i>
+                                </button>
+                                <button class="admin-ia-action-btn" id="adminIaExportBtn" title="Exportar">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button class="admin-ia-action-btn" id="adminIaClearBtn" title="Limpiar chat">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="admin-ia-search" id="adminIaSearch">
+                            <input type="text" id="adminIaSearchInput" placeholder="Buscar en la conversación...">
+                        </div>
+
+                        <div class="admin-ia-convs" id="adminIaConvs"></div>
+
+                        <div class="admin-ia-messages" id="adminIaMessages"></div>
+
+                        <div class="admin-ia-suggestions" id="adminIaSuggestions">
+                            <button class="admin-ia-suggestion" data-query="Dame un resumen general">
+                                <i class="fas fa-chart-pie"></i> Resumen general
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="¿Cuántos clientes tengo?">
+                                <i class="fas fa-users"></i> Total clientes
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="Muéstrame los pedidos urgentes">
+                                <i class="fas fa-fire"></i> Pedidos urgentes
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="¿Cuáles son las ventas totales?">
+                                <i class="fas fa-dollar-sign"></i> Ventas totales
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="¿Qué materiales tienen stock bajo?">
+                                <i class="fas fa-exclamation-triangle"></i> Stock bajo
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="Lista los productos activos">
+                                <i class="fas fa-box"></i> Productos
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="¿Cuánto está el dólar hoy?">
+                                <i class="fas fa-money-bill-wave"></i> Tasa BCV
+                            </button>
+                            <button class="admin-ia-suggestion" data-query="Ayuda">
+                                <i class="fas fa-question-circle"></i> Ayuda
+                            </button>
+                        </div>
+
+                        <div class="admin-ia-input-area">
+                            <div class="admin-ia-input-wrapper">
+                                <textarea
+                                    id="adminIaInput"
+                                    class="admin-ia-input"
+                                    placeholder="Escribe tu pregunta... (Shift+Enter para salto de línea)"
+                                    rows="1"
+                                ></textarea>
+                                <div class="admin-ia-input-actions">
+                                    <button class="admin-ia-input-btn" id="adminIaVoiceBtn" title="Dictado por voz">
+                                        <i class="fas fa-microphone"></i>
+                                    </button>
+                                </div>
+                                <span class="admin-ia-char-counter" id="adminIaCharCounter">0</span>
+                            </div>
+                            <button class="admin-ia-send" id="adminIaSend" title="Enviar (Enter)">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dashboardInvemex.js?v=16"></script>
-    <script src="js/dashboardQueryOptimizer.js?v=16" defer></script>
-    <script src="js/dashboardTV.js?v=16" defer></script>
-    <script src="js/adminPanel.js?v=1" defer></script>
-    
+    <script src="js/dashboardInvemex.js?v=18"></script>
+    <script src="js/dashboardQueryOptimizer.js?v=18" defer></script>
+    <script src="js/dashboardTV.js?v=18" defer></script>
+    <script src="js/adminPanel.js?v=2" defer></script>
+
     <script>
         (function () {
             const indicator = () => document.getElementById('realtime-indicator');
@@ -609,314 +975,5 @@
             });
         })();
     </script>
-
-    <!-- ==========================================
-     PANEL ADMIN OCULTO - LOGIN
-========================================== -->
-<div class="admin-login-overlay" id="adminLoginOverlay">
-    <div class="admin-login-card">
-        <div class="admin-login-icon">
-            <i class="fas fa-lock"></i>
-        </div>
-        <h2 class="admin-login-title">ACCESO RESTRINGIDO</h2>
-        <p class="admin-login-subtitle">Panel administrativo IVENMEX</p>
-
-        <div class="admin-login-form">
-            <input
-                type="password"
-                id="adminPasswordInput"
-                class="admin-login-input"
-                placeholder="Ingresa la contraseña"
-                autocomplete="off"
-            >
-            <div class="admin-login-error" id="adminLoginError"></div>
-            <div class="admin-login-actions">
-                <button class="md-btn md-btn-outline" id="adminLoginCancel">
-                    <i class="fas fa-times"></i> Cancelar
-                </button>
-                <button class="md-btn md-btn-primary" id="adminLoginBtn">
-                    <i class="fas fa-sign-in-alt"></i> Acceder
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- ==========================================
-     PANEL ADMIN OCULTO - CONTENIDO
-========================================== -->
-<div class="admin-panel" id="adminPanel">
-    <!-- Header -->
-    <div class="admin-header">
-        <div class="admin-header-brand">
-            <img src="assets/logos/logo-invemex.png" alt="IVENMEX">
-            <span class="admin-header-title">IVENMEX</span>
-            <span class="admin-header-badge">ADMIN</span>
-        </div>
-        <div class="admin-header-actions">
-            <div class="admin-user-info">
-                <i class="fas fa-circle"></i>
-                Sesión activa
-            </div>
-            <button class="md-btn md-btn-outline md-btn-sm" id="adminLogoutBtn">
-                <i class="fas fa-sign-out-alt"></i> Salir
-            </button>
-            <button class="md-btn md-btn-text md-btn-sm" id="adminCloseBtn" title="Cerrar panel">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    </div>
-
-    <!-- Body -->
-    <div class="admin-body">
-        <!-- Sidebar -->
-        <aside class="admin-sidebar">
-            <button class="admin-nav-item active" data-view="dashboard">
-                <i class="fas fa-chart-line"></i>
-                <span>Dashboard</span>
-            </button>
-            <div class="admin-nav-divider"></div>
-            <button class="admin-nav-item" data-view="clientes">
-                <i class="fas fa-users"></i>
-                <span>Clientes</span>
-            </button>
-            <button class="admin-nav-item" data-view="pedidos">
-                <i class="fas fa-clipboard-list"></i>
-                <span>Pedidos</span>
-            </button>
-            <button class="admin-nav-item" data-view="ventas">
-                <i class="fas fa-dollar-sign"></i>
-                <span>Ventas</span>
-            </button>
-            <button class="admin-nav-item" data-view="productos">
-                <i class="fas fa-box"></i>
-                <span>Productos</span>
-            </button>
-            <button class="admin-nav-item" data-view="inventario">
-                <i class="fas fa-warehouse"></i>
-                <span>Inventario</span>
-            </button>
-            <div class="admin-nav-divider"></div>
-            <button class="admin-nav-item" data-view="ia">
-                <i class="fas fa-robot"></i>
-                <span>Asistente IA</span>
-                <span class="admin-nav-badge">IA</span>
-            </button>
-        </aside>
-
-        <!-- Content -->
-        <main class="admin-content">
-
-            <!-- VISTA: DASHBOARD -->
-            <div class="admin-view active" id="adminView-dashboard">
-                <div class="admin-view-header">
-                    <h2 class="admin-view-title"><i class="fas fa-chart-line"></i> Dashboard General</h2>
-                </div>
-
-                <div class="admin-stats-grid">
-                    <div class="admin-stat-card">
-                        <div class="admin-stat-icon"><i class="fas fa-users"></i></div>
-                        <div class="admin-stat-label">Clientes</div>
-                        <div class="admin-stat-value" id="adminStatClientes">0</div>
-                    </div>
-                    <div class="admin-stat-card info">
-                        <div class="admin-stat-icon"><i class="fas fa-clipboard-list"></i></div>
-                        <div class="admin-stat-label">Pedidos Totales</div>
-                        <div class="admin-stat-value" id="adminStatPedidos">0</div>
-                    </div>
-                    <div class="admin-stat-card warning">
-                        <div class="admin-stat-icon"><i class="fas fa-spinner"></i></div>
-                        <div class="admin-stat-label">Pedidos Activos</div>
-                        <div class="admin-stat-value" id="adminStatActivos">0</div>
-                    </div>
-                    <div class="admin-stat-card danger">
-                        <div class="admin-stat-icon"><i class="fas fa-fire"></i></div>
-                        <div class="admin-stat-label">Urgentes</div>
-                        <div class="admin-stat-value" id="adminStatUrgentes">0</div>
-                    </div>
-                    <div class="admin-stat-card">
-                        <div class="admin-stat-icon"><i class="fas fa-box"></i></div>
-                        <div class="admin-stat-label">Productos</div>
-                        <div class="admin-stat-value" id="adminStatProductos">0</div>
-                    </div>
-                    <div class="admin-stat-card success">
-                        <div class="admin-stat-icon"><i class="fas fa-dollar-sign"></i></div>
-                        <div class="admin-stat-label">Ventas Totales</div>
-                        <div class="admin-stat-value" id="adminStatVentas">$0</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA: CLIENTES -->
-            <div class="admin-view" id="adminView-clientes">
-                <div class="admin-view-header">
-                    <h2 class="admin-view-title"><i class="fas fa-users"></i> Clientes</h2>
-                </div>
-                <div class="admin-table-container">
-                    <div class="admin-table-header">
-                        <div class="admin-table-title"><i class="fas fa-list"></i> Lista de Clientes</div>
-                    </div>
-                    <div class="admin-table-scroll">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th><th>Nombre</th><th>Teléfono</th>
-                                    <th>Email</th><th>Dirección</th><th>Registro</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminTablaClientes">
-                                <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA: PEDIDOS -->
-            <div class="admin-view" id="adminView-pedidos">
-                <div class="admin-view-header">
-                    <h2 class="admin-view-title"><i class="fas fa-clipboard-list"></i> Pedidos</h2>
-                </div>
-                <div class="admin-table-container">
-                    <div class="admin-table-header">
-                        <div class="admin-table-title"><i class="fas fa-list"></i> Últimos 100 pedidos</div>
-                    </div>
-                    <div class="admin-table-scroll">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th><th>Cliente</th><th>Producto</th>
-                                    <th>Total</th><th>Anticipo</th><th>Estado</th>
-                                    <th>Prioridad</th><th>Entrega</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminTablaPedidos">
-                                <tr><td colspan="8" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA: VENTAS -->
-            <div class="admin-view" id="adminView-ventas">
-                <div class="admin-view-header">
-                    <h2 class="admin-view-title"><i class="fas fa-dollar-sign"></i> Ventas</h2>
-                    <div style="font-size: 16px; font-weight: 800; color: var(--md-success);">
-                        Total: <span id="adminVentasTotal">$0</span>
-                    </div>
-                </div>
-                <div class="admin-table-container">
-                    <div class="admin-table-header">
-                        <div class="admin-table-title"><i class="fas fa-list"></i> Últimos 100 pagos</div>
-                    </div>
-                    <div class="admin-table-scroll">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID Pago</th><th>ID Pedido</th><th>Cliente</th>
-                                    <th>Monto</th><th>Método</th><th>Fecha</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminTablaVentas">
-                                <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA: PRODUCTOS -->
-            <div class="admin-view" id="adminView-productos">
-                <div class="admin-view-header">
-                    <h2 class="admin-view-title"><i class="fas fa-box"></i> Productos</h2>
-                </div>
-                <div class="admin-table-container">
-                    <div class="admin-table-header">
-                        <div class="admin-table-title"><i class="fas fa-list"></i> Catálogo</div>
-                    </div>
-                    <div class="admin-table-scroll">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th><th>Nombre</th><th>Categoría</th>
-                                    <th>Material</th><th>Precio</th><th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminTablaProductos">
-                                <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA: INVENTARIO -->
-            <div class="admin-view" id="adminView-inventario">
-                <div class="admin-view-header">
-                    <h2 class="admin-view-title"><i class="fas fa-warehouse"></i> Inventario</h2>
-                </div>
-                <div class="admin-table-container">
-                    <div class="admin-table-header">
-                        <div class="admin-table-title"><i class="fas fa-list"></i> Materiales</div>
-                    </div>
-                    <div class="admin-table-scroll">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>ID</th><th>Nombre</th><th>Tipo</th>
-                                    <th>Stock Actual</th><th>Stock Mínimo</th><th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody id="adminTablaInventario">
-                                <tr><td colspan="6" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- VISTA: ASISTENTE IA -->
-            <div class="admin-view" id="adminView-ia">
-                <div class="admin-ia-container">
-                    <div class="admin-ia-header">
-                        <div class="admin-ia-header-icon">
-                            <i class="fas fa-robot"></i>
-                        </div>
-                        <div>
-                            <h3 class="admin-ia-header-title">Asistente IA IVENMEX</h3>
-                            <p class="admin-ia-header-subtitle">Powered by OpenRouter + Supabase</p>
-                        </div>
-                    </div>
-
-                    <div class="admin-ia-messages" id="adminIaMessages"></div>
-
-                    <div class="admin-ia-suggestions">
-                        <button class="admin-ia-suggestion" data-query="Dame un resumen general">📊 Resumen general</button>
-                        <button class="admin-ia-suggestion" data-query="¿Cuántos clientes tengo?">👥 Total clientes</button>
-                        <button class="admin-ia-suggestion" data-query="Muéstrame los pedidos urgentes">🚨 Pedidos urgentes</button>
-                        <button class="admin-ia-suggestion" data-query="¿Cuáles son las ventas totales?">💰 Ventas totales</button>
-                        <button class="admin-ia-suggestion" data-query="¿Qué materiales tienen stock bajo?">⚠️ Stock bajo</button>
-                        <button class="admin-ia-suggestion" data-query="Lista los productos activos">📦 Productos</button>
-                    </div>
-
-                    <div class="admin-ia-input-area">
-                        <textarea
-                            id="adminIaInput"
-                            class="admin-ia-input"
-                            placeholder="Escribe tu pregunta..."
-                            rows="1"
-                        ></textarea>
-                        <button class="admin-ia-send" id="adminIaSend" title="Enviar">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-</div>
-
 </body>
 </html>
