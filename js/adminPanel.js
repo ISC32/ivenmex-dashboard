@@ -1,6 +1,6 @@
 /* ==========================================
    IVENMEX - PANEL ADMIN OCULTO
-   v3.0 - IA conversacional real (todo en n8n)
+   v3.0 - Con cotizaciones, facturas y deudas
    ========================================== */
 
 (function () {
@@ -13,11 +13,7 @@
         PASSWORD_HASH: 'ivenmex2024',
         SESSION_KEY: 'ivx_admin_session',
         SESSION_DURATION: 2 * 60 * 60 * 1000,
-
-        // 🤖 URL DEL WEBHOOK DE N8N
-        N8N_WEBHOOK_URL: 'https://n8n.aguasdguanipa.com/admin-chat',
-
-        // Timeout de respuesta (ms)
+        N8N_WEBHOOK_URL: 'https://n8n.aguasdguanipa.com/webhook/admin-chat',
         IA_TIMEOUT: 90000
     };
 
@@ -229,13 +225,16 @@
         });
 
         switch (viewName) {
-            case 'dashboard':  loadDashboardStats(); break;
-            case 'clientes':   loadClientes();       break;
-            case 'pedidos':    loadPedidos();        break;
-            case 'ventas':     loadVentas();         break;
-            case 'productos':  loadProductos();      break;
-            case 'inventario': loadInventario();     break;
-            case 'ia':         initIA();             break;
+            case 'dashboard':    loadDashboardStats(); break;
+            case 'clientes':     loadClientes();       break;
+            case 'pedidos':      loadPedidos();        break;
+            case 'ventas':       loadVentas();         break;
+            case 'productos':    loadProductos();      break;
+            case 'inventario':   loadInventario();     break;
+            case 'cotizaciones': loadCotizaciones();   break;
+            case 'facturas':     loadFacturas();       break;
+            case 'deudas':       loadDeudas();         break;
+            case 'ia':           initIA();             break;
         }
     }
 
@@ -250,19 +249,21 @@
     }
 
     // ==========================================
-    // CARGA DE DATOS
+    // DASHBOARD STATS
     // ==========================================
     async function loadDashboardStats() {
         try {
             const sb = getSupabase();
-            const [clientesRes, pedidosRes, ventasRes, productosRes] = await Promise.all([
+            const [clientesRes, pedidosRes, ventasRes, productosRes, deudasRes] = await Promise.all([
                 sb.from('clientes').select('*', { count: 'exact', head: true }),
                 sb.from('pedidos').select('*', { count: 'exact', head: true }),
                 sb.from('pagos').select('monto'),
-                sb.from('productos').select('*', { count: 'exact', head: true })
+                sb.from('productos').select('*', { count: 'exact', head: true }),
+                sb.from('deudas_clientes').select('saldo_usd').neq('estado', 'anulada')
             ]);
 
             const totalVentas = (ventasRes.data || []).reduce((sum, p) => sum + sanitizeNumber(p.monto), 0);
+            const deudaTotal = (deudasRes.data || []).reduce((sum, d) => sum + sanitizeNumber(d.saldo_usd), 0);
 
             setText('adminStatClientes', clientesRes.count || 0);
             setText('adminStatPedidos', pedidosRes.count || 0);
@@ -285,6 +286,9 @@
         }
     }
 
+    // ==========================================
+    // CLIENTES
+    // ==========================================
     async function loadClientes() {
         try {
             const { data, error } = await getSupabase()
@@ -314,6 +318,9 @@
         }
     }
 
+    // ==========================================
+    // PEDIDOS
+    // ==========================================
     async function loadPedidos() {
         try {
             const { data, error } = await getSupabase()
@@ -351,6 +358,9 @@
         }
     }
 
+    // ==========================================
+    // VENTAS
+    // ==========================================
     async function loadVentas() {
         try {
             const { data, error } = await getSupabase()
@@ -385,6 +395,9 @@
         }
     }
 
+    // ==========================================
+    // PRODUCTOS
+    // ==========================================
     async function loadProductos() {
         try {
             const { data, error } = await getSupabase()
@@ -419,6 +432,9 @@
         }
     }
 
+    // ==========================================
+    // INVENTARIO
+    // ==========================================
     async function loadInventario() {
         try {
             const { data, error } = await getSupabase()
@@ -460,6 +476,255 @@
         }
     }
 
+    // ==========================================
+    // COTIZACIONES
+    // ==========================================
+    async function loadCotizaciones() {
+        try {
+            const sb = getSupabase();
+            console.log('📄 Cargando cotizaciones...');
+
+            const { data, error } = await sb
+                .from('cotizaciones')
+                .select(`
+                    id, numero, fecha_emision, total_usd, total_bs, estado,
+                    archivo_pdf_url, archivo_docx_url,
+                    clientes (nombre)
+                `)
+                .order('fecha_emision', { ascending: false })
+                .limit(200);
+
+            if (error) throw error;
+            console.log(`✅ ${data?.length || 0} cotizaciones`);
+
+            const tbody = document.getElementById('adminTablaCotizaciones');
+            if (!tbody) return;
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="admin-table-empty"><i class="fas fa-file-invoice-dollar"></i>No hay cotizaciones</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(c => `
+                <tr>
+                    <td><strong>${escapeHtml(c.numero)}</strong></td>
+                    <td>${escapeHtml(c.clientes?.nombre || 'Sin cliente')}</td>
+                    <td>${formatDate(c.fecha_emision)}</td>
+                    <td><strong>${formatCurrency(c.total_usd)}</strong></td>
+                    <td>Bs ${parseFloat(c.total_bs || 0).toFixed(2)}</td>
+                    <td><span class="cotizacion-estado-badge ${c.estado || 'emitida'}">${c.estado || 'emitida'}</span></td>
+                    <td>
+                        ${c.archivo_pdf_url
+                            ? `<a href="${c.archivo_pdf_url}" target="_blank" class="file-action-btn pdf" title="Ver PDF"><i class="fas fa-file-pdf"></i></a>`
+                            : '<span style="color:#9CA3AF;">-</span>'}
+                    </td>
+                    <td>
+                        ${c.archivo_docx_url
+                            ? `<a href="${c.archivo_docx_url}" target="_blank" class="file-action-btn docx" title="Descargar DOCX"><i class="fas fa-file-word"></i></a>`
+                            : '<span style="color:#9CA3AF;">-</span>'}
+                    </td>
+                </tr>
+            `).join('');
+
+            // Buscador
+            const buscador = document.getElementById('cotizaciones-buscar');
+            if (buscador && !buscador.dataset.listener) {
+                buscador.dataset.listener = 'true';
+                buscador.addEventListener('input', (e) => {
+                    const q = e.target.value.toLowerCase();
+                    tbody.querySelectorAll('tr').forEach(tr => {
+                        tr.style.display = tr.textContent.toLowerCase().includes(q) ? '' : 'none';
+                    });
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error cotizaciones:', error);
+            const tbody = document.getElementById('adminTablaCotizaciones');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
+            showToast('Error al cargar cotizaciones', 'error');
+        }
+    }
+
+    // ==========================================
+    // FACTURAS INTERNAS
+    // ==========================================
+    async function loadFacturas() {
+        try {
+            const sb = getSupabase();
+            console.log('🧾 Cargando facturas internas...');
+
+            const { data, error } = await sb
+                .from('facturas_internas')
+                .select(`
+                    id, numero, fecha_emision, tipo, total_usd, metodo_pago,
+                    clientes (nombre),
+                    pedidos (id)
+                `)
+                .order('fecha_emision', { ascending: false })
+                .limit(200);
+
+            if (error) throw error;
+            console.log(`✅ ${data?.length || 0} facturas internas`);
+
+            const tbody = document.getElementById('adminTablaFacturas');
+            if (!tbody) return;
+
+            if (!data || data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="admin-table-empty"><i class="fas fa-receipt"></i>No hay facturas registradas</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = data.map(f => `
+                <tr>
+                    <td><strong>${escapeHtml(f.numero)}</strong></td>
+                    <td>${escapeHtml(f.clientes?.nombre || '-')}</td>
+                    <td>${f.pedidos?.id ? `#${f.pedidos.id}` : '-'}</td>
+                    <td><span class="md-badge default">${escapeHtml(f.tipo || 'venta')}</span></td>
+                    <td><strong>${formatCurrency(f.total_usd)}</strong></td>
+                    <td>${escapeHtml(f.metodo_pago || '-')}</td>
+                    <td>${formatDate(f.fecha_emision)}</td>
+                </tr>
+            `).join('');
+        } catch (error) {
+            console.error('❌ Error facturas:', error);
+            const tbody = document.getElementById('adminTablaFacturas');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="7" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
+            showToast('Error al cargar facturas', 'error');
+        }
+    }
+
+    // ==========================================
+    // DEUDAS
+    // ==========================================
+    async function loadDeudas() {
+        try {
+            const sb = getSupabase();
+            console.log('💰 Cargando deudas...');
+
+            const periodo = document.getElementById('deudas-filtro-periodo')?.value || 'todo';
+
+            let diasFiltro = null;
+            if (periodo === 'semana') diasFiltro = 7;
+            else if (periodo === 'mes') diasFiltro = 30;
+            else if (periodo === 'trimestre') diasFiltro = 90;
+            else if (periodo === 'año') diasFiltro = 365;
+
+            let query = sb.from('deudas_clientes')
+                .select(`
+                    id, monto_total_usd, monto_pagado_usd, saldo_usd, fecha_deuda,
+                    fecha_vencimiento, estado, concepto, notas,
+                    clientes (id, nombre, telefono)
+                `)
+                .neq('estado', 'anulada')
+                .order('fecha_deuda', { ascending: false });
+
+            if (diasFiltro) {
+                const fechaLimite = new Date();
+                fechaLimite.setDate(fechaLimite.getDate() - diasFiltro);
+                query = query.gte('fecha_deuda', fechaLimite.toISOString().split('T')[0]);
+            }
+
+            const { data, error } = await query;
+            if (error) throw error;
+            console.log(`✅ ${data?.length || 0} deudas`);
+
+            // Agrupar por cliente
+            const porCliente = {};
+            (data || []).forEach(d => {
+                const clienteId = d.clientes?.id || 0;
+                if (!porCliente[clienteId]) {
+                    porCliente[clienteId] = {
+                        id: clienteId,
+                        nombre: d.clientes?.nombre || 'Sin cliente',
+                        telefono: d.clientes?.telefono || '-',
+                        deudas: 0,
+                        total: 0,
+                        pagado: 0,
+                        pendiente: 0,
+                        vencido: 0
+                    };
+                }
+                const c = porCliente[clienteId];
+                c.deudas++;
+                c.total += parseFloat(d.monto_total_usd) || 0;
+                c.pagado += parseFloat(d.monto_pagado_usd) || 0;
+                c.pendiente += parseFloat(d.saldo_usd) || 0;
+                if (d.fecha_vencimiento && new Date(d.fecha_vencimiento) < new Date() && d.estado !== 'pagada') {
+                    c.vencido += parseFloat(d.saldo_usd) || 0;
+                }
+            });
+
+            const deudaTotal = Object.values(porCliente).reduce((s, c) => s + c.pendiente, 0);
+            const deudaVencida = Object.values(porCliente).reduce((s, c) => s + c.vencido, 0);
+            const cobrado = Object.values(porCliente).reduce((s, c) => s + c.pagado, 0);
+            const clientesConDeuda = Object.values(porCliente).filter(c => c.pendiente > 0).length;
+
+            setText('adminDeudaTotal', formatCurrency(deudaTotal));
+            setText('adminDeudaVencida', formatCurrency(deudaVencida));
+            setText('adminClientesDeuda', clientesConDeuda);
+            setText('adminCobrado', formatCurrency(cobrado));
+
+            const tbody = document.getElementById('adminTablaDeudas');
+            if (!tbody) return;
+
+            const clientesArray = Object.values(porCliente)
+                .filter(c => c.pendiente > 0)
+                .sort((a, b) => b.pendiente - a.pendiente);
+
+            if (clientesArray.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="admin-table-empty"><i class="fas fa-check-circle"></i>No hay deudas pendientes</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = clientesArray.map(c => `
+                <tr>
+                    <td><strong>${escapeHtml(c.nombre)}</strong></td>
+                    <td>${escapeHtml(c.telefono)}</td>
+                    <td><span class="md-badge default">${c.deudas}</span></td>
+                    <td>${formatCurrency(c.total)}</td>
+                    <td style="color:#22C55E;font-weight:700;">${formatCurrency(c.pagado)}</td>
+                    <td style="color:#EF4444;font-weight:700;">${formatCurrency(c.pendiente)}</td>
+                    <td>${c.vencido > 0 ? `<span class="md-badge danger">${formatCurrency(c.vencido)}</span>` : '<span style="color:#22C55E;">-</span>'}</td>
+                    <td>
+                        <button class="md-btn md-btn-text md-btn-sm" onclick="AdminPanel.verDetalleDeudas(${c.id})" title="Ver detalle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button class="md-btn md-btn-text md-btn-sm" onclick="AdminPanel.abrirModalAbono(${c.id})" title="Registrar abono">
+                            <i class="fas fa-dollar-sign" style="color:#22C55E;"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+
+            // Listener del filtro
+            const filtro = document.getElementById('deudas-filtro-periodo');
+            if (filtro && !filtro.dataset.listener) {
+                filtro.dataset.listener = 'true';
+                filtro.addEventListener('change', loadDeudas);
+            }
+        } catch (error) {
+            console.error('❌ Error deudas:', error);
+            const tbody = document.getElementById('adminTablaDeudas');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="8" class="admin-table-empty" style="color:#EF4444;">
+                    <i class="fas fa-exclamation-circle"></i>Error: ${escapeHtml(error.message)}
+                </td></tr>`;
+            }
+            showToast('Error al cargar deudas', 'error');
+        }
+    }
+
+    // ==========================================
+    // HELPERS DE ESTADO
+    // ==========================================
     function getEstadoClass(estado) {
         const map = {
             urgente: 'danger', en_produccion: 'warning', diseño: 'primary',
@@ -479,10 +744,253 @@
     }
 
     // ==========================================
-    // ASISTENTE IA - CONVERSACIÓN NATURAL
+    // MODALES: NUEVA DEUDA / ABONO / FACTURA
     // ==========================================
+    function abrirModalNuevaDeuda() {
+        cargarClientesEnSelect('deuda_cliente');
+        const modal = new bootstrap.Modal(document.getElementById('modalNuevaDeuda'));
+        modal.show();
+    }
 
-    // Persistencia
+    async function guardarNuevaDeuda() {
+        const clienteId = document.getElementById('deuda_cliente')?.value;
+        const concepto = document.getElementById('deuda_concepto')?.value.trim();
+        const monto = parseFloat(document.getElementById('deuda_monto')?.value) || 0;
+        const vencimiento = document.getElementById('deuda_vencimiento')?.value || null;
+        const notas = document.getElementById('deuda_notas')?.value.trim() || null;
+
+        if (!clienteId || !concepto || monto <= 0) {
+            showToast('Completa cliente, concepto y monto', 'error');
+            return;
+        }
+
+        try {
+            const sb = getSupabase();
+            const { error } = await sb.from('deudas_clientes').insert({
+                cliente_id: parseInt(clienteId),
+                concepto,
+                monto_total_usd: monto,
+                monto_pagado_usd: 0,
+                saldo_usd: monto,
+                fecha_vencimiento: vencimiento,
+                notas,
+                estado: 'pendiente'
+            });
+
+            if (error) throw error;
+
+            showToast('✅ Deuda registrada', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevaDeuda'))?.hide();
+            document.getElementById('formNuevaDeuda')?.reset();
+            loadDeudas();
+            loadDashboardStats();
+        } catch (error) {
+            console.error('Error nueva deuda:', error);
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    async function abrirModalAbono(clienteId) {
+        const sb = getSupabase();
+        const { data: cliente } = await sb.from('clientes').select('nombre').eq('id', clienteId).single();
+        const { data: deudas } = await sb.from('deudas_clientes')
+            .select('id, concepto, saldo_usd')
+            .eq('cliente_id', clienteId)
+            .neq('estado', 'pagada')
+            .neq('estado', 'anulada');
+
+        document.getElementById('abono_cliente_nombre').value = cliente?.nombre || '';
+        document.getElementById('abono_cliente_id').value = clienteId;
+
+        const selectDeuda = document.getElementById('abono_deuda_id');
+        if (selectDeuda) {
+            selectDeuda.innerHTML = '<option value="">Seleccionar deuda...</option>' +
+                (deudas || []).map(d => `<option value="${d.id}">${d.concepto} - Saldo: $${parseFloat(d.saldo_usd).toFixed(2)}</option>`).join('');
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalAbonoDeuda'));
+        modal.show();
+    }
+
+    async function guardarAbono() {
+        const deudaId = document.getElementById('abono_deuda_id')?.value;
+        const monto = parseFloat(document.getElementById('abono_monto')?.value) || 0;
+        const metodo = document.getElementById('abono_metodo')?.value || 'divisa';
+        const referencia = document.getElementById('abono_referencia')?.value.trim() || null;
+
+        if (!deudaId || monto <= 0) {
+            showToast('Selecciona una deuda y un monto válido', 'error');
+            return;
+        }
+
+        try {
+            const sb = getSupabase();
+            const { error } = await sb.from('abonos_deudas').insert({
+                deuda_id: parseInt(deudaId),
+                monto_usd: monto,
+                metodo_pago: metodo,
+                referencia
+            });
+
+            if (error) throw error;
+
+            showToast('✅ Abono registrado', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalAbonoDeuda'))?.hide();
+            document.getElementById('formAbonoDeuda')?.reset();
+            loadDeudas();
+        } catch (error) {
+            console.error('Error abono:', error);
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    async function verDetalleDeudas(clienteId) {
+        const modalBody = document.getElementById('modalDetalleDeudasBody');
+        if (modalBody) {
+            modalBody.innerHTML = '<div style="text-align:center; padding:40px;"><i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i><p>Cargando...</p></div>';
+        }
+
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalleDeudas'));
+        modal.show();
+
+        try {
+            const sb = getSupabase();
+            const { data: cliente } = await sb.from('clientes').select('*').eq('id', clienteId).single();
+            const { data: deudas } = await sb.from('deudas_clientes')
+                .select('*')
+                .eq('cliente_id', clienteId)
+                .neq('estado', 'anulada')
+                .order('fecha_deuda', { ascending: false });
+
+            const total = (deudas || []).reduce((s, d) => s + parseFloat(d.monto_total_usd || 0), 0);
+            const pagado = (deudas || []).reduce((s, d) => s + parseFloat(d.monto_pagado_usd || 0), 0);
+            const pendiente = (deudas || []).reduce((s, d) => s + parseFloat(d.saldo_usd || 0), 0);
+            const vencido = (deudas || []).filter(d => d.fecha_vencimiento && new Date(d.fecha_vencimiento) < new Date() && d.estado !== 'pagada')
+                .reduce((s, d) => s + parseFloat(d.saldo_usd || 0), 0);
+
+            const filas = (deudas || []).map(d => `
+                <tr>
+                    <td>${formatDate(d.fecha_deuda)}</td>
+                    <td>${escapeHtml(d.concepto || '-')}</td>
+                    <td>${formatCurrency(d.monto_total_usd)}</td>
+                    <td style="color:#22C55E;font-weight:700;">${formatCurrency(d.monto_pagado_usd)}</td>
+                    <td style="color:#EF4444;font-weight:700;">${formatCurrency(d.saldo_usd)}</td>
+                    <td>${formatDate(d.fecha_vencimiento)}</td>
+                    <td><span class="md-badge ${d.estado === 'pagada' ? 'success' : d.estado === 'vencida' ? 'danger' : 'warning'}">${d.estado}</span></td>
+                </tr>
+            `).join('');
+
+            modalBody.innerHTML = `
+                <div class="deuda-detalle-header">
+                    <h3>${escapeHtml(cliente?.nombre || 'Cliente')}</h3>
+                    <p>${cliente?.telefono ? '📞 ' + escapeHtml(cliente.telefono) : ''} ${cliente?.email ? ' · ✉️ ' + escapeHtml(cliente.email) : ''}</p>
+                </div>
+
+                <div class="deuda-detalle-stats">
+                    <div class="deuda-detalle-stat">
+                        <div class="label">Total Facturado</div>
+                        <div class="value">${formatCurrency(total)}</div>
+                    </div>
+                    <div class="deuda-detalle-stat">
+                        <div class="label">Total Pagado</div>
+                        <div class="value success">${formatCurrency(pagado)}</div>
+                    </div>
+                    <div class="deuda-detalle-stat">
+                        <div class="label">Saldo Pendiente</div>
+                        <div class="value danger">${formatCurrency(pendiente)}</div>
+                    </div>
+                    <div class="deuda-detalle-stat">
+                        <div class="label">Vencido</div>
+                        <div class="value warning">${formatCurrency(vencido)}</div>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Concepto</th>
+                                <th>Total</th>
+                                <th>Pagado</th>
+                                <th>Saldo</th>
+                                <th>Vence</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>${filas || '<tr><td colspan="7" class="admin-table-empty">Sin deudas</td></tr>'}</tbody>
+                    </table>
+                </div>
+            `;
+        } catch (error) {
+            console.error('Error detalle deudas:', error);
+            modalBody.innerHTML = '<p style="color:#EF4444;text-align:center;">Error al cargar</p>';
+        }
+    }
+
+    // ==========================================
+    // NUEVA FACTURA INTERNA
+    // ==========================================
+    function abrirModalNuevaFactura() {
+        cargarClientesEnSelect('factura_cliente');
+        const modal = new bootstrap.Modal(document.getElementById('modalNuevaFactura'));
+        modal.show();
+    }
+
+    async function guardarNuevaFactura() {
+        const clienteId = document.getElementById('factura_cliente')?.value || null;
+        const tipo = document.getElementById('factura_tipo')?.value || 'venta';
+        const categoria = document.getElementById('factura_categoria')?.value.trim() || null;
+        const descripcion = document.getElementById('factura_descripcion')?.value.trim() || null;
+        const total = parseFloat(document.getElementById('factura_total')?.value) || 0;
+        const metodo = document.getElementById('factura_metodo')?.value || 'divisa';
+
+        if (total <= 0) {
+            showToast('Ingresa un total válido', 'error');
+            return;
+        }
+
+        try {
+            const sb = getSupabase();
+            const { error } = await sb.from('facturas_internas').insert({
+                cliente_id: clienteId ? parseInt(clienteId) : null,
+                tipo,
+                categoria,
+                descripcion,
+                subtotal_usd: total,
+                total_usd: total,
+                metodo_pago: metodo
+            });
+
+            if (error) throw error;
+
+            showToast('✅ Factura registrada', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('modalNuevaFactura'))?.hide();
+            document.getElementById('formNuevaFactura')?.reset();
+            loadFacturas();
+        } catch (error) {
+            console.error('Error factura:', error);
+            showToast('Error: ' + error.message, 'error');
+        }
+    }
+
+    async function cargarClientesEnSelect(selectId) {
+        try {
+            const sb = getSupabase();
+            const { data } = await sb.from('clientes').select('id, nombre').order('nombre').limit(500);
+            const select = document.getElementById(selectId);
+            if (select) {
+                select.innerHTML = '<option value="">Seleccionar cliente...</option>' +
+                    (data || []).map(c => `<option value="${c.id}">${escapeHtml(c.nombre)}</option>`).join('');
+            }
+        } catch (error) {
+            console.error('Error cargando clientes:', error);
+        }
+    }
+
+    // ==========================================
+    // ASISTENTE IA
+    // ==========================================
     function loadIAConversations() {
         try {
             const raw = localStorage.getItem(IAState.storageKey);
@@ -581,37 +1089,27 @@
                     <i class="fas fa-robot"></i>
                 </div>
                 <h3>Hola, soy tu copiloto de IVENMEX 🤖</h3>
-                <p>Tengo acceso completo a la base de datos. Puedo consultar, analizar y modificar cualquier información del negocio. Pregúntame lo que necesites en lenguaje natural.</p>
+                <p>Tengo acceso completo a la base de datos. Puedo consultar, analizar y modificar cualquier información del negocio. Pregúntame lo que necesites.</p>
                 <div class="ia-welcome-grid">
                     <div class="ia-welcome-card" data-query="Dame un resumen completo del estado actual del negocio">
                         <div class="ia-welcome-card-icon"><i class="fas fa-chart-pie"></i></div>
                         <h4>Visión general</h4>
                         <p>Estado actual de todo el negocio</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="¿Qué clientes han hecho más pedidos este mes?">
-                        <div class="ia-welcome-card-icon" style="background:#DBEAFE;color:#1E40AF;"><i class="fas fa-star"></i></div>
-                        <h4>Top clientes</h4>
-                        <p>Los que más compran</p>
+                    <div class="ia-welcome-card" data-query="Muéstrame las deudas por cliente">
+                        <div class="ia-welcome-card-icon" style="background:#FEE2E2;color:#991B1B;"><i class="fas fa-hand-holding-usd"></i></div>
+                        <h4>Deudas por cliente</h4>
+                        <p>Quién debe y cuánto</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="Análiza las ventas del último mes y dame conclusiones">
+                    <div class="ia-welcome-card" data-query="Analiza las ventas del último mes">
                         <div class="ia-welcome-card-icon" style="background:#D1FAE5;color:#065F46;"><i class="fas fa-chart-line"></i></div>
                         <h4>Análisis de ventas</h4>
                         <p>Tendencias e insights</p>
                     </div>
-                    <div class="ia-welcome-card" data-query="¿Qué tareas están atrasadas y quién las tiene asignadas?">
-                        <div class="ia-welcome-card-icon" style="background:#FEF3C7;color:#92400E;"><i class="fas fa-clock"></i></div>
-                        <h4>Tareas atrasadas</h4>
-                        <p>Qué está deteniendo la producción</p>
-                    </div>
-                    <div class="ia-welcome-card" data-query="¿Qué materiales necesito comprar urgentemente?">
-                        <div class="ia-welcome-card-icon" style="background:#FEE2E2;color:#991B1B;"><i class="fas fa-shopping-cart"></i></div>
-                        <h4>Compras urgentes</h4>
+                    <div class="ia-welcome-card" data-query="¿Qué materiales tienen stock bajo?">
+                        <div class="ia-welcome-card-icon" style="background:#FEF3C7;color:#92400E;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <h4>Alertas de stock</h4>
                         <p>Materiales por reabastecer</p>
-                    </div>
-                    <div class="ia-welcome-card" data-query="¿Cuál es la eficiencia de cada empleado?">
-                        <div class="ia-welcome-card-icon" style="background:#E0E7FF;color:#3730A3;"><i class="fas fa-users-cog"></i></div>
-                        <h4>Rendimiento equipo</h4>
-                        <p>Métricas por empleado</p>
                     </div>
                 </div>
             </div>
@@ -699,7 +1197,6 @@
         }
     }
 
-    // Markdown renderer
     function renderMarkdown(text) {
         if (!text) return '';
         let html = escapeHtml(text);
@@ -769,7 +1266,6 @@
         const container = document.getElementById('adminIaMessages');
         if (!container) return null;
 
-        // Frases contextuales rotativas para que se sienta como IA real
         const frases = [
             'Consultando la base de datos...',
             'Analizando información...',
@@ -846,7 +1342,6 @@
         updateHeaderStatus('pensando', 'Pensando...');
 
         try {
-            // Enviar contexto conversacional (últimos 10 mensajes)
             const historial = conv.mensajes.slice(-10).map(m => ({
                 role: m.role === 'user' ? 'user' : 'assistant',
                 content: m.content
@@ -872,7 +1367,7 @@
             removeTypingIndicator();
             const errorMsg = {
                 role: 'bot',
-                content: `❌ **No pude procesar tu consulta**\n\n${error.message || 'Error desconocido'}\n\n_Verifica que el flujo n8n esté activo._`,
+                content: `❌ **No pude procesar tu consulta**\n\n${error.message || 'Error desconocido'}`,
                 timestamp: Date.now(),
                 categoria: 'error'
             };
@@ -900,23 +1395,19 @@
 
     async function checkIAN8NConnection() {
         updateHeaderStatus('checking', 'Conectando...');
-
         if (!ADMIN_CONFIG.N8N_WEBHOOK_URL) {
             updateHeaderStatus('offline', 'Sin configurar');
             return;
         }
-
         try {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 8000);
-
             const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: '__ping__', ping: true }),
                 signal: controller.signal
             });
-
             clearTimeout(timeoutId);
             updateHeaderStatus(response.ok ? 'online' : 'offline',
                 response.ok ? 'Conectado' : 'Error');
@@ -935,24 +1426,17 @@
         counter.style.color = len > 1800 ? '#EF4444' : '';
     }
 
-    // ==========================================
-    // QUERY A N8N
-    // ==========================================
     async function queryN8N(question, history = []) {
         if (!ADMIN_CONFIG.N8N_WEBHOOK_URL) {
-            throw new Error('No hay webhook de n8n configurado. Revisa ADMIN_CONFIG.N8N_WEBHOOK_URL.');
+            throw new Error('No hay webhook de n8n configurado.');
         }
-
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), ADMIN_CONFIG.IA_TIMEOUT);
 
         try {
             const response = await fetch(ADMIN_CONFIG.N8N_WEBHOOK_URL, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
                 body: JSON.stringify({
                     message: question,
                     history: history,
@@ -961,12 +1445,9 @@
                 }),
                 signal: controller.signal
             });
-
             clearTimeout(timeoutId);
 
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status} - ${response.statusText}`);
-            }
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
 
             const data = await response.json();
             let respuesta = data.response || data.output || data.message ||
@@ -978,23 +1459,17 @@
             if (respuesta && typeof respuesta === 'object') {
                 respuesta = respuesta.text || respuesta.content || JSON.stringify(respuesta);
             }
-            if (!respuesta) {
-                console.warn('Respuesta n8n sin formato:', data);
-                respuesta = '⚠️ El webhook respondió pero sin contenido reconocible.';
-            }
+            if (!respuesta) respuesta = '⚠️ El webhook respondió sin contenido reconocible.';
             return respuesta;
         } catch (error) {
             clearTimeout(timeoutId);
             if (error.name === 'AbortError') {
-                throw new Error('El asistente tardó demasiado (>90s). Intenta de nuevo.');
+                throw new Error('El asistente tardó demasiado. Intenta de nuevo.');
             }
             throw error;
         }
     }
 
-    // ==========================================
-    // ACCIONES DEL HEADER IA
-    // ==========================================
     function setupIAHeaderActions() {
         document.getElementById('adminIaNewBtn')?.addEventListener('click', () => {
             crearNuevaConversacion('Nueva conversación');
@@ -1042,7 +1517,7 @@
         document.getElementById('adminIaClearBtn')?.addEventListener('click', () => {
             const conv = getActiveConversation();
             if (!conv || conv.mensajes.length === 0) return;
-            if (!confirm('¿Limpiar esta conversación? No se puede deshacer.')) return;
+            if (!confirm('¿Limpiar esta conversación?')) return;
             conv.mensajes = [];
             saveIAConversations();
             renderActiveConversation();
@@ -1259,11 +1734,28 @@
         init();
     }
 
+    // ==========================================
+    // API PÚBLICA
+    // ==========================================
     window.AdminPanel = {
         open: openLogin,
         close: closeAdminPanel,
         logout,
         switchView,
-        reload: () => switchView(AdminState.currentView)
+        reload: () => switchView(AdminState.currentView),
+        // Cotizaciones
+        loadCotizaciones,
+        // Facturas
+        loadFacturas,
+        abrirModalNuevaFactura,
+        guardarNuevaFactura,
+        // Deudas
+        loadDeudas,
+        abrirModalNuevaDeuda,
+        guardarNuevaDeuda,
+        abrirModalAbono,
+        guardarAbono,
+        verDetalleDeudas
     };
+
 }());
