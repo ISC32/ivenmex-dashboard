@@ -15,9 +15,9 @@
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="css/dashboardInvemex.css?v=18">
-    <link rel="stylesheet" href="css/dashboard-tv.css?v=18">
-    <link rel="stylesheet" href="css/admin-panel.css?v=2">
+    <link rel="stylesheet" href="css/dashboardInvemex.css?v=19">
+    <link rel="stylesheet" href="css/dashboard-tv.css?v=19">
+    <link rel="stylesheet" href="css/admin-panel.css?v=3">
 
     <style>
         .empleado-avatar-card { position: relative; }
@@ -666,6 +666,20 @@
                     <span>Inventario</span>
                 </button>
                 <div class="admin-nav-divider"></div>
+                <button class="admin-nav-item" data-view="cotizaciones">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>Cotizaciones</span>
+                </button>
+                <button class="admin-nav-item" data-view="facturas">
+                    <i class="fas fa-receipt"></i>
+                    <span>Facturas Internas</span>
+                </button>
+                <button class="admin-nav-item" data-view="deudas">
+                    <i class="fas fa-hand-holding-usd"></i>
+                    <span>Deudas</span>
+                    <span class="admin-nav-badge">NEW</span>
+                </button>
+                <div class="admin-nav-divider"></div>
                 <button class="admin-nav-item" data-view="ia">
                     <i class="fas fa-robot"></i>
                     <span>Asistente IA</span>
@@ -675,6 +689,7 @@
 
             <main class="admin-content">
 
+                <!-- VISTA: DASHBOARD -->
                 <div class="admin-view active" id="adminView-dashboard">
                     <div class="admin-view-header">
                         <h2 class="admin-view-title"><i class="fas fa-chart-line"></i> Dashboard General</h2>
@@ -714,6 +729,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: CLIENTES -->
                 <div class="admin-view" id="adminView-clientes">
                     <div class="admin-view-header">
                         <h2 class="admin-view-title"><i class="fas fa-users"></i> Clientes</h2>
@@ -738,6 +754,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: PEDIDOS -->
                 <div class="admin-view" id="adminView-pedidos">
                     <div class="admin-view-header">
                         <h2 class="admin-view-title"><i class="fas fa-clipboard-list"></i> Pedidos</h2>
@@ -763,6 +780,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: VENTAS -->
                 <div class="admin-view" id="adminView-ventas">
                     <div class="admin-view-header">
                         <h2 class="admin-view-title"><i class="fas fa-dollar-sign"></i> Ventas</h2>
@@ -790,6 +808,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: PRODUCTOS -->
                 <div class="admin-view" id="adminView-productos">
                     <div class="admin-view-header">
                         <h2 class="admin-view-title"><i class="fas fa-box"></i> Productos</h2>
@@ -814,6 +833,7 @@
                     </div>
                 </div>
 
+                <!-- VISTA: INVENTARIO -->
                 <div class="admin-view" id="adminView-inventario">
                     <div class="admin-view-header">
                         <h2 class="admin-view-title"><i class="fas fa-warehouse"></i> Inventario</h2>
@@ -838,6 +858,143 @@
                     </div>
                 </div>
 
+                <!-- VISTA: COTIZACIONES -->
+                <div class="admin-view" id="adminView-cotizaciones">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-file-invoice-dollar"></i> Cotizaciones</h2>
+                        <div class="admin-view-actions">
+                            <input type="text" id="cotizaciones-buscar" placeholder="Buscar por cliente o número..." class="md-form-control" style="max-width: 300px;">
+                        </div>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Historial de cotizaciones</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Número</th>
+                                        <th>Cliente</th>
+                                        <th>Fecha</th>
+                                        <th>Total USD</th>
+                                        <th>Total Bs</th>
+                                        <th>Estado</th>
+                                        <th>PDF</th>
+                                        <th>DOCX</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaCotizaciones">
+                                    <tr><td colspan="8" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA: FACTURAS INTERNAS -->
+                <div class="admin-view" id="adminView-facturas">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-receipt"></i> Facturas Internas (Respaldo)</h2>
+                        <div class="admin-view-actions">
+                            <button class="md-btn md-btn-primary md-btn-sm" onclick="AdminPanel.abrirModalNuevaFactura()">
+                                <i class="fas fa-plus"></i> Nueva Factura
+                            </button>
+                        </div>
+                    </div>
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-list"></i> Historial de facturas de respaldo</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Número</th>
+                                        <th>Cliente</th>
+                                        <th>Pedido</th>
+                                        <th>Tipo</th>
+                                        <th>Total USD</th>
+                                        <th>Método</th>
+                                        <th>Fecha</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaFacturas">
+                                    <tr><td colspan="7" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA: DEUDAS -->
+                <div class="admin-view" id="adminView-deudas">
+                    <div class="admin-view-header">
+                        <h2 class="admin-view-title"><i class="fas fa-hand-holding-usd"></i> Deudas y Cuentas por Cobrar</h2>
+                        <div class="admin-view-actions">
+                            <select id="deudas-filtro-periodo" class="md-form-control md-form-select" style="max-width: 200px;">
+                                <option value="todo">Todo el tiempo</option>
+                                <option value="semana">Última semana</option>
+                                <option value="mes">Último mes</option>
+                                <option value="trimestre">Último trimestre</option>
+                                <option value="año">Último año</option>
+                            </select>
+                            <button class="md-btn md-btn-primary md-btn-sm" onclick="AdminPanel.abrirModalNuevaDeuda()">
+                                <i class="fas fa-plus"></i> Registrar Deuda
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="admin-stats-grid" style="margin-bottom: 20px;">
+                        <div class="admin-stat-card danger">
+                            <div class="admin-stat-icon"><i class="fas fa-hand-holding-usd"></i></div>
+                            <div class="admin-stat-label">Deuda Total</div>
+                            <div class="admin-stat-value" id="adminDeudaTotal">$0</div>
+                        </div>
+                        <div class="admin-stat-card warning">
+                            <div class="admin-stat-icon"><i class="fas fa-clock"></i></div>
+                            <div class="admin-stat-label">Deuda Vencida</div>
+                            <div class="admin-stat-value" id="adminDeudaVencida">$0</div>
+                        </div>
+                        <div class="admin-stat-card info">
+                            <div class="admin-stat-icon"><i class="fas fa-users"></i></div>
+                            <div class="admin-stat-label">Clientes con Deuda</div>
+                            <div class="admin-stat-value" id="adminClientesDeuda">0</div>
+                        </div>
+                        <div class="admin-stat-card success">
+                            <div class="admin-stat-icon"><i class="fas fa-check-circle"></i></div>
+                            <div class="admin-stat-label">Cobrado</div>
+                            <div class="admin-stat-value" id="adminCobrado">$0</div>
+                        </div>
+                    </div>
+
+                    <div class="admin-table-container">
+                        <div class="admin-table-header">
+                            <div class="admin-table-title"><i class="fas fa-users"></i> Deudas por cliente</div>
+                        </div>
+                        <div class="admin-table-scroll">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Cliente</th>
+                                        <th>Teléfono</th>
+                                        <th>Deudas</th>
+                                        <th>Total</th>
+                                        <th>Pagado</th>
+                                        <th>Pendiente</th>
+                                        <th>Vencido</th>
+                                        <th>Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminTablaDeudas">
+                                    <tr><td colspan="8" class="admin-table-empty"><i class="fas fa-spinner fa-spin"></i>Cargando...</td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VISTA: ASISTENTE IA -->
                 <div class="admin-view" id="adminView-ia">
                     <div class="admin-ia-container" id="adminIaContainer">
                         <div class="admin-ia-header">
@@ -899,11 +1056,11 @@
                             <button class="admin-ia-suggestion" data-query="¿Qué materiales tienen stock bajo?">
                                 <i class="fas fa-exclamation-triangle"></i> Stock bajo
                             </button>
+                            <button class="admin-ia-suggestion" data-query="Muéstrame las deudas por cliente">
+                                <i class="fas fa-hand-holding-usd"></i> Deudas por cliente
+                            </button>
                             <button class="admin-ia-suggestion" data-query="Lista los productos activos">
                                 <i class="fas fa-box"></i> Productos
-                            </button>
-                            <button class="admin-ia-suggestion" data-query="¿Cuánto está el dólar hoy?">
-                                <i class="fas fa-money-bill-wave"></i> Tasa BCV
                             </button>
                             <button class="admin-ia-suggestion" data-query="Ayuda">
                                 <i class="fas fa-question-circle"></i> Ayuda
@@ -936,12 +1093,192 @@
         </div>
     </div>
 
+    <!-- MODAL: NUEVA DEUDA -->
+    <div class="modal fade" id="modalNuevaDeuda" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content md-modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-hand-holding-usd me-2" style="color: var(--md-primary);"></i>Registrar Nueva Deuda</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNuevaDeuda">
+                        <div class="mb-3">
+                            <label class="md-form-label">Cliente <span style="color:#EF4444;">*</span></label>
+                            <select id="deuda_cliente" class="md-form-control md-form-select">
+                                <option value="">Cargando clientes...</option>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="md-form-label">Concepto <span style="color:#EF4444;">*</span></label>
+                            <input type="text" id="deuda_concepto" class="md-form-control" placeholder="Ej: Lona banner 3x2">
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="md-form-label">Monto Total USD <span style="color:#EF4444;">*</span></label>
+                                <input type="number" id="deuda_monto" class="md-form-control" placeholder="0.00" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="md-form-label">Vencimiento</label>
+                                <input type="date" id="deuda_vencimiento" class="md-form-control">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="md-form-label">Notas</label>
+                            <textarea id="deuda_notas" class="md-form-control" rows="2"></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="md-btn md-btn-primary" onclick="AdminPanel.guardarNuevaDeuda()">
+                        <i class="fas fa-save"></i> Guardar Deuda
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: NUEVA FACTURA INTERNA -->
+    <div class="modal fade" id="modalNuevaFactura" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content md-modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-receipt me-2" style="color: var(--md-primary);"></i>Nueva Factura Interna</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formNuevaFactura">
+                        <div class="mb-3">
+                            <label class="md-form-label">Cliente</label>
+                            <select id="factura_cliente" class="md-form-control md-form-select">
+                                <option value="">Cargando clientes...</option>
+                            </select>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="md-form-label">Tipo</label>
+                                <select id="factura_tipo" class="md-form-control md-form-select">
+                                    <option value="venta">Venta</option>
+                                    <option value="gasto">Gasto</option>
+                                    <option value="servicio">Servicio</option>
+                                    <option value="otro">Otro</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="md-form-label">Categoría</label>
+                                <input type="text" id="factura_categoria" class="md-form-control" placeholder="Ej: Materiales">
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="md-form-label">Descripción</label>
+                            <textarea id="factura_descripcion" class="md-form-control" rows="2"></textarea>
+                        </div>
+                        <div class="row g-3 mt-2">
+                            <div class="col-md-6">
+                                <label class="md-form-label">Total USD</label>
+                                <input type="number" id="factura_total" class="md-form-control" placeholder="0.00" step="0.01" min="0">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="md-form-label">Método de pago</label>
+                                <select id="factura_metodo" class="md-form-control md-form-select">
+                                    <option value="divisa">Divisa</option>
+                                    <option value="bolivares">Bolívares</option>
+                                    <option value="transferencia">Transferencia</option>
+                                </select>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="md-btn md-btn-primary" onclick="AdminPanel.guardarNuevaFactura()">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ABONO A DEUDA -->
+    <div class="modal fade" id="modalAbonoDeuda" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-md modal-dialog-centered">
+            <div class="modal-content md-modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-dollar-sign me-2" style="color: #22C55E;"></i>Registrar Abono</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formAbonoDeuda">
+                        <div class="mb-3">
+                            <label class="md-form-label">Cliente</label>
+                            <input type="text" id="abono_cliente_nombre" class="md-form-control" readonly>
+                            <input type="hidden" id="abono_cliente_id">
+                        </div>
+                        <div class="mb-3">
+                            <label class="md-form-label">Deuda a abonar</label>
+                            <select id="abono_deuda_id" class="md-form-control md-form-select">
+                                <option value="">Cargando deudas...</option>
+                            </select>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="md-form-label">Monto USD</label>
+                                <input type="number" id="abono_monto" class="md-form-control" placeholder="0.00" step="0.01" min="0.01">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="md-form-label">Método</label>
+                                <select id="abono_metodo" class="md-form-control md-form-select">
+                                    <option value="divisa">Divisa</option>
+                                    <option value="bolivares">Bolívares</option>
+                                    <option value="transferencia">Transferencia</option>
+                                    <option value="pago_movil">Pago Móvil</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="md-form-label">Referencia</label>
+                            <input type="text" id="abono_referencia" class="md-form-control" placeholder="Número de referencia">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="md-btn md-btn-primary" onclick="AdminPanel.guardarAbono()">
+                        <i class="fas fa-save"></i> Registrar Abono
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALLE DE DEUDAS POR CLIENTE -->
+    <div class="modal fade" id="modalDetalleDeudas" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content md-modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="fas fa-list me-2" style="color: var(--md-primary);"></i>Detalle de Deudas</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body" id="modalDetalleDeudasBody">
+                    <div style="text-align:center; padding:30px;">
+                        <i class="fas fa-spinner fa-spin" style="font-size:32px; color: var(--md-primary);"></i>
+                        <p style="margin-top:12px;">Cargando...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="md-btn md-btn-outline" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="js/dashboardInvemex.js?v=18"></script>
-    <script src="js/dashboardQueryOptimizer.js?v=18" defer></script>
-    <script src="js/dashboardTV.js?v=18" defer></script>
-    <script src="js/adminPanel.js?v=2" defer></script>
+    <script src="js/dashboardInvemex.js?v=19"></script>
+    <script src="js/dashboardQueryOptimizer.js?v=19" defer></script>
+    <script src="js/dashboardTV.js?v=19" defer></script>
+    <script src="js/adminPanel.js?v=3" defer></script>
 
     <script>
         (function () {
